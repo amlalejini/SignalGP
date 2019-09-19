@@ -26,9 +26,16 @@ namespace emp {
     size_t GetID() const { return id; }
   };
 
+  struct SimpleEvent {
+    size_t id;
+
+    size_t GetID() const { return id; }
+  };
+
   class SignalGP {
   public:
     using instruction_t = SimpleInstruction;
+    using event_t = SimpleEvent;
 
   protected:
 
