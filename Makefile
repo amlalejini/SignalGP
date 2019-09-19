@@ -51,9 +51,9 @@ clean:
 
 test: clean
 test: tests/unit_tests.cc
-	$(CXX_nat) $(CFLAGS_nat_debug) --coverage tests/unit_tests.cc -o test_debug.out
+	$(CXX_nat) $(CFLAGS_nat_debug) -I./source/ --coverage tests/unit_tests.cc -o test_debug.out
 	./test_debug.out
-	$(CXX_nat) $(CFLAGS_nat) tests/unit_tests.cc -o test_optimized.out
+	$(CXX_nat) $(CFLAGS_nat) tests/unit_tests.cc -I./source/ -o test_optimized.out
 	./test_optimized.out
 
 # Debugging information
