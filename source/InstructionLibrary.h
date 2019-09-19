@@ -50,12 +50,11 @@ namespace emp {
   protected:
 
     emp::vector<InstructionDef> inst_lib;      ///< Full definitions for instructions.
-    emp::vector<instruction_fun_t>  inst_funs; ///< Map from instruction IDs to their functions.
     std::map<std::string, size_t> name_map;    ///< How do names link to instructions?
 
   public:
 
-    InstructionLibrary() : inst_lib(), inst_funs(), name_map() { ; }
+    InstructionLibrary() : inst_lib(), name_map() { ; }
     InstructionLibrary(const InstructionLibrary &) = delete;
     InstructionLibrary(InstructionLibrary &&) = delete;
     ~InstructionLibrary() { ; }
@@ -109,20 +108,19 @@ namespace emp {
 
       const size_t id = inst_lib.size();
       inst_lib.emplace_back(name, fun_call, desc);
-      inst_funs.emplace_back(fun_call);
       name_map[name] = id;
     }
 
     /// Process a specified instruction in the provided hardware.
     void ProcessInst(hardware_t & hw, const instruction_t & inst) const {
-      inst_funs[inst.GetID()](hw, inst);
+      inst_lib[inst.GetID()].fun_call(hw, inst);
     }
 
     /// Process a specified instruction on hardware that can be converted to the correct type.
     template <typename IN_HW>
     void ProcessInst(emp::Ptr<IN_HW> hw, const instruction_t & inst) const {
       emp_assert( dynamic_cast<hardware_t*>(hw.Raw()) );
-      inst_funs[inst.id](*(hw.template Cast<hardware_t>()), inst);
+      inst_lib[inst.id].fun_call(*(hw.template Cast<hardware_t>()), inst);
     }
   };
 }
