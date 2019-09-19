@@ -3,10 +3,10 @@ PROJECT := signalgp-reimplementation-playground
 EMP_DIR := ../Empirical/source
 
 # Flags to use regardless of compiler
-CFLAGS_all := -Wall -Wno-unused-function -std=c++17 -I$(EMP_DIR)/
+CFLAGS_all := -Wall -Wno-unused-function -pedantic -std=c++17 -I$(EMP_DIR)/ -I./source/
 
 # Native compiler information
-CXX_nat := g++
+CXX_nat := g++-8
 CFLAGS_nat := -O3 -DNDEBUG $(CFLAGS_all)
 CFLAGS_nat_debug := -g $(CFLAGS_all)
 
@@ -46,13 +46,15 @@ serve:
 	python3 -m http.server
 
 clean:
-	rm -f $(PROJECT) web/$(PROJECT).js web/*.js.map web/*.js.map *~ source/*.o web/*.wasm web/*.wast
+	rm -f $(PROJECT) web/$(PROJECT).js web/*.js.map web/*.js.map *~ source/*.o web/*.wasm web/*.wast test_debug.out test_optimized.out unit_tests.gcda unit_tests.gcno
+	rm -rf test_debug.out.dSYM
 
-test: debug debug-web
-	./signalgp-reimplementation-playground | grep -q 'Hello, world!' && echo 'matched!' || exit 1
-	npm install
-	echo "const puppeteer = require('puppeteer'); var express = require('express'); var app = express(); app.use(express.static('web')); app.listen(3000); express.static.mime.types['wasm'] = 'application/wasm'; function sleep(millis) { return new Promise(resolve => setTimeout(resolve, millis)); } async function run() { const browser = await puppeteer.launch(); const page = await browser.newPage(); await page.goto('http://localhost:3000/signalgp-reimplementation-playground.html'); await sleep(1000); const html = await page.content(); console.log(html); browser.close(); process.exit(0); } run();" | node | tr -d '\n' | grep -q "Hello, browser!" && echo "matched!" || exit 1
-	echo "const puppeteer = require('puppeteer'); var express = require('express'); var app = express(); app.use(express.static('web')); app.listen(3000); express.static.mime.types['wasm'] = 'application/wasm'; function sleep(millis) { return new Promise(resolve => setTimeout(resolve, millis)); } async function run() { const browser = await puppeteer.launch(); const page = await browser.newPage(); page.on('console', msg => console.log(msg.text())); await page.goto('http://localhost:3000/signalgp-reimplementation-playground.html'); await sleep(1000); await page.content(); browser.close(); process.exit(0); } run();" | node | grep -q "Hello, console!" && echo "matched!"|| exit 1
+test: clean
+test: tests/unit_tests.cc
+	$(CXX_nat) $(CFLAGS_nat_debug) --coverage tests/unit_tests.cc -o test_debug.out
+	./test_debug.out
+	$(CXX_nat) $(CFLAGS_nat) tests/unit_tests.cc -o test_optimized.out
+	./test_optimized.out
 
 # Debugging information
 print-%: ; @echo '$(subst ','\'',$*=$($*))'
