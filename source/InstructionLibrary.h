@@ -28,21 +28,21 @@
 
 namespace emp {
 
-  template<typename HARDWARE_T>
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
   class InstructionLibrary {
 
   public:
     using hardware_t = HARDWARE_T;
-    using instruction_t = typename hardware_t::instruction_t;
-    using instruction_fun_t = std::function<void(hardware_t &, const instruction_t &)>;
+    using inst_t = INSTRUCTION_T;
+    using inst_fun_t = std::function<void(hardware_t &, const inst_t &)>;
 
     struct InstructionDef {
       std::string name;           ///< Name of this instruction.
-      instruction_fun_t fun_call; ///< Function to call when instruction is executed.
+      inst_fun_t fun_call; ///< Function to call when instruction is executed.
       std::string desc;           ///< Description of instruction.
       // Maybe need an instruction category?
 
-      InstructionDef(const std::string & _name, instruction_fun_t _fun_call, const std::string & _desc)
+      InstructionDef(const std::string & _name, inst_fun_t _fun_call, const std::string & _desc)
         : name(_name), fun_call(_fun_call), desc(_desc) { ; }
       InstructionDef(const InstructionDef &) = default;
     };
@@ -55,7 +55,7 @@ namespace emp {
   public:
 
     InstructionLibrary() : inst_lib(), name_map() { ; }
-    InstructionLibrary(const InstructionLibrary &) = delete;
+    InstructionLibrary(const InstructionLibrary &) = delete;    // @AML: Why?
     InstructionLibrary(InstructionLibrary &&) = delete;
     ~InstructionLibrary() { ; }
 
@@ -66,7 +66,7 @@ namespace emp {
     const std::string & GetName(size_t id) const { return inst_lib[id].name; }
 
     /// Return the function associated with the specified instruction ID.
-    const instruction_fun_t & GetFunction(size_t id) const { return inst_lib[id].fun_call; }
+    const inst_fun_t & GetFunction(size_t id) const { return inst_lib[id].fun_call; }
 
     /// Return the provided description for the provided instruction ID.
     const std::string & GetDesc(size_t id) const { return inst_lib[id].desc; }
@@ -103,7 +103,7 @@ namespace emp {
 
     /// Add a new instruction to the instruction set.
     void AddInst(const std::string & name,
-                 const instruction_fun_t & fun_call,
+                 const inst_fun_t & fun_call,
                  const std::string & desc="") {
 
       const size_t id = inst_lib.size();
@@ -112,13 +112,13 @@ namespace emp {
     }
 
     /// Process a specified instruction in the provided hardware.
-    void ProcessInst(hardware_t & hw, const instruction_t & inst) const {
+    void ProcessInst(hardware_t & hw, const inst_t & inst) const {
       inst_lib[inst.GetID()].fun_call(hw, inst);
     }
 
     /// Process a specified instruction on hardware that can be converted to the correct type.
     template <typename IN_HW>
-    void ProcessInst(emp::Ptr<IN_HW> hw, const instruction_t & inst) const {
+    void ProcessInst(emp::Ptr<IN_HW> hw, const inst_t & inst) const {
       emp_assert( dynamic_cast<hardware_t*>(hw.Raw()) );
       inst_lib[inst.id].fun_call(*(hw.template Cast<hardware_t>()), inst);
     }

@@ -104,7 +104,7 @@ template<typename HARDWARE_T>
 
     /// Handle an event.
     void HandleEvent(hardware_t & hw, const event_t & event) const {
-      event_lib[event.GetID()].handler(hw, event);
+      event_lib[event.GetID()].handler_fun(hw, event);
     }
   };
 
