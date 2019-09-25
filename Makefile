@@ -56,5 +56,12 @@ test: tests/unit_tests.cc
 	$(CXX_nat) $(CFLAGS_nat) tests/unit_tests.cc -I./source/ -o test_optimized.out
 	./test_optimized.out
 
+bitset-perf-debug: tests/bit-vec_vs_bit-set.cc
+	$(CXX_nat) $(CFLAGS_nat_debug) tests/bit-vec_vs_bit-set.cc -I./source/ -o bitset_perf-debug.out
+
+bitset-perf-native: tests/bit-vec_vs_bit-set.cc
+	$(CXX_nat) $(CFLAGS_nat) tests/bit-vec_vs_bit-set.cc -I./source/ -o bitset_perf.out
+
+
 # Debugging information
 print-%: ; @echo '$(subst ','\'',$*=$($*))'
