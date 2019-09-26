@@ -46,7 +46,7 @@ serve:
 	python3 -m http.server
 
 clean:
-	rm -f $(PROJECT) web/$(PROJECT).js web/*.js.map web/*.js.map *~ source/*.o web/*.wasm web/*.wast test_debug.out test_optimized.out unit_tests.gcda unit_tests.gcno
+	rm -f $(PROJECT) web/$(PROJECT).js web/*.js.map web/*.js.map *~ source/*.o web/*.wasm web/*.wast test_debug.out test_optimized.out unit_tests.gcda unit_tests.gcno bitmarking.out bitmarking-debug.out
 	rm -rf test_debug.out.dSYM
 
 test: clean
@@ -56,11 +56,11 @@ test: tests/unit_tests.cc
 	$(CXX_nat) $(CFLAGS_nat) tests/unit_tests.cc -I./source/ -o test_optimized.out
 	./test_optimized.out
 
-bitset-perf-debug: tests/bit-vec_vs_bit-set.cc
-	$(CXX_nat) $(CFLAGS_nat_debug) tests/bit-vec_vs_bit-set.cc -I./source/ -o bitset_perf-debug.out
+bitmarking-debug: tests/bitmarking.cc
+	$(CXX_nat) $(CFLAGS_nat_debug) tests/bitmarking.cc -I./source/ -o bitmarking-debug.out
 
-bitset-perf-native: tests/bit-vec_vs_bit-set.cc
-	$(CXX_nat) $(CFLAGS_nat) tests/bit-vec_vs_bit-set.cc -I./source/ -o bitset_perf.out
+bitmarking-native: tests/bitmarking.cc
+	$(CXX_nat) $(CFLAGS_nat) tests/bitmarking.cc -I./source/ -o bitmarking.out
 
 
 # Debugging information
