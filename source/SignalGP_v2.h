@@ -57,46 +57,191 @@ namespace sgp_v2 {
     };
   };
 
-  struct SimpleProgram {
-    struct Instruction {
+  /// Base flow information
+  /// - should be sufficient for basic flow types
+  struct BaseFlowInfo {
+    size_t id;        ///< Flow type ID?
+    size_t ip;        ///< Instruction pointer. Which instruction is executed?
+    size_t mp;        ///< Module pointer. Which module is being executed?
 
+    size_t begin;     ///< Where does the flow begin?
+    size_t end;       ///< Where does the flow end?
+  };
+
+  // Simple program:
+  // - Linear.
+  // - Instructions can have tag or numeric arguments.
+  template<typename LABEL_T, typename ARGUMENT_T=int>
+  class SimpleProgram {
+  public:
+    using label_t = LABEL_T;
+    using arg_t = ARGUMENT_T;
+
+    struct Instruction {
+      size_t id;                      ///< Instruction ID
+      emp::vector<arg_t> args;
+      emp::vector<label_t> labels;
+
+      Instruction(size_t _id,
+                  const emp::vector<arg_t> & _args=emp::vector<arg_t>(),
+                  const emp::vector<label_t> & _labels=emp::vector<label_t>())
+        : id(_id), args(_args), labels(_labels) { ; }
+
+      void SetID(size_t _id) { id = _id; }
+      size_t GetID() const { return id; }
+
+      emp::vector<arg_t> & GetArgs() { return args; }
+      emp::vector<label_t> & GetLabels() { return labels; }
+
+      bool operator==(const Instruction & other) const {
+        return std::tie(id, args, labels) == std::tie(other.id, other.args, other.labels);
+      }
+
+      bool operator!=(const Instruction & other) const { return !(*this == other); }
+
+      bool operator<(const Instruction & other) const {
+        return std::tie(id, args, labels) < std::tie(other.id, other.args, other.labels);
+      }
     };
+
+  protected:
+    emp::vector<Instruction> inst_seq;
+
+  public:
+    SimpleProgram(const emp::vector<Instruction> & iseq=emp::vector<Instruction>())
+      : inst_seq(iseq) { ; }
+
+    SimpleProgram(const SimpleProgram &) = default;
+
+    bool operator==(const SimpleProgram & other) const { return inst_seq == other.inst_seq; }
+    bool operator!=(const SimpleProgram & other) const { return !(*this == other); }
+    bool operator<(const SimpleProgram & other) const { return inst_seq < other.inst_seq; }
+
+    /// Allow program's instruction sequence to be indexed as if a vector.
+    Instruction & operator[](size_t id) {
+      emp_assert(id < inst_seq.size());
+      return inst_seq[id];
+    }
+
+    /// Allow program's instruction sequence to be indexed as if a vector.
+    const Instruction & operator[](size_t id) const {
+      emp_assert(id < inst_seq.size());
+      return inst_seq[id];
+    }
+
+    /// Clear the program's instruction sequence.
+    void Clear() { inst_seq.clear(); }
+
+    /// Get program size.
+    size_t GetSize() const { return inst_seq.size(); }
+
+    /// Is a given position valid in this program?
+    bool IsValidPosition(size_t pos) const { return pos < GetSize(); }
+
+    // ----- Program modifications -----
+
+    /// Set program's instruction sequence to the one given.
+    void SetProgram(const emp::vector<Instruction> & p) { inst_seq = p; }
+
+    /// Push instruction to instruction set.
+    /// - No validation! We're trusting that 'id' is legit!
+    void PushInst(size_t id,
+                  const emp::vector<arg_t> & args=emp::vector<arg_t>(),
+                  const emp::vector<label_t> & labels=emp::vector<label_t>()) {
+      inst_seq.emplace_back(id, args, labels);
+    }
+
+    /// Push instruction to program by name.
+    template<typename HARDWARE_T>
+    void PushInst(const InstructionLibrary<HARDWARE_T, Instruction> & ilib,
+                  const std::string & name,
+                  const emp::vector<arg_t> & args=emp::vector<arg_t>(),
+                  const emp::vector<label_t> & labels=emp::vector<label_t>()) {
+      emp_assert(ilib.IsInst(name), "Uknown instruction name", name);
+      PushInst(ilib.GetID(name), args, labels);
+    }
+
+    /// Push instruction to program.
+    void PushInst(const Instruction & inst) { inst_seq.emplace_back(inst); }
+
+    /// Is the given instruction vaid?
+    template<typename HARDWARE_T>
+    bool IsValidInst(const InstructionLibrary<HARDWARE_T, Instruction> & ilib,
+                     const Instruction & inst) {
+      return inst.id < ilib.GetSize();
+    }
+
   };
 
   // Each program type needs their own 'ExecutionStepper' to manage execution
-  template<typename MEMORY_MODEL_T>
+  template<typename MEMORY_MODEL_T, typename LABEL_T, typename INST_ARGUMENT_T=int>
   class SimpleExecutionStepper {
   public:
     struct ExecState;
 
-    using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T>;
+    using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T, LABEL_T, INST_ARGUMENT_T>;
     using memory_model_t = MEMORY_MODEL_T;
     using memory_state_t = typename memory_model_t::memory_state_t;
     using exec_state_t = ExecState;
-    using program_t = SimpleProgram;
+    using program_t = SimpleProgram<LABEL_T, INST_ARGUMENT_T>;
     using hardware_t = SignalGP<exec_stepper_t>;
-    using inst_t = SimpleProgram::Instruction;
+    using inst_t = typename program_t::Instruction;
     using inst_lib_t = InstructionLibrary<hardware_t, inst_t>;
-    using module_label_t = size_t;
+    using module_label_t = LABEL_T;
 
-    // struct CallState {
-    //   exec_state_t exec_state;
-    //   memory_state_t mem_state;
-    // };
+    struct CallState {
+      exec_state_t exec_state;
+      memory_state_t mem_state;
+    };
 
-    struct ExecState {
+    /// Library of flow types.
+    /// e.g., WHILE, IF, ROUTINE, et cetera
+    struct FlowLib {
+      struct FlowDef {
+        std::string name;
+        std::function<void()> open_flow_fun;
+        std::function<void()> close_flow_fun;
+        std::function<void()> break_flow_fun;
+        std::string desc;
+
+        FlowDef(const std::string & _name,
+                const std::string & _desc)
+          : name(_name), desc(_desc)
+        {
+
+        }
+
+        FlowDef(const FlowDef &) = default;
+
+      };
+      std::map<std::string, size_t> flow_lib;
 
     };
+
+    /// Execution State.
+    struct ExecState {
+      emp::vector<BaseFlowInfo> flow_stack; ///< Stack of 'Flow' (read heads)
+
+      // size_t GetIP() const {}
+
+      // size_t GetMP() const {}
+    };
+
+    // struct Module {
+
+    // };
 
   private:
     Ptr<inst_lib_t> inst_lib;
 
     memory_model_t memory_model;
 
+    program_t program;
+
   public:
 
     void SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state) {
-
+      //
     }
 
   };
@@ -277,7 +422,8 @@ namespace sgp_v2 {
         // Execute the thread (outsourced to execution stepper)!
         exec_stepper.SingleExecutionStep(*this, threads[cur_thread_id].exec_state);
 
-        // TODO - do we need to adjust?
+        // TODO - is this thread dead?
+
         ++thread_order_index;
       }
       is_executing = false;

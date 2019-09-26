@@ -1,5 +1,9 @@
 #define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do this in one cpp file
+
 #include "catch.hpp"
+
+#include "tools/BitSet.h"
+
 #include "InstructionLibrary.h"
 #include "EventLibrary.h"
 #include "SignalGP_v2.h"
@@ -34,9 +38,12 @@ TEST_CASE( "Hello World", "[general]" ) {
 
 TEST_CASE( "SignalGP - v2", "[general]" ) {
   // using emp::sgp_v2; /
+
+  using label_t = emp::BitSet<8>;
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
-  using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t>;
+  using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t, label_t>;
   using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t>;
+
   emp::InstructionLibrary<signalgp_t, exec_stepper_t::inst_t> inst_lib;
   emp::EventLibrary<signalgp_t> event_lib;
   emp::Random random(2);
