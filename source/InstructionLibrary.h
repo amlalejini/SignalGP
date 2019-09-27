@@ -28,22 +28,28 @@
 
 namespace emp {
 
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  template<typename HARDWARE_T, typename INSTRUCTION_T, typename INSTRUCTION_PROPERTY_T=size_t>
   class InstructionLibrary {
 
   public:
     using hardware_t = HARDWARE_T;
     using inst_t = INSTRUCTION_T;
     using inst_fun_t = std::function<void(hardware_t &, const inst_t &)>;
+    using inst_prop_t = INSTRUCTION_PROPERTY_T;
 
     struct InstructionDef {
       std::string name;           ///< Name of this instruction.
-      inst_fun_t fun_call; ///< Function to call when instruction is executed.
+      inst_fun_t fun_call;        ///< Function to call when instruction is executed.
       std::string desc;           ///< Description of instruction.
+      std::unordered_set<inst_prop_t> properties;
       // Maybe need an instruction category?
 
-      InstructionDef(const std::string & _name, inst_fun_t _fun_call, const std::string & _desc)
-        : name(_name), fun_call(_fun_call), desc(_desc) { ; }
+      InstructionDef(const std::string & _name,
+                     inst_fun_t _fun_call,
+                     const std::string & _desc,
+                     const std::unordered_set<inst_prop_t> & _properties=std::unordered_set<inst_prop_t>())
+        : name(_name), fun_call(_fun_call), desc(_desc), properties(properties)
+      { ; }
       InstructionDef(const InstructionDef &) = default;
     };
 
@@ -88,6 +94,12 @@ namespace emp {
       if (symbol >= 'A' && symbol <= 'Z') return (size_t) (symbol - 'A' + 26);
       if (symbol >= '0' && symbol <= '9') return (size_t) (symbol - '0' + 52);
       return (size_t) 62;
+    }
+
+    /// Does instruction have a particular property?
+    bool HasProperty(size_t id, const inst_prop_t & prop) {
+      emp_assert(id < GetSize());
+      return inst_lib[id].properties.count(prop);
     }
 
     /// Is the given instruction (specified by name) in the instruction library?

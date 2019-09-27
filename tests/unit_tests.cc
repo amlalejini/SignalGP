@@ -43,14 +43,16 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
   using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t, label_t>;
   using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t>;
+  using inst_lib_t = typename exec_stepper_t::inst_lib_t;
 
-  emp::InstructionLibrary<signalgp_t, exec_stepper_t::inst_t> inst_lib;
+  inst_lib_t inst_lib;
   emp::EventLibrary<signalgp_t> event_lib;
   emp::Random random(2);
 
   std::cout << "Constructing hardware." << std::endl;
   signalgp_t hardware(&event_lib, &random);
   std::cout << "Hardware constructed." << std::endl;
+  hardware.InitExecStepper(&inst_lib);
 
   hardware.SingleProcess();
 

@@ -2,6 +2,7 @@
 #define EMP_SIGNALGP_V2_H
 
 #include <iostream>
+#include <utility>
 
 #include "base/Ptr.h"
 #include "base/vector.h"
@@ -51,56 +52,60 @@ namespace sgp_v2 {
   struct SimpleMemoryModel {
     struct SimpleMemoryState;
     using memory_state_t = SimpleMemoryState;
+    // using memory_buffer_t = std::unordered
 
+    // global memory
+    // local memory
     struct SimpleMemoryState {
 
     };
+
   };
 
   /// Base flow information
   /// - should be sufficient for basic flow types
   struct BaseFlowInfo {
-    size_t id;        ///< Flow type ID?
-    size_t ip;        ///< Instruction pointer. Which instruction is executed?
-    size_t mp;        ///< Module pointer. Which module is being executed?
+    size_t id=(size_t)-1;        ///< Flow type ID?
+    size_t ip=(size_t)-1;        ///< Instruction pointer. Which instruction is executed?
+    size_t mp=(size_t)-1;        ///< Module pointer. Which module is being executed?
 
-    size_t begin;     ///< Where does the flow begin?
-    size_t end;       ///< Where does the flow end?
+    size_t begin=(size_t)-1;     ///< Where does the flow begin?
+    size_t end=(size_t)-1;       ///< Where does the flow end?
   };
 
   // Simple program:
   // - Linear.
   // - Instructions can have tag or numeric arguments.
-  template<typename LABEL_T, typename ARGUMENT_T=int>
+  template<typename TAG_T, typename ARGUMENT_T=int>
   class SimpleProgram {
   public:
-    using label_t = LABEL_T;
+    using tag_t = TAG_T;
     using arg_t = ARGUMENT_T;
 
     struct Instruction {
       size_t id;                      ///< Instruction ID
       emp::vector<arg_t> args;
-      emp::vector<label_t> labels;
+      emp::vector<tag_t> tags;
 
       Instruction(size_t _id,
                   const emp::vector<arg_t> & _args=emp::vector<arg_t>(),
-                  const emp::vector<label_t> & _labels=emp::vector<label_t>())
-        : id(_id), args(_args), labels(_labels) { ; }
+                  const emp::vector<tag_t> & _tags=emp::vector<tag_t>())
+        : id(_id), args(_args), tags(_tags) { ; }
 
       void SetID(size_t _id) { id = _id; }
       size_t GetID() const { return id; }
 
       emp::vector<arg_t> & GetArgs() { return args; }
-      emp::vector<label_t> & GetLabels() { return labels; }
+      emp::vector<tag_t> & GetTags() { return tags; }
 
       bool operator==(const Instruction & other) const {
-        return std::tie(id, args, labels) == std::tie(other.id, other.args, other.labels);
+        return std::tie(id, args, tags) == std::tie(other.id, other.args, other.tags);
       }
 
       bool operator!=(const Instruction & other) const { return !(*this == other); }
 
       bool operator<(const Instruction & other) const {
-        return std::tie(id, args, labels) < std::tie(other.id, other.args, other.labels);
+        return std::tie(id, args, tags) < std::tie(other.id, other.args, other.tags);
       }
     };
 
@@ -147,8 +152,8 @@ namespace sgp_v2 {
     /// - No validation! We're trusting that 'id' is legit!
     void PushInst(size_t id,
                   const emp::vector<arg_t> & args=emp::vector<arg_t>(),
-                  const emp::vector<label_t> & labels=emp::vector<label_t>()) {
-      inst_seq.emplace_back(id, args, labels);
+                  const emp::vector<tag_t> & tags=emp::vector<tag_t>()) {
+      inst_seq.emplace_back(id, args, tags);
     }
 
     /// Push instruction to program by name.
@@ -156,9 +161,9 @@ namespace sgp_v2 {
     void PushInst(const InstructionLibrary<HARDWARE_T, Instruction> & ilib,
                   const std::string & name,
                   const emp::vector<arg_t> & args=emp::vector<arg_t>(),
-                  const emp::vector<label_t> & labels=emp::vector<label_t>()) {
+                  const emp::vector<tag_t> & tags=emp::vector<tag_t>()) {
       emp_assert(ilib.IsInst(name), "Uknown instruction name", name);
-      PushInst(ilib.GetID(name), args, labels);
+      PushInst(ilib.GetID(name), args, tags);
     }
 
     /// Push instruction to program.
@@ -174,85 +179,130 @@ namespace sgp_v2 {
   };
 
   // Each program type needs their own 'ExecutionStepper' to manage execution
-  template<typename MEMORY_MODEL_T, typename LABEL_T, typename INST_ARGUMENT_T=int>
+  // - knows about program structure
+  // - knows how to make programs
+  // - knows how to execute programs
+  template<typename MEMORY_MODEL_T, typename TAG_T, typename INST_ARGUMENT_T=int>
   class SimpleExecutionStepper {
   public:
     struct ExecState;
 
-    using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T, LABEL_T, INST_ARGUMENT_T>;
+    enum class InstProperty { MODULE };
+
+    using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T, TAG_T, INST_ARGUMENT_T>;
     using memory_model_t = MEMORY_MODEL_T;
     using memory_state_t = typename memory_model_t::memory_state_t;
     using exec_state_t = ExecState;
-    using program_t = SimpleProgram<LABEL_T, INST_ARGUMENT_T>;
+    using program_t = SimpleProgram<TAG_T, INST_ARGUMENT_T>;
     using hardware_t = SignalGP<exec_stepper_t>;
     using inst_t = typename program_t::Instruction;
-    using inst_lib_t = InstructionLibrary<hardware_t, inst_t>;
-    using module_label_t = LABEL_T;
-
-    struct CallState {
-      exec_state_t exec_state;
-      memory_state_t mem_state;
-    };
+    using inst_lib_t = InstructionLibrary<hardware_t, inst_t, InstProperty>;
+    using tag_t = TAG_T;
 
     /// Library of flow types.
     /// e.g., WHILE, IF, ROUTINE, et cetera
-    struct FlowLib {
-      struct FlowDef {
-        std::string name;
-        std::function<void()> open_flow_fun;
-        std::function<void()> close_flow_fun;
-        std::function<void()> break_flow_fun;
-        std::string desc;
-
-        FlowDef(const std::string & _name,
-                const std::string & _desc)
-          : name(_name), desc(_desc)
-        {
-
-        }
-
-        FlowDef(const FlowDef &) = default;
-
+    /// NOTE - I'm not sure that I'm a fan of how this is organized/named/setup.
+    enum class FlowType : size_t { BASIC, WHILE_LOOP, ROUTINE, CALL };
+    struct FlowHandler {
+      struct FlowControl {
+        using flow_control_fun_t = std::function<void(exec_state_t &)>;
+        flow_control_fun_t open_flow_fun;
+        flow_control_fun_t close_flow_fun;
+        flow_control_fun_t break_flow_fun;
       };
-      std::map<std::string, size_t> flow_lib;
+      std::map<FlowType, FlowControl> lib = { {FlowType::BASIC, FlowControl()},
+                                              {FlowType::WHILE_LOOP, FlowControl()},
+                                              {FlowType::ROUTINE, FlowControl()},
+                                              {FlowType::CALL, FlowControl()} };
 
+      FlowControl & operator[](FlowType type) {
+        emp_assert(Has(lib, type), "FlowType not recognized!");
+        return lib[type];
+      }
+
+      const FlowControl & operator[](FlowType type) const {
+        emp_assert(Has(lib, type), "FlowType not recognized!");
+        return lib[type];
+      }
+    };
+
+    struct CallState {
+      // Local memory
+      // memory!
+      // flow stack
+      emp::vector<BaseFlowInfo> flow_stack; ///< Stack of 'Flow' (read heads)
     };
 
     /// Execution State.
     struct ExecState {
-      emp::vector<BaseFlowInfo> flow_stack; ///< Stack of 'Flow' (read heads)
-
-      // size_t GetIP() const {}
-
-      // size_t GetMP() const {}
+      // CallStack
+      emp::vector<CallState> call_stack;   ///< Program call stack.
     };
 
-    // struct Module {
+    /// Module definition.
+    struct Module {
+      size_t id;      ///< Module ID. Used to call/reference module.
+      size_t begin;   ///< First instruction in module (will be executed first).
+      size_t end;     ///< Instruction pointer value this module returns (or loops back) on (1 past last instruction that is part of this module).
+      tag_t tag;    ///< Module tag. Used to call/reference module.
+      std::unordered_set<size_t> in_module; ///< instruction positions belonging to this module.
+      // todo
+    };
 
-    // };
-
-  private:
+  protected:
     Ptr<inst_lib_t> inst_lib;
+    FlowHandler flow_handler;
 
     memory_model_t memory_model;
 
     program_t program;
 
+    void SetupDefaultFlowControl() { // TODO!
+      flow_handler[FlowType::BASIC].open_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::BASIC].close_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::BASIC].break_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::WHILE_LOOP].open_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::WHILE_LOOP].close_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::WHILE_LOOP].break_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::ROUTINE].open_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::ROUTINE].close_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::ROUTINE].break_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::CALL].open_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::CALL].close_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::CALL].break_flow_fun = [](exec_state_t & exec_state) { ; };
+    }
+
   public:
+    SimpleExecutionStepper(Ptr<inst_lib_t> ilib)
+      : inst_lib(ilib),
+        flow_handler(),
+        memory_model(),
+        program()
+    {
+        // Configure default flow control
+        SetupDefaultFlowControl();
+    }
 
     void SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state) {
-      //
+      std::cout << "SingleExecutionStep!" << std::endl;
+    }
+
+    // Load program!
+    // - program = in_program
+    // - initialize program modules! ('compilation')
+    /// Set program for this hardware object.
+    /// After updating hardware's program, run 'UpdateModules'.
+    void SetProgram(const program_t & _program) {
+      program = _program;
+      UpdateModules();
+    }
+
+    void UpdateModules() {
+      std::cout << "Update modules!" << std::endl;
     }
 
   };
 
-  // class BaseSignalGP {
-  //   // virtual functions:
-  //   // - access trait
-  //   // - do memory => but how?
-  //   // - call/fork/return/terminate
-
-  // };
 
   // todo - move function implementations outside of class
   template<typename EXEC_STEPPER_T>
@@ -271,7 +321,7 @@ namespace sgp_v2 {
     using memory_model_t = typename exec_stepper_t::memory_model_t;
     using memory_state_t = typename memory_model_t::memory_state_t;
 
-    using module_label_t = typename exec_stepper_t::module_label_t;
+    using tag_t = typename exec_stepper_t::tag_t;
 
     using event_t = BaseEvent;
     using event_lib_t = EventLibrary<hardware_t>;
@@ -288,11 +338,10 @@ namespace sgp_v2 {
 
     struct ModuleDescriptor {
       size_t id;
-      module_label_t label;
+      tag_t tag;
     };
 
   protected:
-    // Ptr<const inst_lib_t> inst_lib;   /// These are the instructions this hardware knows about.
     Ptr<const event_lib_t> event_lib; /// These are the events this hardware knows about.
 
     std::deque<event_t> event_queue;
@@ -300,7 +349,7 @@ namespace sgp_v2 {
     Ptr<Random> random_ptr;
     bool random_owner;
 
-    exec_stepper_t exec_stepper;
+    Ptr<exec_stepper_t> exec_stepper;
 
     // memory_model_t memory_model;
 
@@ -312,6 +361,8 @@ namespace sgp_v2 {
     bool is_executing=false;
 
     size_t max_threads=(size_t)-1;
+
+    bool initialized=false;
 
   public:
 
@@ -326,9 +377,20 @@ namespace sgp_v2 {
 
     ~SignalGP() {
       if (random_owner) random_ptr.Delete();
+      if (initialized) {
+        exec_stepper.Delete();
+      }
+    }
+
+    /// NOTE - Also not a huge fan of this
+    template<typename... ARGS>
+    void InitExecStepper(ARGS&&... args) {
+      exec_stepper = emp::NewPtr<exec_stepper_t>(std::forward<ARGS>(args)...);
+      initialized = true;
     }
 
     // Todo - Resets
+    // todo - get execution stepper
 
     // Accessors
 
@@ -396,7 +458,7 @@ namespace sgp_v2 {
     /// Advance the hardware by a single step.
     void SingleProcess() {
       // todo - validate that program exists!
-
+      emp_assert(initialized, "SignalGP Hardware has not been properly initialized!");
       // Handle events
       while (!event_queue.empty()) {
         HandleEvent(event_queue.front());
@@ -420,7 +482,7 @@ namespace sgp_v2 {
           thread_exec_order[thread_order_index - adjust] = cur_thread_id;
         }
         // Execute the thread (outsourced to execution stepper)!
-        exec_stepper.SingleExecutionStep(*this, threads[cur_thread_id].exec_state);
+        exec_stepper->SingleExecutionStep(*this, threads[cur_thread_id].exec_state);
 
         // TODO - is this thread dead?
 
@@ -438,6 +500,9 @@ namespace sgp_v2 {
         SingleProcess();
       }
     }
+
+    // todo - call module
+    // todo - spawn thread
 
   };
 
