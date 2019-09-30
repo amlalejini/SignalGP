@@ -79,8 +79,10 @@ namespace sgp_v2 {
   template<typename TAG_T, typename ARGUMENT_T=int>
   class SimpleProgram {
   public:
+    struct Instruction;
     using tag_t = TAG_T;
     using arg_t = ARGUMENT_T;
+    using inst_t = Instruction;
 
     struct Instruction {
       size_t id;                      ///< Instruction ID
@@ -186,6 +188,7 @@ namespace sgp_v2 {
   class SimpleExecutionStepper {
   public:
     struct ExecState;
+    struct Module;
 
     enum class InstProperty { MODULE };
 
@@ -195,9 +198,11 @@ namespace sgp_v2 {
     using exec_state_t = ExecState;
     using program_t = SimpleProgram<TAG_T, INST_ARGUMENT_T>;
     using hardware_t = SignalGP<exec_stepper_t>;
-    using inst_t = typename program_t::Instruction;
+    using inst_t = typename program_t::inst_t;
     using inst_lib_t = InstructionLibrary<hardware_t, inst_t, InstProperty>;
+    using inst_prop_t = InstProperty;
     using tag_t = TAG_T;
+    using module_t = Module;
 
     /// Library of flow types.
     /// e.g., WHILE, IF, ROUTINE, et cetera
@@ -242,11 +247,23 @@ namespace sgp_v2 {
     /// Module definition.
     struct Module {
       size_t id;      ///< Module ID. Used to call/reference module.
-      size_t begin;   ///< First instruction in module (will be executed first).
-      size_t end;     ///< Instruction pointer value this module returns (or loops back) on (1 past last instruction that is part of this module).
-      tag_t tag;    ///< Module tag. Used to call/reference module.
+      size_t begin;   ///< First instruction in module (will be the module definition instruction).
+      size_t end;     ///< The last instruction in the module.
+      tag_t tag;      ///< Module tag. Used to call/reference module.
       std::unordered_set<size_t> in_module; ///< instruction positions belonging to this module.
       // todo
+
+      Module(size_t _id, size_t _begin=0, size_t _end=0, const tag_t & _tag=tag_t())
+        : id(_id), begin(_begin), end(_end), tag(_tag), in_module() { ; }
+
+      size_t GetSize() const { return in_module.size(); }
+
+      size_t GetID() const { return id; }
+
+      tag_t & GetTag() { return tag; }
+      const tag_t & GetTag() const { return tag; }
+
+      bool InModule(size_t ip) const { return Has(in_module, ip); }
     };
 
   protected:
@@ -256,6 +273,10 @@ namespace sgp_v2 {
     memory_model_t memory_model;
 
     program_t program;
+
+    emp::vector<module_t> modules;
+
+    tag_t default_module_tag;
 
     void SetupDefaultFlowControl() { // TODO!
       flow_handler[FlowType::BASIC].open_flow_fun = [](exec_state_t & exec_state) { ; };
@@ -277,10 +298,12 @@ namespace sgp_v2 {
       : inst_lib(ilib),
         flow_handler(),
         memory_model(),
-        program()
+        program(),
+        modules(),
+        default_module_tag()
     {
-        // Configure default flow control
-        SetupDefaultFlowControl();
+      // Configure default flow control
+      SetupDefaultFlowControl();
     }
 
     void SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state) {
@@ -297,15 +320,64 @@ namespace sgp_v2 {
       UpdateModules();
     }
 
-    void UpdateModules() {
-      std::cout << "Update modules!" << std::endl;
+    void SetDefaultTag(const tag_t & _tag) {
+      default_module_tag = _tag;
     }
 
+    // todo - check to see if this works
+    void UpdateModules() {
+      std::cout << "Update modules!" << std::endl;
+      // Clear out the current modules.
+      modules.clear();
+      // Do nothing if there aren't any instructions to look at.
+      if (!program.GetSize()) return;
+      // Scan program for module definitions.
+      std::unordered_set<size_t> dangling_instructions;
+      for (size_t pos = 0; pos < program.GetSize(); ++pos) {
+        inst_t & inst = program[pos];
+        // Is this a module definition?
+        if (inst_lib->HasProperty(inst.GetID(), inst_prop_t::MODULE)) {
+          // If this isn't the first module we've found, mark this position as the
+          // last position of the previous module.
+          if (modules.size()) { modules.back().end = pos; }
+          emp_assert(inst.GetTags().size(), "MODULE-defining instructions must have tag arguments to be used with this execution stepper.");
+          const size_t mod_id = modules.size(); // Module ID for new module.
+          modules.emplace_back(mod_id, ( (pos+1) < program.GetSize() ) ? pos+1 : 0, -1, inst.GetTags()[0]);
+        } else {
+          // We didn't find a new module. Track which module this instruction belongs to:
+          // - If we've found a module, add it to the current module.
+          // - If we haven't found a module, note that this instruction is dangling.
+          if (module.size()) { modules.back().in_module.emplace(pos); }
+          else { dangling_instructions.emplace(pos); }
+        }
+      }
+      // At this point, we know about all of the modules (if any).
+      // First, we need to set the end point for the last module we found.
+      if (modules.size()) {
+        // If the first module begins at the beginning of the instruction, the last
+        // module must end at the end of the program.
+        // Otherwise, the last module ends where the first module begins.
+        if (modules[0].begin == 0) modules.back().end = program.GetSize();
+        else modules.back().end = modules[0].begin - 1;
+      } else {
+        // Found no modules. Add a default module that starts at the beginning and
+        // ends at the end.
+        modules.emplace_back(0, 0, program.GetSize(), default_module_tag);
+      }
+      // Now, we need to take care of the dangling instructions.
+      // - We're going to assume the program is circular, so dangling instructions
+      //   belong to the last module we found.
+      for (size_t val : dangling_instructions) modules.back().in_module.emplace(val);
+    }
+
+    emp::vector<module_t> & GetModules() { return modules;  }
+    size_t GetNumModules() const { return module.size(); }
   };
 
 
   // todo - move function implementations outside of class
-  template<typename EXEC_STEPPER_T>
+  template<typename EXEC_STEPPER_T,
+           typename MATCHBIN_TYPE=emp::MatchBin<size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16>>>>
   class SignalGP {
   public:
     struct Thread;
@@ -313,21 +385,21 @@ namespace sgp_v2 {
 
     using exec_stepper_t = EXEC_STEPPER_T;
     using exec_state_t = typename exec_stepper_t::exec_state_t;
+    using program_t = typename exec_stepper_t::program_t;
+    using tag_t = typename exec_stepper_t::tag_t;
+    using module_t = typename exec_stepper_t::module;
+    using memory_model_t = typename exec_stepper_t::memory_model_t;
+    using memory_state_t = typename memory_model_t::memory_state_t;
+
+    using matchbin_t = MATCHBIN_TYPE;
 
     // using custom_comp_t = CUSTOM_COMPONENT_T;
 
     using hardware_t = SignalGP<exec_stepper_t>;
 
-    using memory_model_t = typename exec_stepper_t::memory_model_t;
-    using memory_state_t = typename memory_model_t::memory_state_t;
-
-    using tag_t = typename exec_stepper_t::tag_t;
-
     using event_t = BaseEvent;
     using event_lib_t = EventLibrary<hardware_t>;
 
-    // using call_state_t = CallState;
-    // using call_state_t = CallState;
     using thread_t = Thread;
 
     struct Thread {
@@ -364,6 +436,10 @@ namespace sgp_v2 {
 
     bool initialized=false;
 
+    matchbin_t matchbin;
+    bool is_matchbin_cache_dirty;
+    std::function<void()> fun_clear_matchbin_cache = [this](){ this->ResetMatchBin(); };
+
   public:
 
     SignalGP(Ptr<const event_lib_t> elib,
@@ -385,11 +461,27 @@ namespace sgp_v2 {
     /// NOTE - Also not a huge fan of this
     template<typename... ARGS>
     void InitExecStepper(ARGS&&... args) {
+      if (initialized) exec_stepper.Delete();
       exec_stepper = emp::NewPtr<exec_stepper_t>(std::forward<ARGS>(args)...);
       initialized = true;
     }
 
     // Todo - Resets
+    void ResetMatchBin() {
+      // todo!
+      matchbin.Clear();
+      is_matchbin_cache_dirty = false;
+      // TODO - reset match bin!
+      if (initialized) {
+        // NOTE - this is the only place so far that signalgp needs to know module type!
+        // - should work to get rid of this requirement!
+        emp::vector<module_t> & modules = exec_stepper_t->GetModules();
+        for (size_t i = 0; i < modules.size(); ++i) {
+          matchbin.Set(i, modules[i].GetTag(), i);
+        }
+      }
+    }
+
     // todo - get execution stepper
 
     // Accessors
@@ -423,6 +515,13 @@ namespace sgp_v2 {
 
     exec_state_t & GetCurExecState() {
       return GetCurThread().exec_state;
+    }
+
+    void SetProgram(const program_t & program) {
+      emp_assert(initialized, "Hardware must be initialized!");
+      // todo - clear the matchbin
+      exec_stepper->SetProgram(program); // TODO - finish this function!
+      // => get modules for match bin!
     }
 
     /// todo
