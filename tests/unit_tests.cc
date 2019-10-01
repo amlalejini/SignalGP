@@ -58,11 +58,9 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
 
   // Construct a program
   program_t program;
-  program.PushInst(inst_lib, "ModuleDef", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
   program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
   program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
   program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
-  program.PushInst(inst_lib, "ModuleDef", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
   program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
 
   std::cout << "Constructing hardware." << std::endl;
@@ -75,6 +73,10 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
 
   hardware.SetPrintProgramFun([](std::ostream & os) {
     os << "HI THERE" << std::endl;
+    // For each
+  });
+  hardware.SetPrintModulesFun([&hardware](std::ostream & os) {
+    hardware.GetExecStepper().PrintModules();
   });
 
   std::cout << "Loading program." << std::endl;
@@ -83,7 +85,9 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
 
   // Todo - print program to verify!
   // Todo - print modules to verify!
+  std::cout << "======= MODULES =======" << std::endl;
+  hardware.PrintModules(); std::cout << std::endl;
+  std::cout << "=======================" << std::endl;
   hardware.PrintProgram();
-
   hardware.SingleProcess();
 }

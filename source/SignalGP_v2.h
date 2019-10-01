@@ -91,6 +91,9 @@ namespace sgp_v2 {
     using arg_t = ARGUMENT_T;
     using inst_t = Instruction;
 
+    // todo => print arg fun
+    // todo => print tag fun
+
     struct Instruction {
       size_t id;                      ///< Instruction ID
       emp::vector<arg_t> args;
@@ -389,8 +392,9 @@ namespace sgp_v2 {
         // If the first module begins at the beginning of the instruction, the last
         // module must end at the end of the program.
         // Otherwise, the last module ends where the first module begins.
-        if (modules[0].begin == 0) modules.back().end = program.GetSize();
-        else modules.back().end = modules[0].begin - 1;
+        // if (modules[0].begin == 0) modules.back().end = program.GetSize();
+        // else
+        modules.back().end = (modules[0].begin - 1 > 0) ? modules[0].begin - 1 : program.GetSize();
       } else {
         // Found no modules. Add a default module that starts at the beginning and
         // ends at the end.
@@ -407,6 +411,16 @@ namespace sgp_v2 {
 
     emp::vector<module_t> & GetModules() { return modules;  }
     size_t GetNumModules() const { return modules.size(); }
+
+    void PrintModules(std::ostream & os=std::cout) const {
+      os << "Modules: {";
+      for (size_t i = 0; i < modules.size(); ++i) {
+        if (i) os << ",";
+        os << "[id: " << modules[i].id << ", begin: " << modules[i].begin << ", end: " << modules[i].end << "]";
+        os << "(" << modules[i].tag << ")"; // TODO - make this generic!
+      }
+      os << "}";
+    }
   };
 
 
@@ -436,6 +450,7 @@ namespace sgp_v2 {
     using thread_t = Thread;
 
     using fun_print_program_t = std::function<void(std::ostream &)>;
+    using fun_print_modules_t = std::function<void(std::ostream &)>;
 
     struct Thread {
       size_t id;
@@ -472,6 +487,7 @@ namespace sgp_v2 {
     bool initialized=false;
 
     fun_print_program_t fun_print_program = [](std::ostream & os) { os << "Print program function not set!"; };
+    fun_print_modules_t fun_print_modules = [](std::ostream & os) { os << "Print modules function not set!"; };
 
   public:
 
@@ -543,6 +559,8 @@ namespace sgp_v2 {
       return GetCurThread().exec_state;
     }
 
+    exec_stepper_t & GetExecStepper() { return *exec_stepper; }
+
     void SetProgram(const program_t & program) {
       emp_assert(initialized, "Hardware must be initialized!");
       // todo - clear the matchbin
@@ -552,6 +570,10 @@ namespace sgp_v2 {
 
     void SetPrintProgramFun(const fun_print_program_t & print_fun) {
       fun_print_program = print_fun;
+    }
+
+    void SetPrintModulesFun(const fun_print_modules_t & print_fun) {
+      fun_print_modules = print_fun;
     }
 
     /// todo
@@ -634,6 +656,7 @@ namespace sgp_v2 {
     // todo - spawn thread
 
     void PrintProgram(std::ostream & os=std::cout) const { fun_print_program(os); }
+    void PrintModules(std::ostream & os=std::cout) const { fun_print_modules(os); }
 
   };
 
