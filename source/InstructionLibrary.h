@@ -48,7 +48,7 @@ namespace emp {
                      inst_fun_t _fun_call,
                      const std::string & _desc,
                      const std::unordered_set<inst_prop_t> & _properties=std::unordered_set<inst_prop_t>())
-        : name(_name), fun_call(_fun_call), desc(_desc), properties(properties)
+        : name(_name), fun_call(_fun_call), desc(_desc), properties(_properties)
       { ; }
       InstructionDef(const InstructionDef &) = default;
     };
@@ -116,10 +116,11 @@ namespace emp {
     /// Add a new instruction to the instruction set.
     void AddInst(const std::string & name,
                  const inst_fun_t & fun_call,
-                 const std::string & desc="") {
+                 const std::string & desc="",
+                 const std::unordered_set<inst_prop_t> & properties=std::unordered_set<inst_prop_t>()) {
 
       const size_t id = inst_lib.size();
-      inst_lib.emplace_back(name, fun_call, desc);
+      inst_lib.emplace_back(name, fun_call, desc, properties);
       name_map[name] = id;
     }
 

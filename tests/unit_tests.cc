@@ -39,21 +39,51 @@ TEST_CASE( "Hello World", "[general]" ) {
 TEST_CASE( "SignalGP - v2", "[general]" ) {
   // using emp::sgp_v2; /
 
-  using label_t = emp::BitSet<8>;
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
-  using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t, label_t>;
+  using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t>;
+  using tag_t = typename exec_stepper_t::tag_t;
   using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t>;
   using inst_lib_t = typename exec_stepper_t::inst_lib_t;
+  using inst_t = typename exec_stepper_t::inst_t;
+  using inst_prop_t = typename exec_stepper_t::inst_prop_t;
+  using program_t = typename exec_stepper_t::program_t; // SimpleProgram<TAG_T, INST_ARGUMENT_T>
 
   inst_lib_t inst_lib;
   emp::EventLibrary<signalgp_t> event_lib;
   emp::Random random(2);
 
+  // Add some instructions to the instruction library.
+  inst_lib.AddInst("Nop", [](signalgp_t & hw, const inst_t & inst) { ; }, "No operation!");
+  inst_lib.AddInst("ModuleDef", [](signalgp_t & hw, const inst_t & inst) { ; }, "Module definition", {inst_prop_t::MODULE});
+
+  // Construct a program
+  program_t program;
+  program.PushInst(inst_lib, "ModuleDef", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "ModuleDef", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+
   std::cout << "Constructing hardware." << std::endl;
   signalgp_t hardware(&event_lib, &random);
-  std::cout << "Hardware constructed." << std::endl;
-  hardware.InitExecStepper(&inst_lib);
+  std::cout << "=> Hardware constructed." << std::endl;
+
+  std::cout << "Initializing execution stepper." << std::endl;
+  hardware.InitExecStepper(&inst_lib, &random);
+  std::cout << "=> Execution stepper initialized." << std::endl;
+
+  hardware.SetPrintProgramFun([](std::ostream & os) {
+    os << "HI THERE" << std::endl;
+  });
+
+  std::cout << "Loading program." << std::endl;
+  hardware.SetProgram(program);
+  std::cout << "=> Program loaded." << std::endl;
+
+  // Todo - print program to verify!
+  // Todo - print modules to verify!
+  hardware.PrintProgram();
 
   hardware.SingleProcess();
-
 }

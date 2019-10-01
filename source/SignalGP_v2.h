@@ -7,6 +7,8 @@
 #include "base/Ptr.h"
 #include "base/vector.h"
 #include "tools/Random.h"
+#include "tools/MatchBin.h"
+#include "tools/matchbin_utils.h"
 
 #include "EventLibrary.h"
 #include "InstructionLibrary.h"
@@ -35,6 +37,11 @@
 //    - Custom module (i.e., trait)
 //    - Memory module
 //    - Program module
+
+// TODOS
+// - [ ] break this file up
+// - [ ] clean up matchbin handling
+// - [ ] reconcile random num gen ownership
 
 namespace emp {
 namespace sgp_v2 {
@@ -159,8 +166,8 @@ namespace sgp_v2 {
     }
 
     /// Push instruction to program by name.
-    template<typename HARDWARE_T>
-    void PushInst(const InstructionLibrary<HARDWARE_T, Instruction> & ilib,
+    template<typename HARDWARE_T, typename INST_PROPERTY_T>
+    void PushInst(const InstructionLibrary<HARDWARE_T, Instruction, INST_PROPERTY_T> & ilib,
                   const std::string & name,
                   const emp::vector<arg_t> & args=emp::vector<arg_t>(),
                   const emp::vector<tag_t> & tags=emp::vector<tag_t>()) {
@@ -171,9 +178,9 @@ namespace sgp_v2 {
     /// Push instruction to program.
     void PushInst(const Instruction & inst) { inst_seq.emplace_back(inst); }
 
-    /// Is the given instruction vaid?
-    template<typename HARDWARE_T>
-    bool IsValidInst(const InstructionLibrary<HARDWARE_T, Instruction> & ilib,
+    /// Is the given instruction valid?
+    template<typename HARDWARE_T, typename INST_PROPERTY_T>
+    bool IsValidInst(const InstructionLibrary<HARDWARE_T, Instruction, INST_PROPERTY_T> & ilib,
                      const Instruction & inst) {
       return inst.id < ilib.GetSize();
     }
@@ -184,7 +191,11 @@ namespace sgp_v2 {
   // - knows about program structure
   // - knows how to make programs
   // - knows how to execute programs
-  template<typename MEMORY_MODEL_T, typename TAG_T, typename INST_ARGUMENT_T=int>
+  template<typename MEMORY_MODEL_T,
+           typename TAG_T=emp::BitSet<16>,
+           typename INST_ARGUMENT_T=int,
+           typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>
+           >
   class SimpleExecutionStepper {
   public:
     struct ExecState;
@@ -192,7 +203,7 @@ namespace sgp_v2 {
 
     enum class InstProperty { MODULE };
 
-    using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T, TAG_T, INST_ARGUMENT_T>;
+    using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T, TAG_T, INST_ARGUMENT_T, MATCHBIN_T>;
     using memory_model_t = MEMORY_MODEL_T;
     using memory_state_t = typename memory_model_t::memory_state_t;
     using exec_state_t = ExecState;
@@ -203,6 +214,7 @@ namespace sgp_v2 {
     using inst_prop_t = InstProperty;
     using tag_t = TAG_T;
     using module_t = Module;
+    using matchbin_t = MATCHBIN_T;
 
     /// Library of flow types.
     /// e.g., WHILE, IF, ROUTINE, et cetera
@@ -278,6 +290,12 @@ namespace sgp_v2 {
 
     tag_t default_module_tag;
 
+    Ptr<Random> random_ptr;         // TODO - does signalgp need a random number generator anymore?
+
+    matchbin_t matchbin;
+    bool is_matchbin_cache_dirty;
+    std::function<void()> fun_clear_matchbin_cache = [this](){ this->ResetMatchBin(); };
+
     void SetupDefaultFlowControl() { // TODO!
       flow_handler[FlowType::BASIC].open_flow_fun = [](exec_state_t & exec_state) { ; };
       flow_handler[FlowType::BASIC].close_flow_fun = [](exec_state_t & exec_state) { ; };
@@ -294,16 +312,30 @@ namespace sgp_v2 {
     }
 
   public:
-    SimpleExecutionStepper(Ptr<inst_lib_t> ilib)
+    SimpleExecutionStepper(Ptr<inst_lib_t> ilib,
+                           Ptr<Random> rnd)
       : inst_lib(ilib),
         flow_handler(),
         memory_model(),
         program(),
         modules(),
-        default_module_tag()
+        default_module_tag(),
+        random_ptr(rnd),
+        matchbin(rnd ? *rnd : *emp::NewPtr<emp::Random>()),
+        is_matchbin_cache_dirty(true)
     {
       // Configure default flow control
       SetupDefaultFlowControl();
+    }
+
+    void ResetMatchBin() {
+      // todo!
+      matchbin.Clear();
+      is_matchbin_cache_dirty = false;
+      // TODO - reset match bin!
+      for (size_t i = 0; i < modules.size(); ++i) {
+        matchbin.Set(i, modules[i].GetTag(), i);
+      }
     }
 
     void SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state) {
@@ -347,7 +379,7 @@ namespace sgp_v2 {
           // We didn't find a new module. Track which module this instruction belongs to:
           // - If we've found a module, add it to the current module.
           // - If we haven't found a module, note that this instruction is dangling.
-          if (module.size()) { modules.back().in_module.emplace(pos); }
+          if (modules.size()) { modules.back().in_module.emplace(pos); }
           else { dangling_instructions.emplace(pos); }
         }
       }
@@ -368,16 +400,18 @@ namespace sgp_v2 {
       // - We're going to assume the program is circular, so dangling instructions
       //   belong to the last module we found.
       for (size_t val : dangling_instructions) modules.back().in_module.emplace(val);
+
+      // Reset matchbin
+      ResetMatchBin();
     }
 
     emp::vector<module_t> & GetModules() { return modules;  }
-    size_t GetNumModules() const { return module.size(); }
+    size_t GetNumModules() const { return modules.size(); }
   };
 
 
   // todo - move function implementations outside of class
-  template<typename EXEC_STEPPER_T,
-           typename MATCHBIN_TYPE=emp::MatchBin<size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16>>>>
+  template<typename EXEC_STEPPER_T>
   class SignalGP {
   public:
     struct Thread;
@@ -387,11 +421,10 @@ namespace sgp_v2 {
     using exec_state_t = typename exec_stepper_t::exec_state_t;
     using program_t = typename exec_stepper_t::program_t;
     using tag_t = typename exec_stepper_t::tag_t;
-    using module_t = typename exec_stepper_t::module;
+    using module_t = typename exec_stepper_t::module_t;
     using memory_model_t = typename exec_stepper_t::memory_model_t;
     using memory_state_t = typename memory_model_t::memory_state_t;
-
-    using matchbin_t = MATCHBIN_TYPE;
+    using matchbin_t = typename exec_stepper_t::matchbin_t;
 
     // using custom_comp_t = CUSTOM_COMPONENT_T;
 
@@ -401,6 +434,8 @@ namespace sgp_v2 {
     using event_lib_t = EventLibrary<hardware_t>;
 
     using thread_t = Thread;
+
+    using fun_print_program_t = std::function<void(std::ostream &)>;
 
     struct Thread {
       size_t id;
@@ -418,7 +453,7 @@ namespace sgp_v2 {
 
     std::deque<event_t> event_queue;
 
-    Ptr<Random> random_ptr;
+    Ptr<Random> random_ptr;         // TODO - does signalgp need a random number generator anymore?
     bool random_owner;
 
     Ptr<exec_stepper_t> exec_stepper;
@@ -436,16 +471,15 @@ namespace sgp_v2 {
 
     bool initialized=false;
 
-    matchbin_t matchbin;
-    bool is_matchbin_cache_dirty;
-    std::function<void()> fun_clear_matchbin_cache = [this](){ this->ResetMatchBin(); };
+    fun_print_program_t fun_print_program = [](std::ostream & os) { os << "Print program function not set!"; };
 
   public:
 
     SignalGP(Ptr<const event_lib_t> elib,
              Ptr<Random> rnd=nullptr)
       : event_lib(elib),
-        random_ptr(rnd), random_owner(false)
+        random_ptr(rnd),
+        random_owner(false)
     {
       // If no random provided, create one.
       if (!rnd) NewRandom();
@@ -469,16 +503,8 @@ namespace sgp_v2 {
     // Todo - Resets
     void ResetMatchBin() {
       // todo!
-      matchbin.Clear();
-      is_matchbin_cache_dirty = false;
-      // TODO - reset match bin!
       if (initialized) {
-        // NOTE - this is the only place so far that signalgp needs to know module type!
-        // - should work to get rid of this requirement!
-        emp::vector<module_t> & modules = exec_stepper_t->GetModules();
-        for (size_t i = 0; i < modules.size(); ++i) {
-          matchbin.Set(i, modules[i].GetTag(), i);
-        }
+        exec_stepper->ResetMatchBin();
       }
     }
 
@@ -522,6 +548,10 @@ namespace sgp_v2 {
       // todo - clear the matchbin
       exec_stepper->SetProgram(program); // TODO - finish this function!
       // => get modules for match bin!
+    }
+
+    void SetPrintProgramFun(const fun_print_program_t & print_fun) {
+      fun_print_program = print_fun;
     }
 
     /// todo
@@ -602,6 +632,8 @@ namespace sgp_v2 {
 
     // todo - call module
     // todo - spawn thread
+
+    void PrintProgram(std::ostream & os=std::cout) const { fun_print_program(os); }
 
   };
 
