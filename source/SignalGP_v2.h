@@ -412,6 +412,8 @@ namespace sgp_v2 {
     emp::vector<module_t> & GetModules() { return modules;  }
     size_t GetNumModules() const { return modules.size(); }
 
+    program_t & GetProgram() { return program; }
+
     void PrintModules(std::ostream & os=std::cout) const {
       os << "Modules: {";
       for (size_t i = 0; i < modules.size(); ++i) {
@@ -557,6 +559,11 @@ namespace sgp_v2 {
 
     exec_state_t & GetCurExecState() {
       return GetCurThread().exec_state;
+    }
+
+    program_t & GetProgram() {
+      emp_assert(initialized, "Hardware must be initialized!");
+      return exec_stepper->GetProgram();
     }
 
     exec_stepper_t & GetExecStepper() { return *exec_stepper; }

@@ -71,8 +71,28 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
   hardware.InitExecStepper(&inst_lib, &random);
   std::cout << "=> Execution stepper initialized." << std::endl;
 
-  hardware.SetPrintProgramFun([](std::ostream & os) {
-    os << "HI THERE" << std::endl;
+  hardware.SetPrintProgramFun([&hardware, &inst_lib](std::ostream & os) {
+    program_t & program = hardware.GetProgram();
+    for (size_t i = 0; i < program.GetSize(); ++i) {
+      inst_t & inst = program[i];
+      // Name[tags](args)
+      os << inst_lib.GetName(inst.id);
+      os << "[";
+      for (size_t ti = 0; ti < inst.tags.size(); ++ti) {
+        if (ti) os << ",";
+        os << inst.tags[ti];
+      }
+      os << "](";
+      for (size_t ai = 0; ai < inst.args.size(); ++ai) {
+        if (ai) os << ",";
+        os << inst.args[ai];
+      }
+      os << ")\n";
+    }
+    //
+    // id
+    // args
+    // tags
     // For each
   });
   hardware.SetPrintModulesFun([&hardware](std::ostream & os) {
@@ -88,6 +108,8 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
   std::cout << "======= MODULES =======" << std::endl;
   hardware.PrintModules(); std::cout << std::endl;
   std::cout << "=======================" << std::endl;
+  std::cout << "======= PROGRAMS =======" << std::endl;
   hardware.PrintProgram();
+  std::cout << "========================" << std::endl;
   hardware.SingleProcess();
 }
