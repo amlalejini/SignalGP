@@ -89,11 +89,6 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
       }
       os << ")\n";
     }
-    //
-    // id
-    // args
-    // tags
-    // For each
   });
   hardware.SetPrintModulesFun([&hardware](std::ostream & os) {
     hardware.GetExecStepper().PrintModules();

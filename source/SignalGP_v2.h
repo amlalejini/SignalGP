@@ -56,16 +56,40 @@ namespace sgp_v2 {
   };
 
 
-  struct SimpleMemoryModel {
+  // Demonstrative memory model based on original version of SignalGP.
+  class SimpleMemoryModel {
+  public:
     struct SimpleMemoryState;
     using memory_state_t = SimpleMemoryState;
     // using memory_buffer_t = std::unordered
-
+    using mem_buffer_t = std::unordered_map<int, double>;
     // global memory
     // local memory
     struct SimpleMemoryState {
+      mem_buffer_t working_mem;      // Single buffer!
+      mem_buffer_t input_mem;
+      mem_buffer_t output_mem;
+      // NOTE - memory state does not own this pointer!
+      Ptr<mem_buffer_t> global_mem_ptr;   // Check with others that this is a somewhat safe thing to do...
 
+      SimpleMemoryState(const mem_buffer_t & w=mem_buffer_t(),
+                        const mem_buffer_t & i=mem_buffer_t(),
+                        const mem_buffer_t & o=mem_buffer_t(),
+                        Ptr<mem_buffer_t> g=nullptr)
+        : working_mem(w), input_mem(i), output_mem(o), global_mem_ptr(g) { ; }
+      SimpleMemoryState(const SimpleMemoryState &) = default;
+      SimpleMemoryState(SimpleMemoryState &&) = default;
     };
+
+  protected:
+    mem_buffer_t global_mem=mem_buffer_t();
+
+  public:
+
+    SimpleMemoryState CreateMemoryState(const mem_buffer_t & working=mem_buffer_t(),
+                                        const mem_buffer_t & input=mem_buffer_t(),
+                                        const mem_buffer_t & output=mem_buffer_t())
+    { return {working, input, output, &global_mem}; }
 
   };
 
@@ -250,6 +274,7 @@ namespace sgp_v2 {
       // Local memory
       // memory!
       // flow stack
+      memory_state_t memory;
       emp::vector<BaseFlowInfo> flow_stack; ///< Stack of 'Flow' (read heads)
     };
 
@@ -455,9 +480,11 @@ namespace sgp_v2 {
     using fun_print_modules_t = std::function<void(std::ostream &)>;
 
     struct Thread {
-      size_t id;
       // label?
       exec_state_t exec_state;
+
+      Thread(const exec_state_t & _exec_state=exec_state_t())
+        : exec_state(_exec_state) { ; }
     };
 
     struct ModuleDescriptor {
@@ -477,14 +504,17 @@ namespace sgp_v2 {
 
     // memory_model_t memory_model;
 
+    // Thread management
+    size_t max_threads=64;
     emp::vector<thread_t> threads;
+    emp::vector<size_t> active_threads;
+    emp::vector<size_t> unused_threads;
+    std::deque<size_t> pending_threads;
 
-    emp::vector<size_t> thread_exec_order;
-    emp::vector<size_t> pending_threads;
+    // emp::vector<size_t> thread_exec_order;
+    // emp::vector<size_t> pending_threads;
     size_t cur_thread_id=(size_t)-1;
     bool is_executing=false;
-
-    size_t max_threads=(size_t)-1;
 
     bool initialized=false;
 
@@ -497,10 +527,15 @@ namespace sgp_v2 {
              Ptr<Random> rnd=nullptr)
       : event_lib(elib),
         random_ptr(rnd),
-        random_owner(false)
+        random_owner(false),
+        threads(max_threads), active_threads(), unused_threads(max_threads), pending_threads()
     {
       // If no random provided, create one.
       if (!rnd) NewRandom();
+      // Set all threads to unused.
+      for (int i = unused_threads.size() - 1; i > 0; --i) {
+        unused_threads[i] = i;
+      }
     }
 
     ~SignalGP() {
@@ -511,6 +546,9 @@ namespace sgp_v2 {
     }
 
     /// NOTE - Also not a huge fan of this
+    // Do we want execution steppers to have a setup funtion that we pass SignalGP
+    // hardware to and the stepper will wire things up to the hardware (e.g., on
+    // thread creation)?
     template<typename... ARGS>
     void InitExecStepper(ARGS&&... args) {
       if (initialized) exec_stepper.Delete();
@@ -583,8 +621,70 @@ namespace sgp_v2 {
       fun_print_modules = print_fun;
     }
 
-    /// todo
-    void SetMaxThreads(size_t n) { ; }
+    /// TODO - TEST => PULLED FROM ORIGINAL SIGNALGP
+    // Warning: If you decrease max threads, you may kill actively running threads.
+    // Warning: If you decrease max threads
+    void SetMaxThreads(size_t n) {
+      emp_assert(n, "Max thread count must be greater than 0.");
+      emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
+      // (1) Resize threads to new max thread count.
+      threads.resize(n);
+      if (n > max_threads) {
+        // Increase total available threads. Add new threads to inactive threads
+        // vector.
+        for (size_t i = max_threads; i < n; ++i) {
+          unused_threads.insert(unused_threads.begin(), i);
+        }
+      } else if (n < max_threads) {
+        // Decreasing total threads, adjust active and inactive threads (maintaining
+        // relative ordering in each).
+
+        // (1) Fix active threads (maintaining relative ordering).
+        size_t active_idx = 0;
+        size_t active_cnt = active_threads.size();
+        size_t active_adjust = 0;
+        while (active_idx < active_cnt) {
+          size_t thread_id = active_threads[active_idx];
+          if (thread_id >= n) { // Do we need to eliminate this thread id from active threads?
+            // If yes, set to -1 and increment adjust.
+            active_threads[active_idx - active_adjust] = (size_t)-1;
+            ++active_adjust;
+          } else if (active_adjust) { // Still valid thread ID, so do we need to defragment?
+            active_threads[active_idx] = (size_t)-1;
+            active_threads[active_idx - active_adjust] = thread_id;
+          }
+          ++active_idx;
+        }
+        active_threads.resize(active_cnt - active_adjust);
+
+        // (2) Fix inactive threads (maintain relative ordering).
+        size_t unused_idx = 0;
+        size_t unused_cnt = unused_threads.size();
+        size_t unused_adjust = 0;
+        while (unused_idx < unused_cnt) {
+          size_t thread_id = unused_threads[unused_idx];
+          if (thread_id >= n) { // Do we need to eliminate this thread id from inactive cores?
+            // If yes, set to -1 and increment adjust.
+            unused_threads[unused_idx - unused_adjust] = (size_t)-1;
+            ++unused_adjust;
+          } else if (unused_adjust) { // Still valid thread ID, so do we need to defragment?
+            unused_threads[unused_idx] = (size_t)-1;
+            unused_threads[unused_idx - unused_adjust] = thread_id;
+          }
+          ++unused_idx;
+        }
+        unused_threads.resize(unused_cnt - unused_adjust);
+
+        // (3) Fix pending threads (maintain relative ordering).
+        std::deque<size_t> fixed_pending;
+        for (size_t i = 0; i < pending_threads.size(); ++i) {
+          if (pending_threads[i] < n) fixed_pending.emplace_back(pending_threads[i]);
+        }
+        pending_threads = fixed_pending;
+      }
+
+      max_threads = n; // update max threads
+    }
 
     /// ...
     void NewRandom(int seed=-1) {
@@ -600,6 +700,21 @@ namespace sgp_v2 {
     // thread_t & SpawnThread() {
     //   ;
     // }
+        // todo - spawn thread
+
+    void SpawnThread(size_t module_id) {
+      if (threads.size() >= max_threads) return; // If threads maxed out, don't spawn a new thread.
+      // const size_t thread_id = threads.size(); // Where will this thread end up in thread vector?
+      // threads.emplace_back(thread_t()); // Create an empty thread
+
+      // //
+
+      // // if hardware is executing, add thread to pending threads
+      // if (is_executing) { pending_threads.emplace_back(thread_id); }
+      // else { pending_threads.emplace_back(thread_id); }
+
+
+    }
 
     /// Handle an event (on this hardware) now!.
     void HandleEvent(const event_t & event) { event_lib->HandleEvent(*this, event); }
@@ -617,39 +732,52 @@ namespace sgp_v2 {
     void SingleProcess() {
       // todo - validate that program exists!
       emp_assert(initialized, "SignalGP Hardware has not been properly initialized!");
+
       // Handle events
       while (!event_queue.empty()) {
         HandleEvent(event_queue.front());
         event_queue.pop_front();
       }
+
       // Distribute one unit of computational time to each thread.
       is_executing = true;
-      size_t thread_cnt = threads.size();
+      size_t active_thread_id = 0;
+      size_t thread_cnt = active_threads.size();
       size_t adjust = 0;
-      emp_assert(thread_cnt == thread_exec_order.size()); // Number of threads should match size of thread execution order
-
-      size_t thread_order_index = 0;
-      while (thread_order_index < thread_cnt) {
+      // std::cout << "Thread count: " << thread_cnt << std::endl;
+      // Run each active thread.
+      while (active_thread_id < thread_cnt) {
         // Set the current thread to the thread ID we want to execute.
-        cur_thread_id = thread_exec_order[thread_order_index];
+        cur_thread_id = active_threads[active_thread_id];
         // Do we need to move the current core over in the execution order to make
         // our order tracker contiguous?
         if (adjust) {
           // If we need to adjust, clear out current position, move cur thread ID up by adjust.
-          thread_exec_order[thread_order_index] = (size_t)-1;
-          thread_exec_order[thread_order_index - adjust] = cur_thread_id;
+          active_threads[active_thread_id] = (size_t)-1;
+          active_threads[active_thread_id - adjust] = cur_thread_id;
         }
         // Execute the thread (outsourced to execution stepper)!
         exec_stepper->SingleExecutionStep(*this, threads[cur_thread_id].exec_state);
 
         // TODO - is this thread dead?
-
-        ++thread_order_index;
+        if (false) {
+          active_threads[active_thread_id - adjust] = (size_t)-1;
+          unused_threads.emplace_back(cur_thread_id);
+          ++adjust;
+        }
+        ++active_thread_id;
       }
+
+      // No longer executing.
       is_executing = false;
-      thread_exec_order.resize(thread_cnt - adjust);
+      // Update execution stack size to be accurate.
+      active_threads.resize(thread_cnt - adjust);
       // todo - spawn any new threads
-      cur_thread_id = (size_t)-1;
+      while (pending_threads.size()) {
+        active_threads.emplace_back(pending_threads.front());
+        pending_threads.pop_front();
+      }
+      cur_thread_id = (size_t)-1; // Update current thread (to be nonsense while not executing)
     }
 
     /// Advance hardware by some arbitrary number of steps.
@@ -660,7 +788,6 @@ namespace sgp_v2 {
     }
 
     // todo - call module
-    // todo - spawn thread
 
     void PrintProgram(std::ostream & os=std::cout) const { fun_print_program(os); }
     void PrintModules(std::ostream & os=std::cout) const { fun_print_modules(os); }
