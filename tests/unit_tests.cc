@@ -6,7 +6,9 @@
 
 #include "InstructionLibrary.h"
 #include "EventLibrary.h"
-#include "SignalGP_v2.h"
+#include "SGP-V2/SignalGP.h"
+#include "SGP-V2/MemoryModel.h"
+#include "SGP-V2/ExecutionStepper.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
