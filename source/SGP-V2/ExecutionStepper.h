@@ -18,21 +18,11 @@
 
 namespace emp { namespace sgp_v2 {
 
-  /// Base flow information
-  /// - should be sufficient for basic flow types
-  struct BaseFlowInfo {
-    size_t id=(size_t)-1;        ///< Flow type ID?
-    size_t ip=(size_t)-1;        ///< Instruction pointer. Which instruction is executed?
-    size_t mp=(size_t)-1;        ///< Module pointer. Which module is being executed?
-
-    size_t begin=(size_t)-1;     ///< Where does the flow begin?
-    size_t end=(size_t)-1;       ///< Where does the flow end?
-  };
-
   // Each program type needs their own 'ExecutionStepper' to manage execution
   // - knows about program structure
   // - knows how to make programs
   // - knows how to execute programs
+  // TODO - turn everything into configurable lambdas?
   template<typename MEMORY_MODEL_T,
            typename TAG_T=emp::BitSet<16>,
            typename INST_ARGUMENT_T=int,
@@ -46,18 +36,24 @@ namespace emp { namespace sgp_v2 {
     enum class InstProperty { MODULE };
 
     using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T, TAG_T, INST_ARGUMENT_T, MATCHBIN_T>;
-    using memory_model_t = MEMORY_MODEL_T;
-    using memory_state_t = typename memory_model_t::memory_state_t;
     using exec_state_t = ExecState;
-    using program_t = SimpleProgram<TAG_T, INST_ARGUMENT_T>;
-    using hardware_t = SignalGP<exec_stepper_t>;
-    using inst_t = typename program_t::inst_t;
-    using inst_lib_t = InstructionLibrary<hardware_t, inst_t, InstProperty>;
-    using inst_prop_t = InstProperty;
+
     using tag_t = TAG_T;
+    using arg_t = INST_ARGUMENT_T;
     using module_t = Module;
     using matchbin_t = MATCHBIN_T;
+
+    using memory_model_t = MEMORY_MODEL_T;
+    using memory_state_t = typename memory_model_t::memory_state_t;
+
+    using program_t = SimpleProgram<tag_t, arg_t>;
+
+    using hardware_t = SignalGP<exec_stepper_t>;
     using thread_t = typename hardware_t::thread_t;
+
+    using inst_t = typename program_t::inst_t;
+    using inst_prop_t = InstProperty;
+    using inst_lib_t = InstructionLibrary<hardware_t, inst_t, inst_prop_t>;
 
     /// Library of flow types.
     /// e.g., WHILE, IF, ROUTINE, et cetera
@@ -84,6 +80,30 @@ namespace emp { namespace sgp_v2 {
         emp_assert(Has(lib, type), "FlowType not recognized!");
         return lib[type];
       }
+
+      std::string FlowTypeToString(FlowType type) const {
+        switch (type) {
+          case FlowType::BASIC: return "BASIC";
+          case FlowType::WHILE_LOOP: return "WHILE_LOOP";
+          case FlowType::ROUTINE: return "ROUTINE";
+          case FlowType::CALL: return "CALL";
+          default: return "UNKNOWN";
+        }
+      }
+    };
+
+    /// Base flow information
+    struct FlowInfo {
+      FlowType type;        ///< Flow type ID?
+      size_t mp;        ///< Module pointer. Which module is being executed?
+      size_t ip;        ///< Instruction pointer. Which instruction is executed?
+
+      size_t begin;     ///< Where does the flow begin?
+      size_t end;       ///< Where does the flow end?
+
+      FlowInfo(FlowType _type, size_t _mp=(size_t)-1, size_t _ip=(size_t)-1,
+               size_t _begin=(size_t)-1, size_t _end=(size_t)-1)
+        : type(_type), mp(_mp), ip(_ip), begin(_begin), end(_end) { ; }
     };
 
     struct CallState {
@@ -91,7 +111,10 @@ namespace emp { namespace sgp_v2 {
       // memory!
       // flow stack
       memory_state_t memory;
-      emp::vector<BaseFlowInfo> flow_stack; ///< Stack of 'Flow' (read heads)
+      emp::vector<FlowInfo> flow_stack; ///< Stack of 'Flow' (read heads)
+
+      CallState(const memory_state_t & _mem=memory_state_t())
+        : memory(_mem), flow_stack() { ; }
     };
 
     /// Execution State.
@@ -191,6 +214,7 @@ namespace emp { namespace sgp_v2 {
     }
 
     void InitThread(thread_t & thread, size_t module_id) {
+      emp_assert(module_id < modules.size(), "Invalid module ID.");
       // Initialize new thread!
       std::cout << "InitThread!" << std::endl;
       exec_state_t & state = thread.GetExecState();
@@ -198,11 +222,22 @@ namespace emp { namespace sgp_v2 {
       // (1) create fresh memory state
       state.call_stack.emplace_back(memory_model.CreateMemoryState());
       // (2) Set exec state up
+      CallState & call_state = state.call_stack.back();
+      // flow type, ip, mp, begin, end
+      module_t & module_info = modules[module_id];
+      call_state.flow_stack.emplace_back(FlowType::CALL, module_info.begin, module_id, module_info.begin, module_info.end);
     }
 
-    // void InitThread(thread_t & thread, size_t module_id, const memory_state_t & mem_state) {
-    //   // pass
-    // }
+    // Find best module given a tag.
+    emp::vector<size_t> FindModuleMatch(const tag_t & tag, size_t n=1) {
+      // Find n matches.
+      if(is_matchbin_cache_dirty){
+        ResetMatchBin();
+      }
+      // no need to transform to values because we're using
+      // matchbin uids equivalent to function uids
+      return matchbin.Match(tag, n);
+    }
 
     // Load program!
     // - program = in_program
@@ -273,15 +308,42 @@ namespace emp { namespace sgp_v2 {
 
     program_t & GetProgram() { return program; }
 
+    memory_model_t & GetMemoryModel() { return memory_model; }
+
     void PrintModules(std::ostream & os=std::cout) const {
-      os << "Modules: {";
+      os << "Modules: [";
       for (size_t i = 0; i < modules.size(); ++i) {
         if (i) os << ",";
-        os << "[id: " << modules[i].id << ", begin: " << modules[i].begin << ", end: " << modules[i].end << "]";
-        os << "(" << modules[i].tag << ")"; // TODO - make this generic!
+        os << "{id:" << modules[i].id << ", begin:" << modules[i].begin << ", end:" << modules[i].end << ", tag:" << modules[i].tag << "}";
       }
-      os << "}";
+      os << "]";
     }
+
+    void PrintExecutionState(const exec_state_t & state, std::ostream & os=std::cout) const {
+      // -- Call stack --
+      // todo
+      os << "Call stack (" << state.call_stack.size() << "):\n";
+      os << "------ TOP ------\n";
+      for (auto it = state.call_stack.rbegin(); it != state.call_stack.rend(); ++it) {
+        const CallState & call_state = *it;
+        if (call_state.flow_stack.size()) {
+          const FlowInfo & top_flow = call_state.flow_stack.back();
+          // MP, IP, ...
+          // type, mp, ip, begin, end
+          // todo - print full flow stack!
+          os << "Call: {mp:" << top_flow.mp
+             << ", ip:" << top_flow.ip
+             << ", flow-begin:" << top_flow.begin
+             << ", flow-end:" << top_flow.end
+             << ", flow-type:" << flow_handler.FlowTypeToString(top_flow.type)
+             << "}\n";
+        }
+        memory_model.PrintMemoryState(call_state.memory, os);
+        os << "---\n";
+      }
+      os << "-----------------";
+    }
+
   };
 
 }}

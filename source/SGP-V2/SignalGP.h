@@ -19,10 +19,15 @@ namespace emp { namespace sgp_v2 {
     size_t id;
 
     size_t GetID() const { return id; }
+
+    void Print(std::ostream & os) const {
+      os << "{id:" << GetID() << "}";
+    }
   };
 
 
   // todo - move function implementations outside of class
+  // todo - make signalgp hardware not awful (& safe) to make copies of
   template<typename EXEC_STEPPER_T>
   class SignalGP {
   public:
@@ -47,8 +52,11 @@ namespace emp { namespace sgp_v2 {
 
     using thread_t = Thread;
 
-    using fun_print_program_t = std::function<void(std::ostream &)>;
-    using fun_print_modules_t = std::function<void(std::ostream &)>;
+    // using fun_print_program_t = std::function<void(std::ostream &)>;
+    // using fun_print_modules_t = std::function<void(std::ostream &)>;
+    // using fun_print_hardware_state_t = std::function<void(std::ostream &)>;
+    using fun_print_event_t = std::function<void(const event_t &, std::ostream &)>;
+    using fun_print_execution_state_t = std::function<void(const exec_state_t &, std::ostream &)>;
 
     struct Thread {
       // label?
@@ -98,8 +106,13 @@ namespace emp { namespace sgp_v2 {
 
     bool initialized=false;
 
-    fun_print_program_t fun_print_program = [](std::ostream & os) { os << "Print program function not set!"; };
-    fun_print_modules_t fun_print_modules = [](std::ostream & os) { os << "Print modules function not set!"; };
+    std::function<void(std::ostream &)> fun_print_program = [](std::ostream & os) { return; };
+    std::function<void(std::ostream &)> fun_print_modules = [](std::ostream & os) { return; };
+    std::function<void(std::ostream &)> fun_print_hardware_state = [](std::ostream & os) { return; };
+    std::function<void(std::ostream &)> fun_print_exec_stepper_state = [](std::ostream & os) { return; };
+    fun_print_execution_state_t fun_print_execution_state = [](const exec_state_t & state, std::ostream & os) { return; };
+    fun_print_event_t fun_print_event = [](const event_t & event, std::ostream & os) { event.Print(os); };
+
 
   public:
 
@@ -129,6 +142,8 @@ namespace emp { namespace sgp_v2 {
     // Do we want execution steppers to have a setup funtion that we pass SignalGP
     // hardware to and the stepper will wire things up to the hardware (e.g., on
     // thread creation)?
+    // Should we pass reference to hardware to execution stepper?
+    //  - would allow execution stepper to hook up to lambdas
     template<typename... ARGS>
     void InitExecStepper(ARGS&&... args) {
       if (initialized) exec_stepper.Delete();
@@ -193,18 +208,34 @@ namespace emp { namespace sgp_v2 {
       // => get modules for match bin!
     }
 
-    void SetPrintProgramFun(const fun_print_program_t & print_fun) {
+    void SetPrintProgramFun(const std::function<void(std::ostream &)> & print_fun) {
       fun_print_program = print_fun;
     }
 
-    void SetPrintModulesFun(const fun_print_modules_t & print_fun) {
+    void SetPrintModulesFun(const std::function<void(std::ostream &)> & print_fun) {
       fun_print_modules = print_fun;
+    }
+
+    void SetPrintExecStepperStateFun(const std::function<void(std::ostream &)> & print_fun) {
+      fun_print_exec_stepper_state = print_fun;
+    }
+
+    void SetPrintHardwareStateFun(const std::function<void(std::ostream &)> & print_fun) {
+      fun_print_hardware_state = print_fun;
+    }
+
+    void SetPrintExecutionStateFun(const fun_print_execution_state_t & print_fun) {
+      fun_print_execution_state = print_fun;
+    }
+
+    void SetPrintEventFun(const fun_print_event_t & print_fun) {
+      fun_print_event = print_fun;
     }
 
     /// TODO - TEST => PULLED FROM ORIGINAL SIGNALGP
     // Warning: If you decrease max threads, you may kill actively running threads.
     // Warning: If you decrease max threads
-    void SetMaxThreads(size_t n) {
+    void SetThreadLimit(size_t n) {
       emp_assert(n, "Max thread count must be greater than 0.");
       emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
       // (1) Resize threads to new max thread count.
@@ -276,14 +307,22 @@ namespace emp { namespace sgp_v2 {
 
     // ----- Hardware Execution -----
     // todo - add signals throughout?
+    // Spawn number (<= n) of threads, using tag to select which modules.
+    // return vector of spawned thread ids
+    emp::vector<size_t> SpawnThreads(const tag_t & tag, size_t n=1) {
+      emp::vector<size_t> matches(exec_stepper->FindModuleMatch(tag, n));
+      emp::vector<size_t> thread_ids;
+      for (size_t match : matches) {
+        const size_t thread_id = SpawnThread(match);
+        if (thread_id >= threads.size()) break;
+        thread_ids.emplace_back(thread_id);
+      }
+      return thread_ids;
+    }
 
-    // thread_t & SpawnThread() {
-    //   ;
-    // }
-        // todo - spawn thread
-
-    void SpawnThread(size_t module_id) {
-      if (!unused_threads.size()) return; // If no unused threads, return.
+    // returns thread_id of spawned thread (-1 if none spawned)
+    size_t SpawnThread(size_t module_id) {
+      if (!unused_threads.size()) return (size_t)-1; // If no unused threads, return.
       // Which thread should we spawn?
       size_t thread_id = unused_threads.back();
       unused_threads.pop_back();
@@ -293,12 +332,14 @@ namespace emp { namespace sgp_v2 {
       thread.Reset();
 
       // Initialize thread state.
-      exec_stepper->InitThread(thread); // TODO - this is somewhat gross; requires yet another function of the exec_stepper.
+      exec_stepper->InitThread(thread, module_id); // TODO - this is somewhat gross; requires yet another function of the exec_stepper.
 
       // Mark thread as pending if hardware is currently executing. Otherwise,
       // mark it is active.
       if (is_executing) { pending_threads.emplace_back(thread_id); }
       else { active_threads.emplace_back(thread_id); }
+
+      return thread_id;
     }
 
     /// Handle an event (on this hardware) now!.
@@ -373,9 +414,60 @@ namespace emp { namespace sgp_v2 {
     }
 
     // todo - call module
+    void PrintActiveThreadStates(std::ostream & os=std::cout) const {
+      for (size_t i = 0; i < active_threads.size(); ++i) {
+        size_t thread_id = active_threads[i];
+        const thread_t & thread = threads[thread_id];
+        os << "Thread " << i << " (ID="<< thread_id << "):\n";
+        PrintExecutionState(thread.GetExecState(), os);
+        os << "\n";
+      }
+    }
 
     void PrintProgram(std::ostream & os=std::cout) const { fun_print_program(os); }
+
     void PrintModules(std::ostream & os=std::cout) const { fun_print_modules(os); }
+
+    void PrintExecStepperState(std::ostream & os=std::cout) const { fun_print_exec_stepper_state(os); }
+
+    void PrintHardwareState(std::ostream & os=std::cout) const { fun_print_hardware_state(os); }
+
+    void PrintThreadUsage(std::ostream & os=std::cout) const {
+      // Active threads
+      os << "Active threads (" << active_threads.size() << "): [";
+      for (size_t i = 0; i < active_threads.size(); ++i) {
+        if (i) os << ", ";
+        os << active_threads[i];
+      }
+      os << "]\n";
+      // Unused threads
+      os << "Unused threads (" << unused_threads.size() << "): [";
+      for (size_t i = 0; i < unused_threads.size(); ++i) {
+        if (i) os << ", ";
+        os << unused_threads[i];
+      }
+      os << "]\n";
+      // Pending threads
+      os << "Pending threads (" << pending_threads.size() << "): [";
+      for (size_t i = 0; i < pending_threads.size(); ++i) {
+        if (i) os << ", ";
+        os << pending_threads[i];
+      }
+      os << "]";
+    }
+
+    void PrintEventQueue(std::ostream & os=std::cout) const {
+      os << "Event queue (" << event_queue.size() << "): [";
+      for (size_t i = 0; i < event_queue.size(); ++i) {
+        if (i) os << ", ";
+        fun_print_event(event_queue[i], os);
+      }
+      os << "]";
+    }
+
+    void PrintExecutionState(const exec_state_t & state, std::ostream & os=std::cout) const {
+      fun_print_execution_state(state, os);
+    }
 
   };
 

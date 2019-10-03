@@ -9,6 +9,7 @@
 #include "SGP-V2/SignalGP.h"
 #include "SGP-V2/MemoryModel.h"
 #include "SGP-V2/ExecutionStepper.h"
+#include "SGP-V2/LinearProgram.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
@@ -43,6 +44,7 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
 
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
   using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t>;
+  using exec_state_t = typename exec_stepper_t::exec_state_t;
   using tag_t = typename exec_stepper_t::tag_t;
   using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t>;
   using inst_lib_t = typename exec_stepper_t::inst_lib_t;
@@ -95,11 +97,33 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
   hardware.SetPrintModulesFun([&hardware](std::ostream & os) {
     hardware.GetExecStepper().PrintModules();
   });
+  hardware.SetPrintExecStepperStateFun([&hardware](std::ostream & os) {
+    hardware.PrintModules(os);
+    os << "\n";
+    // todo - print matchbin state
+    hardware.GetExecStepper().GetMemoryModel().PrintState(os);
+  });
+  hardware.SetPrintExecutionStateFun([&hardware](const exec_state_t & state, std::ostream & os) {
+    hardware.GetExecStepper().PrintExecutionState(state, os);
+  });
+  hardware.SetPrintHardwareStateFun([&hardware](std::ostream & os) {
+    // -- Print thread usage --
+    hardware.PrintThreadUsage(os);
+    os << "\n";
+    // -- Print event queue --
+    hardware.PrintEventQueue(os);
+    os << "\n";
+    // -- Print state of exec stepper --
+    hardware.PrintExecStepperState(os);
+    os << "\n";
+    // -- Print thread states --
+    hardware.PrintActiveThreadStates(os);
+  });
 
   std::cout << "Loading program." << std::endl;
   hardware.SetProgram(program);
   std::cout << "=> Program loaded." << std::endl;
-
+  hardware.SetThreadLimit(8);
   // Todo - print program to verify!
   // Todo - print modules to verify!
   std::cout << "======= MODULES =======" << std::endl;
@@ -108,5 +132,25 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
   std::cout << "======= PROGRAMS =======" << std::endl;
   hardware.PrintProgram();
   std::cout << "========================" << std::endl;
-  hardware.SingleProcess();
+
+  hardware.SingleProcess(); // This should do nothing!
+
+  std::cout << "============= HARDWARE STATE =============" << std::endl;
+  hardware.PrintHardwareState();
+  std::cout << "==========================================" << std::endl;
+
+  // Spawn a thread!
+  std::cout << ">>Spawn a thread (module 0)" << std::endl;
+  hardware.SpawnThread(0);
+  std::cout << "============= HARDWARE STATE =============" << std::endl;
+  hardware.PrintHardwareState();
+  std::cout << "==========================================" << std::endl;
+
+  hardware.SpawnThreads(tag_t(), 1);
+  std::cout << ">>Spawn a thread (module ?)" << std::endl;
+  std::cout << "============= HARDWARE STATE =============" << std::endl;
+  hardware.PrintHardwareState();
+  std::cout << "==========================================" << std::endl;
+
+
 }

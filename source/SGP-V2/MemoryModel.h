@@ -49,6 +49,34 @@ namespace emp { namespace sgp_v2 {
                                         const mem_buffer_t & output=mem_buffer_t())
     { return {working, input, output}; }
 
+    void PrintMemoryBuffer(const mem_buffer_t & buffer, std::ostream & os=std::cout) const {
+      os << "[";
+      bool comma = false;
+      for (auto mem : buffer) {
+        if (comma) os << ", ";
+        os << "{" << mem.first << ":" << mem.second << "}";
+        comma = true;
+      }
+      os << "]";
+    }
+
+    void PrintMemoryState(const memory_state_t & state, std::ostream & os=std::cout) const {
+      os << "Working memory (" << state.working_mem.size() << "): ";
+      PrintMemoryBuffer(state.working_mem, os);
+      os << "\n";
+      os << "Input memory (" << state.input_mem.size() << "): ";
+      PrintMemoryBuffer(state.input_mem, os);
+      os << "\n";
+      os << "Output memory (" << state.output_mem.size() << "): ";
+      PrintMemoryBuffer(state.output_mem, os);
+      os << "\n";
+    }
+
+    void PrintState(std::ostream & os=std::cout) const {
+      os << "Global memory (" << global_mem.size() << "): ";
+      PrintMemoryBuffer(global_mem, os);
+    }
+
   };
 
 }}
