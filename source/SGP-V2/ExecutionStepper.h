@@ -196,6 +196,8 @@ namespace emp { namespace sgp_v2 {
     bool is_matchbin_cache_dirty;
     std::function<void()> fun_clear_matchbin_cache = [this](){ this->ResetMatchBin(); };
 
+    size_t max_call_depth;
+
     void SetupDefaultFlowControl() { // TODO!
       // --- BASIC Flow ---
       // On open:
@@ -269,7 +271,8 @@ namespace emp { namespace sgp_v2 {
         default_module_tag(),
         random_ptr(rnd),
         matchbin(rnd ? *rnd : *emp::NewPtr<emp::Random>()),
-        is_matchbin_cache_dirty(true)
+        is_matchbin_cache_dirty(true),
+        max_call_depth(256)
     {
       // Configure default flow control
       SetupDefaultFlowControl();
@@ -334,6 +337,7 @@ namespace emp { namespace sgp_v2 {
       std::cout << "InitThread!" << std::endl;
       exec_state_t & state = thread.GetExecState();
       if (state.call_stack.size()) { state.Clear(); }
+      // TODO - switch code below to just use call module function!
       // (1) create fresh memory state
       state.call_stack.emplace_back(memory_model.CreateMemoryState());
       // (2) Set exec state up
@@ -341,7 +345,7 @@ namespace emp { namespace sgp_v2 {
       // flow type, ip, mp, begin, end
       module_t & module_info = modules[module_id];
       // call_state.flow_stack.emplace_back(FlowType::CALL, module_info.begin, module_id, module_info.begin, module_info.end);
-      flow_handler.OpenFlow({FlowType::CALL, module_info.begin, module_id, module_info.begin, module_info.end}, state);
+      flow_handler.OpenFlow({FlowType::CALL, module_id, module_info.begin, module_info.begin, module_info.end}, state);
     }
 
     // Find best module given a tag.
@@ -353,6 +357,33 @@ namespace emp { namespace sgp_v2 {
       // no need to transform to values because we're using
       // matchbin uids equivalent to function uids
       return matchbin.Match(tag, n);
+    }
+
+    void CallModule(const tag_t & tag, exec_state_t & exec_state, bool circular=false) {
+      // todo!
+      emp::vector<size_t> matches(FindModuleMatch(tag));
+      if (matches.size()) {
+        CallModule(matches[0], exec_state, circular);
+      }
+    }
+
+    // call a module on given execution state
+    void CallModule(size_t module_id, exec_state_t & exec_state, bool circular=false) {
+      emp_assert(module_id < modules.size());
+      if (exec_state.call_stack.size() >= max_call_depth) return;
+      // Push new state onto stack.
+      exec_state.call_stack.emplace_back({memory_model.CreateMemoryState(), circular});
+
+      // todo - open flow
+      module_t & module_info = modules[module_id];
+      flow_handler.OpenFlow({FlowType::CALL, module_id, module_info.begin, module_info.begin, module_info.end}, exec_state);
+
+      if (exec_state.call_stack.size() > 1) {
+        // todo - memory
+        CallState & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
+        CallState & new_state = exec_state.call_stack.back();
+        memory_model.OnModuleCall(caller_state, new_state);
+      }
     }
 
     // todo - test!
