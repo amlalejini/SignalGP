@@ -15,6 +15,7 @@
 
 namespace emp { namespace sgp_v2 {
 
+  // TODO - make on return/on call re-configurable
   // Demonstrative memory model based on original version of SignalGP.
   class SimpleMemoryModel {
   public:
@@ -37,6 +38,18 @@ namespace emp { namespace sgp_v2 {
         : working_mem(w), input_mem(i), output_mem(o) { ; }
       SimpleMemoryState(const SimpleMemoryState &) = default;
       SimpleMemoryState(SimpleMemoryState &&) = default;
+
+      void SetWorking(int key, double value) {
+        working_mem[key] = value;
+      }
+
+      void SetInput(int key, double value) {
+        input_mem[key] = value;
+      }
+
+      void SetOutput(int key, double value) {
+        output_mem[key] = value;
+      }
     };
 
   protected:
@@ -75,6 +88,19 @@ namespace emp { namespace sgp_v2 {
     void PrintState(std::ostream & os=std::cout) const {
       os << "Global memory (" << global_mem.size() << "): ";
       PrintMemoryBuffer(global_mem, os);
+    }
+
+    void OnModuleCall(memory_state_t & caller_mem, memory_state_t & callee_mem) {
+      for (auto & mem : caller_mem.working_mem) {
+        callee_mem.SetInput(mem.first, mem.second);
+      }
+    }
+
+    // Handle Module return
+    void OnModuleReturn(memory_state_t & returning_mem, memory_state_t & caller_mem) {
+      for (auto & mem : returning_mem.output_mem) {
+        caller_mem.SetWorking(mem.first, mem.second);
+      }
     }
 
   };

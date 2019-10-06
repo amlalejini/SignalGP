@@ -133,7 +133,7 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
   hardware.PrintProgram();
   std::cout << "========================" << std::endl;
 
-  hardware.SingleProcess(); // This should do nothing!
+  // hardware.SingleProcess(); // This should do nothing!
 
   std::cout << "============= HARDWARE STATE =============" << std::endl;
   hardware.PrintHardwareState();
@@ -152,5 +152,16 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
   hardware.PrintHardwareState();
   std::cout << "==========================================" << std::endl;
 
+  while (true) {
+    char cmd;
+    std::cin >> cmd;
+    if (cmd == 'q') {
+      break;
+    }
+    hardware.SingleProcess();
+    std::cout << "============= HARDWARE STATE =============" << std::endl;
+    hardware.PrintHardwareState();
+    std::cout << "==========================================" << std::endl;
+  }
 
 }

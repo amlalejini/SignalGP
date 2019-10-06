@@ -32,6 +32,8 @@ namespace emp { namespace sgp_v2 {
   public:
     struct ExecState;
     struct Module;
+    struct FlowInfo;
+    struct CallState;
 
     enum class InstProperty { MODULE };
 
@@ -58,13 +60,15 @@ namespace emp { namespace sgp_v2 {
     /// Library of flow types.
     /// e.g., WHILE, IF, ROUTINE, et cetera
     /// NOTE - I'm not sure that I'm a fan of how this is organized/named/setup.
+    /// BASIC: if statements (for now)
     enum class FlowType : size_t { BASIC, WHILE_LOOP, ROUTINE, CALL };
     struct FlowHandler {
       struct FlowControl {
-        using flow_control_fun_t = std::function<void(exec_state_t &)>;
-        flow_control_fun_t open_flow_fun;
-        flow_control_fun_t close_flow_fun;
-        flow_control_fun_t break_flow_fun;
+        using end_flow_fun_t = std::function<void(exec_state_t &)>;
+        using open_flow_fun_t = std::function<void(exec_state_t &, const FlowInfo &)>;
+        open_flow_fun_t open_flow_fun;
+        end_flow_fun_t close_flow_fun;
+        end_flow_fun_t break_flow_fun;
       };
       std::map<FlowType, FlowControl> lib = { {FlowType::BASIC, FlowControl()},
                                               {FlowType::WHILE_LOOP, FlowControl()},
@@ -90,6 +94,17 @@ namespace emp { namespace sgp_v2 {
           default: return "UNKNOWN";
         }
       }
+
+      void OpenFlow(const FlowInfo & new_flow, exec_state_t & state) {
+        FlowType type = new_flow.type;
+        emp_assert(Has(lib, type), "FlowType not recognized!");
+        lib[type].open_flow_fun(state, new_flow);
+      }
+
+      void CloseFlow(FlowType type, exec_state_t & state) {
+        emp_assert(Has(lib, type), "FlowType not recognized!");
+        lib[type].close_flow_fun(state);
+      }
     };
 
     /// Base flow information
@@ -112,9 +127,23 @@ namespace emp { namespace sgp_v2 {
       // flow stack
       memory_state_t memory;
       emp::vector<FlowInfo> flow_stack; ///< Stack of 'Flow' (read heads)
+      bool circular;  ///< Should call wrap when IP goes off end? Or, implicitly return?
 
-      CallState(const memory_state_t & _mem=memory_state_t())
-        : memory(_mem), flow_stack() { ; }
+      CallState(const memory_state_t & _mem=memory_state_t(), bool _circular=false)
+        : memory(_mem), flow_stack(), circular(_circular) { ; }
+
+      bool IsFlow() const { return !flow_stack.empty(); }
+
+      emp::vector<FlowInfo> & GetFlowStack() { return flow_stack; }
+
+      FlowInfo & GetTopFlow() {
+        emp_assert(flow_stack.size());
+        return flow_stack.back();
+      }
+
+      bool IsCircular() const { return circular; }
+
+      memory_state_t & GetMemory() { return memory; }
     };
 
     /// Execution State.
@@ -168,17 +197,64 @@ namespace emp { namespace sgp_v2 {
     std::function<void()> fun_clear_matchbin_cache = [this](){ this->ResetMatchBin(); };
 
     void SetupDefaultFlowControl() { // TODO!
-      flow_handler[FlowType::BASIC].open_flow_fun = [](exec_state_t & exec_state) { ; };
-      flow_handler[FlowType::BASIC].close_flow_fun = [](exec_state_t & exec_state) { ; };
+      // --- BASIC Flow ---
+      // On open:
+      flow_handler[FlowType::BASIC].open_flow_fun =
+        [](exec_state_t & exec_state, const FlowInfo & new_flow) {    };
+
+      // On close
+      // - Pop current flow from stack.
+      // - Set new top of flow stack (if any)'s IP and MP to returning IP and MP.
+      flow_handler[FlowType::BASIC].close_flow_fun =
+        [](exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to close BASIC flow. NO calls on call stack.");
+          CallState & call_state = exec_state.call_stack.back();
+          emp_assert(call_state.IsFlow(), "Failed to close BASIC flow. No flow to close.");
+          const size_t ip = call_state.GetTopFlow().ip;
+          const size_t mp = call_state.GetTopFlow().mp;
+          call_state.flow_stack.pop_back();
+          if (call_state.IsFlow()) {
+            FlowInfo & top = call_state.GetTopFlow();
+            top.ip = ip;
+            top.mp = mp;
+          }
+        };
+
+      // On break!
       flow_handler[FlowType::BASIC].break_flow_fun = [](exec_state_t & exec_state) { ; };
-      flow_handler[FlowType::WHILE_LOOP].open_flow_fun = [](exec_state_t & exec_state) { ; };
+
+      flow_handler[FlowType::WHILE_LOOP].open_flow_fun = [](exec_state_t & exec_state, const FlowInfo & new_flow) { ; };
       flow_handler[FlowType::WHILE_LOOP].close_flow_fun = [](exec_state_t & exec_state) { ; };
       flow_handler[FlowType::WHILE_LOOP].break_flow_fun = [](exec_state_t & exec_state) { ; };
-      flow_handler[FlowType::ROUTINE].open_flow_fun = [](exec_state_t & exec_state) { ; };
+
+      flow_handler[FlowType::ROUTINE].open_flow_fun = [](exec_state_t & exec_state, const FlowInfo & new_flow) { ; };
       flow_handler[FlowType::ROUTINE].close_flow_fun = [](exec_state_t & exec_state) { ; };
       flow_handler[FlowType::ROUTINE].break_flow_fun = [](exec_state_t & exec_state) { ; };
-      flow_handler[FlowType::CALL].open_flow_fun = [](exec_state_t & exec_state) { ; };
-      flow_handler[FlowType::CALL].close_flow_fun = [](exec_state_t & exec_state) { ; };
+
+      flow_handler[FlowType::CALL].open_flow_fun =
+        [](exec_state_t & exec_state, const FlowInfo & new_flow) {
+          emp_assert(exec_state.call_stack.size(), "Failed to close CALL flow. NO calls on call stack.");
+          CallState & call_state = exec_state.call_stack.back();
+          call_state.flow_stack.emplace_back(new_flow);
+        };
+
+      flow_handler[FlowType::CALL].close_flow_fun =
+        [](exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to close CALL flow. NO calls on call stack.");
+          CallState & call_state = exec_state.call_stack.back();
+          emp_assert(call_state.IsFlow(), "Failed to close CALL flow. No flow to close.");
+          // Closing a CALL flow:
+          // - Pop call flow from flow stack.
+          // - No need to pass IP and MP down (presumably, this was the bottom
+          //   of the flow stack).
+          if (call_state.IsCircular()) {
+            FlowInfo & top = call_state.GetTopFlow();
+            top.ip = top.begin;
+          } else {
+            call_state.GetFlowStack().pop_back();
+          }
+        };
+
       flow_handler[FlowType::CALL].break_flow_fun = [](exec_state_t & exec_state) { ; };
     }
 
@@ -211,6 +287,45 @@ namespace emp { namespace sgp_v2 {
 
     void SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state) {
       std::cout << "SingleExecutionStep!" << std::endl;
+      // If there's a call state on the call stack, execute an instruction.
+      while (exec_state.call_stack.size()) {
+        // There's something on the call stack.
+        CallState & call_state = exec_state.call_stack.back();
+        // Is there anything on the flow stack?
+        if (call_state.IsFlow()) {
+          std::cout << "- There's some flow." << std::endl;
+          FlowInfo & flow_info = call_state.flow_stack.back();
+          size_t mp = flow_info.mp;
+          size_t ip = flow_info.ip;
+          std::cout << ">> MP=" << mp << "; IP=" << ip << std::endl;
+          emp_assert(mp < GetNumModules(), "Invalid module pointer: ", mp);
+          // Process current instruction (if any)!
+          if (modules[mp].InModule(ip)) {
+            // The instruction pointer is looking at a valid instruction in the current module.
+            // NOTE - should we increment the IP before or after executing?
+            inst_lib->ProcessInst(hardware, program[ip]);
+            ++flow_info.ip; // Move instruction pointer forward (might be invalid location).
+          } else if (ip >= program.GetSize()
+                    && modules[mp].InModule(0)
+                    && modules[mp].end < modules[mp].begin) {
+            // The instruction pointer is off the edge of the program.
+            // HERE, we handle if this module wraps back to the beginning of the program.
+            // in which case, we need to move the IP.
+            ip = 0;
+            inst_lib->ProcessInst(hardware, program[ip]);
+            ++flow_info.ip;
+          } else {
+            // IP not valid for this module. Close flow.
+            flow_handler.CloseFlow(flow_info.type, exec_state);
+            continue;
+          }
+        } else {
+          // No flow!
+          // todo - return from call?
+          ReturnCall(exec_state);
+        }
+        break; // We executed *something*, break from loop.
+      }
     }
 
     void InitThread(thread_t & thread, size_t module_id) {
@@ -222,10 +337,11 @@ namespace emp { namespace sgp_v2 {
       // (1) create fresh memory state
       state.call_stack.emplace_back(memory_model.CreateMemoryState());
       // (2) Set exec state up
-      CallState & call_state = state.call_stack.back();
+      // CallState & call_state = state.call_stack.back();
       // flow type, ip, mp, begin, end
       module_t & module_info = modules[module_id];
-      call_state.flow_stack.emplace_back(FlowType::CALL, module_info.begin, module_id, module_info.begin, module_info.end);
+      // call_state.flow_stack.emplace_back(FlowType::CALL, module_info.begin, module_id, module_info.begin, module_info.end);
+      flow_handler.OpenFlow({FlowType::CALL, module_info.begin, module_id, module_info.begin, module_info.end}, state);
     }
 
     // Find best module given a tag.
@@ -237,6 +353,25 @@ namespace emp { namespace sgp_v2 {
       // no need to transform to values because we're using
       // matchbin uids equivalent to function uids
       return matchbin.Match(tag, n);
+    }
+
+    // todo - test!
+    void ReturnCall(exec_state_t & exec_state) {
+      std::cout << "Return!" << std::endl;
+      // TODO - finish
+      if (exec_state.call_stack.empty()) return; // Nothing to return from.
+      // Get the current call state.
+      CallState & returning_state = exec_state.call_stack.back();
+
+      // Is there anything to return to?
+      if (exec_state.call_stack.size() > 1) {
+        // Yes! Copy the returning state's output memory into the caller state's local memory.
+        CallState & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
+        // TODO - setup configurable memory return! (lambda)
+        memory_model.OnModuleReturn(returning_state.GetMemory(), caller_state.GetMemory());
+      }
+      // Pop the returning state from call stack.
+      exec_state.call_stack.pop_back();
     }
 
     // Load program!
