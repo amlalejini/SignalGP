@@ -54,6 +54,10 @@ namespace emp { namespace sgp_v2 {
       bool operator<(const Instruction & other) const {
         return std::tie(id, args, tags) < std::tie(other.id, other.args, other.tags);
       }
+
+      const arg_t & GetArg(size_t i) const { return args[i]; }
+      const tag_t & GetTag(size_t i) const { return tags[i]; }
+
     };
 
   protected:

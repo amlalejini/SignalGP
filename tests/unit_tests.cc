@@ -10,6 +10,7 @@
 #include "SGP-V2/MemoryModel.h"
 #include "SGP-V2/ExecutionStepper.h"
 #include "SGP-V2/LinearProgram.h"
+#include "SGP-V2/instructions_impl.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
@@ -40,7 +41,6 @@ TEST_CASE( "Hello World", "[general]" ) {
 // }
 
 TEST_CASE( "SignalGP - v2", "[general]" ) {
-  // using emp::sgp_v2; /
 
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
   using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t>;
@@ -59,6 +59,7 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
   // Add some instructions to the instruction library.
   inst_lib.AddInst("Nop", [](signalgp_t & hw, const inst_t & inst) { ; }, "No operation!");
   inst_lib.AddInst("ModuleDef", [](signalgp_t & hw, const inst_t & inst) { ; }, "Module definition", {inst_prop_t::MODULE});
+  inst_lib.AddInst("Inc", emp::sgp_v2::inst_impl::Inst_Inc<signalgp_t, inst_t>, "Increment!");
 
   // Construct a program
   program_t program;

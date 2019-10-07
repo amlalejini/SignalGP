@@ -50,6 +50,22 @@ namespace emp { namespace sgp_v2 {
       void SetOutput(int key, double value) {
         output_mem[key] = value;
       }
+
+      double & AccessWorking(int key) {
+        if (!Has(working_mem, key)) working_mem[key] = 0;
+        return working_mem[key];
+      }
+
+      double & AccessInput(int key) {
+        if (!Has(input_mem, key)) input_mem[key] = 0;
+        return input_mem[key];
+      }
+
+      double & AccessOutput(int key) {
+        if (!Has(output_mem, key)) output_mem[key] = 0;
+        return output_mem[key];
+      }
+
     };
 
   protected:

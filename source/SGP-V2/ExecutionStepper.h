@@ -154,6 +154,11 @@ namespace emp { namespace sgp_v2 {
       void Clear() {
         call_stack.clear();
       }
+
+      CallState & GetTopCallState() {
+        emp_assert(call_stack.size(), "Cannot get top call state from empty call stack.");
+        return call_stack.back();
+      }
     };
 
     /// Module definition.
@@ -338,14 +343,15 @@ namespace emp { namespace sgp_v2 {
       exec_state_t & state = thread.GetExecState();
       if (state.call_stack.size()) { state.Clear(); }
       // TODO - switch code below to just use call module function!
+      CallModule(module_id, state);
       // (1) create fresh memory state
-      state.call_stack.emplace_back(memory_model.CreateMemoryState());
+      // state.call_stack.emplace_back(memory_model.CreateMemoryState());
       // (2) Set exec state up
       // CallState & call_state = state.call_stack.back();
       // flow type, ip, mp, begin, end
-      module_t & module_info = modules[module_id];
+      // module_t & module_info = modules[module_id];
       // call_state.flow_stack.emplace_back(FlowType::CALL, module_info.begin, module_id, module_info.begin, module_info.end);
-      flow_handler.OpenFlow({FlowType::CALL, module_id, module_info.begin, module_info.begin, module_info.end}, state);
+      // flow_handler.OpenFlow({FlowType::CALL, module_id, module_info.begin, module_info.begin, module_info.end}, state);
     }
 
     // Find best module given a tag.
@@ -372,7 +378,7 @@ namespace emp { namespace sgp_v2 {
       emp_assert(module_id < modules.size());
       if (exec_state.call_stack.size() >= max_call_depth) return;
       // Push new state onto stack.
-      exec_state.call_stack.emplace_back({memory_model.CreateMemoryState(), circular});
+      exec_state.call_stack.emplace_back(memory_model.CreateMemoryState(), circular);
 
       // todo - open flow
       module_t & module_info = modules[module_id];
@@ -382,7 +388,7 @@ namespace emp { namespace sgp_v2 {
         // todo - memory
         CallState & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
         CallState & new_state = exec_state.call_stack.back();
-        memory_model.OnModuleCall(caller_state, new_state);
+        memory_model.OnModuleCall(caller_state.GetMemory(), new_state.GetMemory());
       }
     }
 
