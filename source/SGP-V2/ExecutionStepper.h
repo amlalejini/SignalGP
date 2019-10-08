@@ -35,7 +35,8 @@ namespace emp { namespace sgp_v2 {
     struct FlowInfo;
     struct CallState;
 
-    enum class InstProperty { MODULE };
+    // Blocks are within-module flow control segments (e.g., while loops, if statements, etc)
+    enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
 
     using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T, TAG_T, INST_ARGUMENT_T, MATCHBIN_T>;
     using exec_state_t = ExecState;
@@ -119,6 +120,7 @@ namespace emp { namespace sgp_v2 {
       FlowInfo(FlowType _type, size_t _mp=(size_t)-1, size_t _ip=(size_t)-1,
                size_t _begin=(size_t)-1, size_t _end=(size_t)-1)
         : type(_type), mp(_mp), ip(_ip), begin(_begin), end(_end) { ; }
+
     };
 
     struct CallState {
@@ -144,6 +146,26 @@ namespace emp { namespace sgp_v2 {
       bool IsCircular() const { return circular; }
 
       memory_state_t & GetMemory() { return memory; }
+
+      void SetIP(size_t i) {
+        emp_assert(flow_stack.size());
+        flow_stack.back().ip = i;
+      }
+
+      void SetMP(size_t m) {
+        emp_assert(flow_stack.size());
+        flow_stack.back().mp = m;
+      }
+
+      size_t & IP() {
+        emp_assert(flow_stack.size());
+        flow_stack.back().ip;
+      }
+
+      size_t & MP() {
+        emp_assert(flow_stack.size());
+        flow_stack.back().mp;
+      }
     };
 
     /// Execution State.
@@ -206,8 +228,13 @@ namespace emp { namespace sgp_v2 {
     void SetupDefaultFlowControl() { // TODO!
       // --- BASIC Flow ---
       // On open:
+      // TODO!
       flow_handler[FlowType::BASIC].open_flow_fun =
-        [](exec_state_t & exec_state, const FlowInfo & new_flow) {    };
+        [](exec_state_t & exec_state, const FlowInfo & new_flow) {
+          emp_assert(exec_state.call_stack.size(), "Failed to open BASIC flow. No calls on call stack.");
+          CallState & call_state = exec_state.call_stack.back();
+          call_state.flow_stack.emplace_back(new_flow);
+        };
 
       // On close
       // - Pop current flow from stack.
@@ -240,14 +267,14 @@ namespace emp { namespace sgp_v2 {
 
       flow_handler[FlowType::CALL].open_flow_fun =
         [](exec_state_t & exec_state, const FlowInfo & new_flow) {
-          emp_assert(exec_state.call_stack.size(), "Failed to close CALL flow. NO calls on call stack.");
+          emp_assert(exec_state.call_stack.size(), "Failed to open CALL flow. No calls on call stack.");
           CallState & call_state = exec_state.call_stack.back();
           call_state.flow_stack.emplace_back(new_flow);
         };
 
       flow_handler[FlowType::CALL].close_flow_fun =
         [](exec_state_t & exec_state) {
-          emp_assert(exec_state.call_stack.size(), "Failed to close CALL flow. NO calls on call stack.");
+          emp_assert(exec_state.call_stack.size(), "Failed to close CALL flow. No calls on call stack.");
           CallState & call_state = exec_state.call_stack.back();
           emp_assert(call_state.IsFlow(), "Failed to close CALL flow. No flow to close.");
           // Closing a CALL flow:
@@ -291,6 +318,13 @@ namespace emp { namespace sgp_v2 {
       for (size_t i = 0; i < modules.size(); ++i) {
         matchbin.Set(i, modules[i].GetTag(), i);
       }
+    }
+
+    bool IsValidProgramPosition(size_t mp, size_t ip) const {
+      if (mp < modules.size()) {
+        if (modules[mp].InModule(ip)) return true;
+      }
+      return false;
     }
 
     void SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state) {
@@ -352,6 +386,34 @@ namespace emp { namespace sgp_v2 {
       // module_t & module_info = modules[module_id];
       // call_state.flow_stack.emplace_back(FlowType::CALL, module_info.begin, module_id, module_info.begin, module_info.end);
       // flow_handler.OpenFlow({FlowType::CALL, module_id, module_info.begin, module_info.begin, module_info.end}, state);
+    }
+
+    FlowHandler & GetFlowHandler() {
+      return flow_handler;
+    }
+
+    /// Find end of code block (i.e., internal flow control code segment).
+    // todo - debug!
+    // BLOCK_CLOSE
+    // BLOCK_DEF
+    size_t FindEndOfBlock(size_t mp, size_t ip) {
+      emp_assert(mp < modules.size(), "Invalid module!");
+      int depth = 1;
+      std::unordered_set<size_t> seen;
+      while (true) {
+        if (!IsValidProgramPosition(mp, ip)) break;
+        const inst_t & inst = program[ip];
+        if (inst_lib->HasProperty(inst.GetID(), inst_prop_t::BLOCK_DEF)) {
+          ++depth;
+        } else if (inst_lib->HasProperty(inst.GetID(), inst_prop_t::BLOCK_CLOSE)) {
+          --depth;
+          if (depth == 0) break;
+        }
+        seen.emplace(ip);
+        ++ip;
+        if (ip >= program.GetSize() && seen.size() < modules[mp].GetSize()) ip %= program.GetSize();
+      }
+      return ip;
     }
 
     // Find best module given a tag.

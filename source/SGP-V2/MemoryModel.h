@@ -66,6 +66,12 @@ namespace emp { namespace sgp_v2 {
         return output_mem[key];
       }
 
+      double GetWorking(int key) { return Find(working_mem, key, 0.0); }
+
+      double GetInput(int key) { return Find(input_mem, key, 0.0); }
+
+      double GetOutput(int key) { return Find(output_mem, key, 0.0); }
+
     };
 
   protected:

@@ -60,12 +60,14 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
   inst_lib.AddInst("Nop", [](signalgp_t & hw, const inst_t & inst) { ; }, "No operation!");
   inst_lib.AddInst("ModuleDef", [](signalgp_t & hw, const inst_t & inst) { ; }, "Module definition", {inst_prop_t::MODULE});
   inst_lib.AddInst("Inc", emp::sgp_v2::inst_impl::Inst_Inc<signalgp_t, inst_t>, "Increment!");
+  inst_lib.AddInst("Dec", emp::sgp_v2::inst_impl::Inst_Dec<signalgp_t, inst_t>, "Decrement!");
+  inst_lib.AddInst("Not", emp::sgp_v2::inst_impl::Inst_Not<signalgp_t, inst_t>, "Logical not of ARG[0]");
 
   // Construct a program
   program_t program;
   program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
-  program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
-  program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "Inc", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "Dec", {1, 0, 0}, {tag_t(), tag_t(), tag_t()});
   program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
 
   std::cout << "Constructing hardware." << std::endl;
