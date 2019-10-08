@@ -121,6 +121,10 @@ namespace emp { namespace sgp_v2 {
                size_t _begin=(size_t)-1, size_t _end=(size_t)-1)
         : type(_type), mp(_mp), ip(_ip), begin(_begin), end(_end) { ; }
 
+      size_t GetBegin() const { return begin; }
+      size_t GetEnd() const { return end; }
+      size_t GetMP() const { return mp; }
+      size_t GetIP() const { return ip; }
     };
 
     struct CallState {
@@ -223,7 +227,6 @@ namespace emp { namespace sgp_v2 {
     void SetupDefaultFlowControl() { // TODO!
       // --- BASIC Flow ---
       // On open:
-      // TODO!
       flow_handler[FlowType::BASIC].open_flow_fun =
         [](exec_state_t & exec_state, const FlowInfo & new_flow) {
           emp_assert(exec_state.call_stack.size(), "Failed to open BASIC flow. No calls on call stack.");
@@ -252,8 +255,27 @@ namespace emp { namespace sgp_v2 {
       // On break!
       flow_handler[FlowType::BASIC].break_flow_fun = [](exec_state_t & exec_state) { ; };
 
-      flow_handler[FlowType::WHILE_LOOP].open_flow_fun = [](exec_state_t & exec_state, const FlowInfo & new_flow) { ; };
-      flow_handler[FlowType::WHILE_LOOP].close_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::WHILE_LOOP].open_flow_fun =
+        [](exec_state_t & exec_state, const FlowInfo & new_flow) {
+          emp_assert(exec_state.call_stack.size(), "Failed to open WHILE_LOOP flow. No calls on call stack.");
+          CallState & call_state = exec_state.call_stack.back();
+          call_state.flow_stack.emplace_back(new_flow);
+        };
+
+      flow_handler[FlowType::WHILE_LOOP].close_flow_fun =
+        [](exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to close WHILE_LOOP flow. No calls on call stack.");
+          // Move IP to start of block
+          CallState & call_state = exec_state.call_stack.back();
+          const size_t loop_begin = call_state.GetTopFlow().begin;
+          const size_t mp = call_state.GetTopFlow().mp;
+          call_state.flow_stack.pop_back();
+          if (call_state.IsFlow()) {
+            call_state.SetIP(loop_begin);
+            call_state.SetMP(mp);
+          }
+        };
+
       flow_handler[FlowType::WHILE_LOOP].break_flow_fun = [](exec_state_t & exec_state) { ; };
 
       flow_handler[FlowType::ROUTINE].open_flow_fun = [](exec_state_t & exec_state, const FlowInfo & new_flow) { ; };

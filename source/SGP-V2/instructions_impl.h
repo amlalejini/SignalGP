@@ -174,13 +174,12 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
     mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) >= mem_state.AccessWorking(inst.GetArg(1)));
   }
 
-  // - Inst_If
+  // - Inst_If TODO - TEST EDGE CASES!
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_If(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     auto & exec_stepper = hw.GetExecStepper();
     auto & call_state = hw.GetCurExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
-    std::cout << "INSTRUCTION - IF" << std::endl;
     const size_t prog_len = exec_stepper.GetProgram().GetSize();
     const size_t cur_ip = call_state.GetIP();
     const size_t cur_mp = call_state.GetMP();
@@ -188,28 +187,19 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
     // Beginning of block (if instruction).
     const size_t bob = cur_ip;
     // First instruction of block (next instruction)
-    // const size_t next_ip = cur_ip + 1; //(!(cur_ip + 1 < exec_stepper.GetProgram().GetSize())) ? 0 : cur_ip + 1;
     size_t next_ip = (cur_ip + 1 >= prog_len
                       && exec_stepper.IsValidProgramPosition(cur_mp, 0)
                       && cur_module.GetBegin() != 0) ? 0 : cur_ip + 1;
-    // Next IP
-    // - if we're in the middle of the program, just the next i
     // Find end of flow.
     const size_t eob = exec_stepper.FindEndOfBlock(cur_mp, next_ip); // NOTE - if IP is current instruction, want to start looking past current BLOCK_DEF
-    std::cout << "bob = " << bob << std::endl;
-    std::cout << "next ip = " << next_ip << std::endl;
-    std::cout << "eob = " << eob << std::endl;
     if (mem_state.AccessWorking(inst.GetArg(0)) == 0.0) {
-      std::cout << "Skip block!" << std::endl;
       // Skip to EOB
       call_state.SetIP(eob);
       // Advance past the block close if not at end of module.
       if (exec_stepper.IsValidProgramPosition(cur_mp, eob)) {
-        std::cout << "Advance past eob?" << std::endl;
         ++call_state.IP();
       }
     } else {
-      std::cout << "Enter if!" << std::endl;
       // Open flow
       exec_stepper.GetFlowHandler().OpenFlow({HARDWARE_T::exec_stepper_t::FlowType::BASIC,
                                               cur_mp,
@@ -221,7 +211,78 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
   }
 
   // - Inst_While
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_While(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & exec_stepper = hw.GetExecStepper();
+    auto & call_state = hw.GetCurExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    const size_t prog_len = exec_stepper.GetProgram().GetSize();
+    const size_t cur_ip = call_state.GetIP();
+    const size_t cur_mp = call_state.GetMP();
+    auto & cur_module = exec_stepper.GetModules()[cur_mp];
+    // Beginning of block (while instruction).
+    const size_t bob = cur_ip;
+    // First instruction of block (next instruction)
+    size_t next_ip = (cur_ip + 1 >= prog_len
+                      && exec_stepper.IsValidProgramPosition(cur_mp, 0)
+                      && cur_module.GetBegin() != 0) ? 0 : cur_ip + 1;
+    // Find end of flow.
+    const size_t eob = exec_stepper.FindEndOfBlock(cur_mp, next_ip); // NOTE - if IP is current instruction, want to start looking past current BLOCK_DEF
+    if (mem_state.AccessWorking(inst.GetArg(0)) == 0.0) {
+      // Skip to EOB
+      call_state.SetIP(eob);
+      // Advance past the block close if not at end of module.
+      if (exec_stepper.IsValidProgramPosition(cur_mp, eob)) {
+        ++call_state.IP();
+      }
+    } else {
+      // Open flow
+      exec_stepper.GetFlowHandler().OpenFlow({HARDWARE_T::exec_stepper_t::FlowType::WHILE_LOOP,
+                                              cur_mp,
+                                              next_ip,
+                                              bob,
+                                              eob},
+                                              hw.GetCurExecState());
+    }
+  }
+
   // - Inst_Countdown
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Countdown(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & exec_stepper = hw.GetExecStepper();
+    auto & call_state = hw.GetCurExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    const size_t prog_len = exec_stepper.GetProgram().GetSize();
+    const size_t cur_ip = call_state.GetIP();
+    const size_t cur_mp = call_state.GetMP();
+    auto & cur_module = exec_stepper.GetModules()[cur_mp];
+    // Beginning of block (while instruction).
+    const size_t bob = cur_ip;
+    // First instruction of block (next instruction)
+    size_t next_ip = (cur_ip + 1 >= prog_len
+                      && exec_stepper.IsValidProgramPosition(cur_mp, 0)
+                      && cur_module.GetBegin() != 0) ? 0 : cur_ip + 1;
+    // Find end of flow.
+    const size_t eob = exec_stepper.FindEndOfBlock(cur_mp, next_ip); // NOTE - if IP is current instruction, want to start looking past current BLOCK_DEF
+    if (mem_state.AccessWorking(inst.GetArg(0)) == 0.0) {
+      // Skip to EOB
+      call_state.SetIP(eob);
+      // Advance past the block close if not at end of module.
+      if (exec_stepper.IsValidProgramPosition(cur_mp, eob)) {
+        ++call_state.IP();
+      }
+    } else {
+      --mem_state.AccessWorking(inst.args[0]);
+      // Open flow
+      exec_stepper.GetFlowHandler().OpenFlow({HARDWARE_T::exec_stepper_t::FlowType::WHILE_LOOP,
+                                              cur_mp,
+                                              next_ip,
+                                              bob,
+                                              eob},
+                                              hw.GetCurExecState());
+    }
+  }
+
   // - Inst_Break
   // - Inst_Close
   // - Inst_Call
