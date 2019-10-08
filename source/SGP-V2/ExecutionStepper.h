@@ -147,25 +147,17 @@ namespace emp { namespace sgp_v2 {
 
       memory_state_t & GetMemory() { return memory; }
 
-      void SetIP(size_t i) {
-        emp_assert(flow_stack.size());
-        flow_stack.back().ip = i;
-      }
+      void SetIP(size_t i) { emp_assert(flow_stack.size()); flow_stack.back().ip = i; }
 
-      void SetMP(size_t m) {
-        emp_assert(flow_stack.size());
-        flow_stack.back().mp = m;
-      }
+      void SetMP(size_t m) { emp_assert(flow_stack.size()); flow_stack.back().mp = m; }
 
-      size_t & IP() {
-        emp_assert(flow_stack.size());
-        flow_stack.back().ip;
-      }
+      size_t GetIP() const { emp_assert(flow_stack.size()); return flow_stack.back().ip; }
 
-      size_t & MP() {
-        emp_assert(flow_stack.size());
-        flow_stack.back().mp;
-      }
+      size_t GetMP() const { emp_assert(flow_stack.size()); return flow_stack.back().mp; }
+
+      size_t & IP() { emp_assert(flow_stack.size()); return flow_stack.back().ip; }
+
+      size_t & MP() { emp_assert(flow_stack.size()); return flow_stack.back().mp; }
     };
 
     /// Execution State.
@@ -201,6 +193,9 @@ namespace emp { namespace sgp_v2 {
 
       tag_t & GetTag() { return tag; }
       const tag_t & GetTag() const { return tag; }
+
+      size_t GetBegin() const { return begin; }
+      size_t GetEnd() const { return end; }
 
       bool InModule(size_t ip) const { return Has(in_module, ip); }
     };

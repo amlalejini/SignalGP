@@ -180,23 +180,39 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
     auto & exec_stepper = hw.GetExecStepper();
     auto & call_state = hw.GetCurExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
+    std::cout << "INSTRUCTION - IF" << std::endl;
+    const size_t prog_len = exec_stepper.GetProgram().GetSize();
     const size_t cur_ip = call_state.GetIP();
     const size_t cur_mp = call_state.GetMP();
+    auto & cur_module = exec_stepper.GetModules()[cur_mp];
     // Beginning of block (if instruction).
     const size_t bob = cur_ip;
     // First instruction of block (next instruction)
-    const size_t next_ip = (!(cur_ip + 1 < exec_stepper.GetProgram().GetSize())) ? 0 : cur_ip + 1;
+    // const size_t next_ip = cur_ip + 1; //(!(cur_ip + 1 < exec_stepper.GetProgram().GetSize())) ? 0 : cur_ip + 1;
+    size_t next_ip = (cur_ip + 1 >= prog_len
+                      && exec_stepper.IsValidProgramPosition(cur_mp, 0)
+                      && cur_module.GetBegin() != 0) ? 0 : cur_ip + 1;
+    // Next IP
+    // - if we're in the middle of the program, just the next i
     // Find end of flow.
-    const size_t eob = exec_stepper.FindEndOfBlock(call_state.GetMP(), next_ip); // NOTE - if IP is current instruction, want to start looking past current BLOCK_DEF
+    const size_t eob = exec_stepper.FindEndOfBlock(cur_mp, next_ip); // NOTE - if IP is current instruction, want to start looking past current BLOCK_DEF
+    std::cout << "bob = " << bob << std::endl;
+    std::cout << "next ip = " << next_ip << std::endl;
+    std::cout << "eob = " << eob << std::endl;
     if (mem_state.AccessWorking(inst.GetArg(0)) == 0.0) {
+      std::cout << "Skip block!" << std::endl;
       // Skip to EOB
       call_state.SetIP(eob);
       // Advance past the block close if not at end of module.
-      if (exec_stepper.IsValidPosition(call_state.GetMP(), eob)) ++call_state.IP();
+      if (exec_stepper.IsValidProgramPosition(cur_mp, eob)) {
+        std::cout << "Advance past eob?" << std::endl;
+        ++call_state.IP();
+      }
     } else {
+      std::cout << "Enter if!" << std::endl;
       // Open flow
       exec_stepper.GetFlowHandler().OpenFlow({HARDWARE_T::exec_stepper_t::FlowType::BASIC,
-                                              call_state.GetMP(),
+                                              cur_mp,
                                               next_ip,
                                               bob,
                                               eob},

@@ -40,6 +40,142 @@ TEST_CASE( "Hello World", "[general]" ) {
 
 // }
 
+
+TEST_CASE( "SignalGP - v2 - if instruction", "[instruction]" ) {
+
+  using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
+  using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t>;
+  using exec_state_t = typename exec_stepper_t::exec_state_t;
+  using tag_t = typename exec_stepper_t::tag_t;
+  using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t>;
+  using inst_lib_t = typename exec_stepper_t::inst_lib_t;
+  using inst_t = typename exec_stepper_t::inst_t;
+  using inst_prop_t = typename exec_stepper_t::inst_prop_t;
+  using program_t = typename exec_stepper_t::program_t; // SimpleProgram<TAG_T, INST_ARGUMENT_T>
+
+  inst_lib_t inst_lib;
+  emp::EventLibrary<signalgp_t> event_lib;
+  emp::Random random(2);
+
+  // Add some instructions to the instruction library.
+  inst_lib.AddInst("Nop", [](signalgp_t & hw, const inst_t & inst) { ; }, "No operation!");
+  inst_lib.AddInst("ModuleDef", [](signalgp_t & hw, const inst_t & inst) { ; }, "Module definition", {inst_prop_t::MODULE});
+  inst_lib.AddInst("Inc", emp::sgp_v2::inst_impl::Inst_Inc<signalgp_t, inst_t>, "Increment!");
+  inst_lib.AddInst("Dec", emp::sgp_v2::inst_impl::Inst_Dec<signalgp_t, inst_t>, "Decrement!");
+  inst_lib.AddInst("Not", emp::sgp_v2::inst_impl::Inst_Not<signalgp_t, inst_t>, "Logical not of ARG[0]");
+  inst_lib.AddInst("Add", emp::sgp_v2::inst_impl::Inst_Add<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Sub", emp::sgp_v2::inst_impl::Inst_Sub<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Mult", emp::sgp_v2::inst_impl::Inst_Mult<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Div", emp::sgp_v2::inst_impl::Inst_Div<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Mod", emp::sgp_v2::inst_impl::Inst_Mod<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestEqu", emp::sgp_v2::inst_impl::Inst_TestEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestNEqu", emp::sgp_v2::inst_impl::Inst_TestNEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestLess", emp::sgp_v2::inst_impl::Inst_TestLess<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestLessEqu", emp::sgp_v2::inst_impl::Inst_TestLessEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestGreater", emp::sgp_v2::inst_impl::Inst_TestGreater<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestGreaterEqu", emp::sgp_v2::inst_impl::Inst_TestGreaterEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("If", emp::sgp_v2::inst_impl::Inst_If<signalgp_t, inst_t>, "");
+
+  std::cout << "Constructing hardware." << std::endl;
+  signalgp_t hardware(&event_lib, &random);
+  std::cout << "=> Hardware constructed." << std::endl;
+
+  std::cout << "Initializing execution stepper." << std::endl;
+  hardware.InitExecStepper(&inst_lib, &random);
+  std::cout << "=> Execution stepper initialized." << std::endl;
+
+  hardware.SetPrintProgramFun([&hardware, &inst_lib](std::ostream & os) {
+    program_t & program = hardware.GetProgram();
+    for (size_t i = 0; i < program.GetSize(); ++i) {
+      inst_t & inst = program[i];
+      // Name[tags](args)
+      os << inst_lib.GetName(inst.id);
+      os << "[";
+      for (size_t ti = 0; ti < inst.tags.size(); ++ti) {
+        if (ti) os << ",";
+        os << inst.tags[ti];
+      }
+      os << "](";
+      for (size_t ai = 0; ai < inst.args.size(); ++ai) {
+        if (ai) os << ",";
+        os << inst.args[ai];
+      }
+      os << ")\n";
+    }
+  });
+  hardware.SetPrintModulesFun([&hardware](std::ostream & os) {
+    hardware.GetExecStepper().PrintModules();
+  });
+  hardware.SetPrintExecStepperStateFun([&hardware](std::ostream & os) {
+    hardware.PrintModules(os);
+    os << "\n";
+    // todo - print matchbin state
+    hardware.GetExecStepper().GetMemoryModel().PrintState(os);
+  });
+  hardware.SetPrintExecutionStateFun([&hardware](const exec_state_t & state, std::ostream & os) {
+    hardware.GetExecStepper().PrintExecutionState(state, os);
+  });
+  hardware.SetPrintHardwareStateFun([&hardware](std::ostream & os) {
+    // -- Print thread usage --
+    hardware.PrintThreadUsage(os);
+    os << "\n";
+    // -- Print event queue --
+    hardware.PrintEventQueue(os);
+    os << "\n";
+    // -- Print state of exec stepper --
+    hardware.PrintExecStepperState(os);
+    os << "\n";
+    // -- Print thread states --
+    hardware.PrintActiveThreadStates(os);
+  });
+
+  // Construct a program
+  program_t program;
+  program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "Inc", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "If", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
+
+
+  std::cout << "Loading program." << std::endl;
+  hardware.SetProgram(program);
+  std::cout << "=> Program loaded." << std::endl;
+  hardware.SetThreadLimit(8);
+  // Todo - print program to verify!
+  // Todo - print modules to verify!
+  std::cout << "======= MODULES =======" << std::endl;
+  hardware.PrintModules(); std::cout << std::endl;
+  std::cout << "=======================" << std::endl;
+  std::cout << "======= PROGRAMS =======" << std::endl;
+  hardware.PrintProgram();
+  std::cout << "========================" << std::endl;
+
+  // hardware.SingleProcess(); // This should do nothing!
+
+  std::cout << "============= HARDWARE STATE =============" << std::endl;
+  hardware.PrintHardwareState();
+  std::cout << "==========================================" << std::endl;
+
+  // Spawn a thread!
+  std::cout << ">>Spawn a thread (module 0)" << std::endl;
+  hardware.SpawnThread(0);
+  std::cout << "============= HARDWARE STATE =============" << std::endl;
+  hardware.PrintHardwareState();
+  std::cout << "==========================================" << std::endl;
+
+  while (true) {
+    char cmd;
+    std::cin >> cmd;
+    if (cmd == 'q') {
+      break;
+    }
+    hardware.SingleProcess();
+    std::cout << "============= HARDWARE STATE =============" << std::endl;
+    hardware.PrintHardwareState();
+    std::cout << "==========================================" << std::endl;
+  }
+}
+
 TEST_CASE( "SignalGP - v2", "[general]" ) {
 
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
@@ -62,12 +198,25 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
   inst_lib.AddInst("Inc", emp::sgp_v2::inst_impl::Inst_Inc<signalgp_t, inst_t>, "Increment!");
   inst_lib.AddInst("Dec", emp::sgp_v2::inst_impl::Inst_Dec<signalgp_t, inst_t>, "Decrement!");
   inst_lib.AddInst("Not", emp::sgp_v2::inst_impl::Inst_Not<signalgp_t, inst_t>, "Logical not of ARG[0]");
+  inst_lib.AddInst("Add", emp::sgp_v2::inst_impl::Inst_Add<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Sub", emp::sgp_v2::inst_impl::Inst_Sub<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Mult", emp::sgp_v2::inst_impl::Inst_Mult<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Div", emp::sgp_v2::inst_impl::Inst_Div<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Mod", emp::sgp_v2::inst_impl::Inst_Mod<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestEqu", emp::sgp_v2::inst_impl::Inst_TestEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestNEqu", emp::sgp_v2::inst_impl::Inst_TestNEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestLess", emp::sgp_v2::inst_impl::Inst_TestLess<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestLessEqu", emp::sgp_v2::inst_impl::Inst_TestLessEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestGreater", emp::sgp_v2::inst_impl::Inst_TestGreater<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestGreaterEqu", emp::sgp_v2::inst_impl::Inst_TestGreaterEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("If", emp::sgp_v2::inst_impl::Inst_If<signalgp_t, inst_t>, "");
 
   // Construct a program
   program_t program;
   program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
   program.PushInst(inst_lib, "Inc", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
   program.PushInst(inst_lib, "Dec", {1, 0, 0}, {tag_t(), tag_t(), tag_t()});
+  program.PushInst(inst_lib, "Sub", {0, 1, 2}, {tag_t(), tag_t(), tag_t()});
   program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
 
   std::cout << "Constructing hardware." << std::endl;
@@ -166,5 +315,4 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
     hardware.PrintHardwareState();
     std::cout << "==========================================" << std::endl;
   }
-
 }
