@@ -106,6 +106,11 @@ namespace emp { namespace sgp_v2 {
         emp_assert(Has(lib, type), "FlowType not recognized!");
         lib[type].close_flow_fun(state);
       }
+
+      void BreakFlow(FlowType type, exec_state_t & state) {
+        emp_assert(Has(lib, type), "FlowType not recognized!");
+        lib[type].break_flow_fun(state);
+      }
     };
 
     /// Base flow information
@@ -125,6 +130,7 @@ namespace emp { namespace sgp_v2 {
       size_t GetEnd() const { return end; }
       size_t GetMP() const { return mp; }
       size_t GetIP() const { return ip; }
+      FlowType GetType() const { return type; }
     };
 
     struct CallState {
@@ -238,8 +244,8 @@ namespace emp { namespace sgp_v2 {
       // - Pop current flow from stack.
       // - Set new top of flow stack (if any)'s IP and MP to returning IP and MP.
       flow_handler[FlowType::BASIC].close_flow_fun =
-        [](exec_state_t & exec_state) {
-          emp_assert(exec_state.call_stack.size(), "Failed to close BASIC flow. NO calls on call stack.");
+        [this](exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to close BASIC flow. No calls on call stack.");
           CallState & call_state = exec_state.call_stack.back();
           emp_assert(call_state.IsFlow(), "Failed to close BASIC flow. No flow to close.");
           const size_t ip = call_state.GetTopFlow().ip;
@@ -253,7 +259,19 @@ namespace emp { namespace sgp_v2 {
         };
 
       // On break!
-      flow_handler[FlowType::BASIC].break_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::BASIC].break_flow_fun =
+        [this](exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to break BASIC flow. No calls on call stack.");
+          CallState & call_state = exec_state.call_stack.back();
+          emp_assert(call_state.IsFlow(), "Failed to break BASIC flow. No flow to close.");
+          const size_t flow_end = call_state.GetTopFlow().GetEnd();
+          if (call_state.IsFlow()) {
+            call_state.SetIP(flow_end);
+            if (IsValidProgramPosition(call_state.GetMP(), call_state.GetIP())) {
+              ++call_state.IP();
+            }
+          }
+        };
 
       flow_handler[FlowType::WHILE_LOOP].open_flow_fun =
         [](exec_state_t & exec_state, const FlowInfo & new_flow) {
@@ -263,7 +281,7 @@ namespace emp { namespace sgp_v2 {
         };
 
       flow_handler[FlowType::WHILE_LOOP].close_flow_fun =
-        [](exec_state_t & exec_state) {
+        [this](exec_state_t & exec_state) {
           emp_assert(exec_state.call_stack.size(), "Failed to close WHILE_LOOP flow. No calls on call stack.");
           // Move IP to start of block
           CallState & call_state = exec_state.call_stack.back();
@@ -276,7 +294,19 @@ namespace emp { namespace sgp_v2 {
           }
         };
 
-      flow_handler[FlowType::WHILE_LOOP].break_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::WHILE_LOOP].break_flow_fun =
+        [this](exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to break BASIC flow. No calls on call stack.");
+          CallState & call_state = exec_state.call_stack.back();
+          emp_assert(call_state.IsFlow(), "Failed to break BASIC flow. No flow to close.");
+          const size_t flow_end = call_state.GetTopFlow().GetEnd();
+          if (call_state.IsFlow()) {
+            call_state.SetIP(flow_end);
+            if (IsValidProgramPosition(call_state.GetMP(), call_state.GetIP())) {
+              ++call_state.IP();
+            }
+          }
+        };
 
       flow_handler[FlowType::ROUTINE].open_flow_fun = [](exec_state_t & exec_state, const FlowInfo & new_flow) { ; };
       flow_handler[FlowType::ROUTINE].close_flow_fun = [](exec_state_t & exec_state) { ; };

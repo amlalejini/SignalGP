@@ -284,9 +284,67 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
   }
 
   // - Inst_Break
+  //   - break out of nearest loop in flow stack (that isn't preceded by a routine or call)
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Break(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    using flow_type_t = typename HARDWARE_T::exec_stepper_t::FlowType;
+    auto & exec_stepper = hw.GetExecStepper();
+    auto & call_state = hw.GetCurExecState().GetTopCallState();
+    // break out of the nearest loop:
+    //     loop = false;
+    // (1) While (true) {
+    //       if (basic) continue; ++i
+    //       elif (loop) loop = true; break;
+    //       else break;
+    //     }
+    bool found_loop = false;
+    int flow_pos = call_state.flow_stack.size() - 1;
+    while (flow_pos >= 0) {
+      auto & flow = call_state.flow_stack[flow_pos];
+      if (flow.GetType() == flow_type_t::BASIC) {
+        --flow_pos;
+        continue;
+      } else if (flow.GetType() == flow_type_t::WHILE_LOOP) {
+        found_loop = true;
+        break;
+      } else {
+        break;
+      }
+    }
+    // (2) While (loop) {
+    //       if (basic) pop_back()
+    //       if (loop) {
+    //         BreakFlow(loop, exec_state);
+    //         break;
+    //       }
+    //     }
+    while (found_loop) {
+      if (call_state.GetTopFlow().GetType() == flow_type_t::BASIC) {
+        call_state.flow_stack.pop_back();
+      } else {
+        emp_assert(call_state.GetTopFlow().GetType() == flow_type_t::WHILE_LOOP);
+        exec_stepper.GetFlowHandler().BreakFlow(flow_type_t::WHILE_LOOP, exec_stepper);
+        break;
+      }
+    }
+  }
+
   // - Inst_Close
+  //   - close basic and while_loop flow
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Close(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    using flow_type_t = typename HARDWARE_T::exec_stepper_t::FlowType;
+    auto & exec_stepper = hw.GetExecStepper();
+    auto & call_state = hw.GetCurExecState().GetTopCallState();
+    const flow_type_t cur_flow_type = call_state.GetTopFlow().GetType();
+    if (cur_flow_type == flow_type_t::BASIC || cur_flow_type == flow_type_t::WHILE_LOOP) {
+      exec_stepper.GetFlowHandler().CloseFlow(cur_flow_type, exec_state);
+    }
+  }
+
   // - Inst_Call
   // - Inst_Return
+
   // - Inst_SetMem
   // - Inst_CopyMem
   // - Inst_SwapMem
@@ -294,9 +352,14 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
   // - Inst_Output
   // - Inst_Commit
   // - Inst_Pull
+
   // - Inst_Fork
   // - Inst_Terminate
+
   // - Inst_Nop
+  ///  - do nothing
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Nop(HARDWARE_T & hw, const INSTRUCTION_T & inst) { ; }
 
 }}}
 
