@@ -416,18 +416,18 @@ namespace emp { namespace sgp_v2 {
     }
 
     void SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state) {
-      std::cout << "SingleExecutionStep!" << std::endl;
+      // std::cout << "SingleExecutionStep!" << std::endl;
       // If there's a call state on the call stack, execute an instruction.
       while (exec_state.call_stack.size()) {
         // There's something on the call stack.
         CallState & call_state = exec_state.call_stack.back();
         // Is there anything on the flow stack?
         if (call_state.IsFlow()) {
-          std::cout << "- There's some flow." << std::endl;
+          // std::cout << "- There's some flow." << std::endl;
           FlowInfo & flow_info = call_state.flow_stack.back();
           size_t mp = flow_info.mp;
           size_t ip = flow_info.ip;
-          std::cout << ">> MP=" << mp << "; IP=" << ip << std::endl;
+          // std::cout << ">> MP=" << mp << "; IP=" << ip << std::endl;
           emp_assert(mp < GetNumModules(), "Invalid module pointer: ", mp);
           // Process current instruction (if any)!
           if (modules[mp].InModule(ip)) {
@@ -585,7 +585,7 @@ namespace emp { namespace sgp_v2 {
 
     // todo - check to see if this works
     void UpdateModules() {
-      std::cout << "Update modules!" << std::endl;
+      // std::cout << "Update modules!" << std::endl;
       // Clear out the current modules.
       modules.clear();
       // Do nothing if there aren't any instructions to look at.
