@@ -183,7 +183,6 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
     const size_t prog_len = exec_stepper.GetProgram().GetSize();
     const size_t cur_ip = call_state.GetIP();
     const size_t cur_mp = call_state.GetMP();
-    auto & cur_module = exec_stepper.GetModules()[cur_mp];
     // Beginning of block (if instruction).
     const size_t bob = (cur_ip == 0) ? prog_len - 1 : cur_ip - 1;
     // Find end of flow.
@@ -345,7 +344,7 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
     using flow_type_t = typename HARDWARE_T::exec_stepper_t::FlowType;
     auto & exec_stepper = hw.GetExecStepper();
     auto & call_state = hw.GetCurExecState().GetTopCallState();
-    emp::vector<size_t> matches(exec_stepper.FindModuleMatch(int.GetArgs(0)));
+    emp::vector<size_t> matches(exec_stepper.FindModuleMatch(inst.GetArgs(0)));
     if (matches.size()) {
       const auto & target_module = exec_stepper.GetModule(matches[0]);
       // Flow: type mp ip begin end
@@ -424,7 +423,8 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
   void Inst_WorkingToGlobal(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     auto & call_state = hw.GetCurExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
-    hw.
+    auto & mem_model = hw.GetExecStepper().GetMemoryModel();
+    mem_model.SetGlobal(inst.GetArg(1), mem_state.AccessWorking(inst.GetArg(0)));
   }
 
   // - Inst_Pull (pull value from global to working memory)
