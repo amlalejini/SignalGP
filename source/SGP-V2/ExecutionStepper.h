@@ -657,19 +657,43 @@ namespace emp { namespace sgp_v2 {
       os << "------ TOP ------\n";
       for (auto it = state.call_stack.rbegin(); it != state.call_stack.rend(); ++it) {
         const CallState & call_state = *it;
-        if (call_state.flow_stack.size()) {
-          const FlowInfo & top_flow = call_state.flow_stack.back();
+        const size_t num_flow = call_state.flow_stack.size();
+        // os << "--- CALL ---\n";
+        memory_model.PrintMemoryState(call_state.memory, os);
+        os << "Flow Stack:\n";
+        for (size_t i = 0; i < num_flow; ++i) {
+          // if (i) os << "---\n";
+          const FlowInfo & flow = call_state.flow_stack[num_flow - 1 - i];
           // MP, IP, ...
           // type, mp, ip, begin, end
           // todo - print full flow stack!
-          os << "Call: {mp:" << top_flow.mp
-             << ", ip:" << top_flow.ip
-             << ", flow-begin:" << top_flow.begin
-             << ", flow-end:" << top_flow.end
-             << ", flow-type:" << flow_handler.FlowTypeToString(top_flow.type)
-             << "}\n";
+          os << "  Flow: {mp:" << flow.mp
+             << ", ip:" << flow.ip
+             << ", flow-begin:" << flow.begin
+             << ", flow-end:" << flow.end
+             << ", flow-type:" << flow_handler.FlowTypeToString(flow.type)
+             << "}; ";
+          // if is valid instruction
+          os << "Instruction: ";
+          if (IsValidProgramPosition(flow.mp, flow.ip)) {
+            // Name[tags](args)
+            const inst_t & inst = program[i];
+            os << inst_lib->GetName(inst.id);
+            os << "[";
+            for (size_t ti = 0; ti < inst.tags.size(); ++ti) {
+              if (ti) os << ",";
+              os << inst.tags[ti];
+            }
+            os << "](";
+            for (size_t ai = 0; ai < inst.args.size(); ++ai) {
+              if (ai) os << ",";
+              os << inst.args[ai];
+            }
+            os << ")\n";
+          } else {
+            os << "NONE\n";
+          }
         }
-        memory_model.PrintMemoryState(call_state.memory, os);
         os << "---\n";
       }
       os << "-----------------";
