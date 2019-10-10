@@ -215,7 +215,6 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
     const size_t prog_len = exec_stepper.GetProgram().GetSize();
     const size_t cur_ip = call_state.GetIP();
     const size_t cur_mp = call_state.GetMP();
-    auto & cur_module = exec_stepper.GetModules()[cur_mp];
     // Beginning of block (while instruction).
     const size_t bob = (cur_ip == 0) ? prog_len - 1 : cur_ip - 1;
     // Find end of flow.
@@ -248,7 +247,6 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
     const size_t prog_len = exec_stepper.GetProgram().GetSize();
     const size_t cur_ip = call_state.GetIP();
     const size_t cur_mp = call_state.GetMP();
-    auto & cur_module = exec_stepper.GetModules()[cur_mp];
     // Beginning of block (while instruction).
     const size_t bob = (cur_ip == 0) ? prog_len - 1 : cur_ip - 1;
     // Find end of flow.
@@ -312,7 +310,7 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
         call_state.flow_stack.pop_back(); // todo - CloseFlow?
       } else {
         emp_assert(call_state.GetTopFlow().GetType() == flow_type_t::WHILE_LOOP);
-        exec_stepper.GetFlowHandler().BreakFlow(flow_type_t::WHILE_LOOP, exec_stepper);
+        exec_stepper.GetFlowHandler().BreakFlow(flow_type_t::WHILE_LOOP, hw.GetCurExecState());
         break;
       }
     }
@@ -335,7 +333,7 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Call(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     auto & exec_stepper = hw.GetExecStepper();
-    exec_stepper.CallModule(inst.GetTag(0), exec_stepper.GetCurExecState());
+    exec_stepper.CallModule(inst.GetTag(0), hw.GetCurExecState());
   }
 
   // - Inst_Routine
@@ -343,8 +341,7 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
   void Inst_Routine(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     using flow_type_t = typename HARDWARE_T::exec_stepper_t::FlowType;
     auto & exec_stepper = hw.GetExecStepper();
-    auto & call_state = hw.GetCurExecState().GetTopCallState();
-    emp::vector<size_t> matches(exec_stepper.FindModuleMatch(inst.GetArgs(0)));
+    emp::vector<size_t> matches(exec_stepper.FindModuleMatch(inst.GetTag(0)));
     if (matches.size()) {
       const auto & target_module = exec_stepper.GetModule(matches[0]);
       // Flow: type mp ip begin end
@@ -367,10 +364,10 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
     while (call_state.IsFlow()) {
       auto & top = call_state.GetTopFlow();
       if (top.GetType() == flow_type_t::CALL || top.GetType() == flow_type_t::ROUTINE) {
-        exec_stepper.CloseFlow(top.GetType(), hw.GetCurExecState());
+        exec_stepper.GetFlowHandler().CloseFlow(top.GetType(), hw.GetCurExecState());
         break;
       } else {
-        exec_stepper.CloseFlow(top.GetType(), hw.GetCurExecState());
+        exec_stepper.GetFlowHandler().CloseFlow(top.GetType(), hw.GetCurExecState());
       }
     }
   }
@@ -446,8 +443,8 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
       if (thread_id < hw.GetMaxThreads()) {
         // Spawned valid thread.
         // Do whatever it is that the memory model says we should do on a function call.
-        auto & forker = hw.GetCurExecState();
-        auto & forkee = hw.GetThread(thread_id).GetExecState();
+        auto & forker = hw.GetCurExecState().GetTopCallState();
+        auto & forkee = hw.GetThread(thread_id).GetExecState().GetTopCallState();
         exec_stepper.GetMemoryModel().OnModuleCall(forker.GetMemory(), forkee.GetMemory());
       }
     }

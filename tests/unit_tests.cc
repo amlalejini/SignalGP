@@ -54,6 +54,22 @@ TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[
   inst_lib.AddInst("TestGreater", emp::sgp_v2::inst_impl::Inst_TestGreater<signalgp_t, inst_t>, "");
   inst_lib.AddInst("TestGreaterEqu", emp::sgp_v2::inst_impl::Inst_TestGreaterEqu<signalgp_t, inst_t>, "");
   inst_lib.AddInst("If", emp::sgp_v2::inst_impl::Inst_If<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("SetMem", emp::sgp_v2::inst_impl::Inst_SetMem<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("While", emp::sgp_v2::inst_impl::Inst_While<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Countdown", emp::sgp_v2::inst_impl::Inst_Countdown<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Break", emp::sgp_v2::inst_impl::Inst_Break<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Close", emp::sgp_v2::inst_impl::Inst_Close<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Call", emp::sgp_v2::inst_impl::Inst_Call<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Routine", emp::sgp_v2::inst_impl::Inst_Routine<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Return", emp::sgp_v2::inst_impl::Inst_Return<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("CopyMem", emp::sgp_v2::inst_impl::Inst_CopyMem<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("SwapMem", emp::sgp_v2::inst_impl::Inst_SwapMem<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("InputToWorking", emp::sgp_v2::inst_impl::Inst_InputToWorking<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("WorkingToOutput", emp::sgp_v2::inst_impl::Inst_WorkingToOutput<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("WorkingToGlobal", emp::sgp_v2::inst_impl::Inst_WorkingToGlobal<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("GlobalToWorking", emp::sgp_v2::inst_impl::Inst_GlobalToWorking<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Fork", emp::sgp_v2::inst_impl::Inst_Fork<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Terminate", emp::sgp_v2::inst_impl::Inst_Terminate<signalgp_t, inst_t>, "");
 
   signalgp_t hardware(&event_lib, &random);
   hardware.InitExecStepper(&inst_lib, &random);
@@ -523,9 +539,61 @@ TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[
     hardware.SingleProcess(); // IP off edge of program
     REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
   }
-  // SECTION ("Inst_TestEqu") {
 
-  // }
+  SECTION ("Inst_SetMem") {
+    std::cout << "-- Testing Inst_SetMem --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "SetMem", {0, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {1, 1, 0});
+    program.PushInst(inst_lib, "SetMem", {2, 2, 0});
+    program.PushInst(inst_lib, "SetMem", {3, -128, 0});
+    program.PushInst(inst_lib, "SetMem", {4, 256, 0});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetExecStepper().GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // SetMem(0, 0, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}}));
+    hardware.SingleProcess(); // SetMem(1, 1, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 1.0}}));
+    hardware.SingleProcess(); // SetMem(2, 2, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 2.0}}));
+    hardware.SingleProcess(); // SetMem(3, -128, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 2.0}, {3, -128.0}}));
+    hardware.SingleProcess(); // SetMem(4, 256, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 2.0}, {3, -128.0}, {4, 256}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_TestEqu") {
+
+  }
+
   // SECTION ("Inst_TestNEqu") {
 
   // }
