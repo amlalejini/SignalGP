@@ -112,6 +112,19 @@ namespace emp { namespace sgp_v2 {
       PrintMemoryBuffer(global_mem, os);
     }
 
+    void SetGlobal(int key, double val) {
+      global_mem[key] = val;
+    }
+
+    double & AccessGlobal(int key) {
+      if (!Has(global_mem, key)) global_mem[key] = 0;
+      return global_mem[key];
+    }
+
+    double GetGlobal(int key) {
+      return Find(global_mem, key, 0.0);
+    }
+
     void OnModuleCall(memory_state_t & caller_mem, memory_state_t & callee_mem) {
       for (auto & mem : caller_mem.working_mem) {
         callee_mem.SetInput(mem.first, mem.second);

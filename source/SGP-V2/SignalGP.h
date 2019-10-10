@@ -61,10 +61,10 @@ namespace emp { namespace sgp_v2 {
     struct Thread {
       // label?
       exec_state_t exec_state;
-      // bool dead;
+      bool dead;
 
       Thread(const exec_state_t & _exec_state=exec_state_t())
-        : exec_state(_exec_state) { ; }
+        : exec_state(_exec_state), dead(false) { ; }
 
       void Reset() {
         exec_state.Clear(); // TODO - make this functionality more flexible! Currently assumes exec_state_t has a Clear function!
@@ -72,6 +72,9 @@ namespace emp { namespace sgp_v2 {
 
       exec_state_t & GetExecState() { return exec_state; }
       const exec_state_t & GetExecState() const { return exec_state; }
+
+      void SetDead(bool val=true) { dead = val; }
+      bool IsDead() const { return dead; }
 
     };
 
@@ -179,6 +182,7 @@ namespace emp { namespace sgp_v2 {
     /// Get a reference to active threads.
     /// NOTE: use responsibly! No safety gloves here!
     emp::vector<thread_t> & GetThreads() { return threads; }
+    thread_t & GetThread(size_t i) { emp_assert(i < threads.size); return threads[i]; }
 
     /// Get the ID of the currently executing thread. If hardware is not in midst
     /// of an execution cycle, this will return (size_t)-1.
@@ -386,7 +390,7 @@ namespace emp { namespace sgp_v2 {
         exec_stepper->SingleExecutionStep(*this, threads[cur_thread_id].exec_state);
 
         // TODO - is this thread dead?
-        if (false) {
+        if (threads[cur_thread_id].IsDead()) {
           active_threads[active_thread_id - adjust] = (size_t)-1;
           unused_threads.emplace_back(cur_thread_id);
           ++adjust;

@@ -183,6 +183,7 @@ namespace emp { namespace sgp_v2 {
         emp_assert(call_stack.size(), "Cannot get top call state from empty call stack.");
         return call_stack.back();
       }
+
     };
 
     /// Module definition.
@@ -230,7 +231,7 @@ namespace emp { namespace sgp_v2 {
 
     size_t max_call_depth;
 
-    void SetupDefaultFlowControl() { // TODO!
+    void SetupDefaultFlowControl() {
       // --- BASIC Flow ---
       // On open:
       flow_handler[FlowType::BASIC].open_flow_fun =
@@ -265,6 +266,7 @@ namespace emp { namespace sgp_v2 {
           CallState & call_state = exec_state.call_stack.back();
           emp_assert(call_state.IsFlow(), "Failed to break BASIC flow. No flow to close.");
           const size_t flow_end = call_state.GetTopFlow().GetEnd();
+          call_state.flow_stack.pop_back();
           if (call_state.IsFlow()) {
             call_state.SetIP(flow_end);
             if (IsValidProgramPosition(call_state.GetMP(), call_state.GetIP())) {
@@ -296,10 +298,11 @@ namespace emp { namespace sgp_v2 {
 
       flow_handler[FlowType::WHILE_LOOP].break_flow_fun =
         [this](exec_state_t & exec_state) {
-          emp_assert(exec_state.call_stack.size(), "Failed to break BASIC flow. No calls on call stack.");
+          emp_assert(exec_state.call_stack.size(), "Failed to break WHILE_LOOP flow. No calls on call stack.");
           CallState & call_state = exec_state.call_stack.back();
-          emp_assert(call_state.IsFlow(), "Failed to break BASIC flow. No flow to close.");
+          emp_assert(call_state.IsFlow(), "Failed to break WHILE_LOOP flow. No flow to close.");
           const size_t flow_end = call_state.GetTopFlow().GetEnd();
+          call_state.flow_stack.pop_back();
           if (call_state.IsFlow()) {
             call_state.SetIP(flow_end);
             if (IsValidProgramPosition(call_state.GetMP(), call_state.GetIP())) {
@@ -308,9 +311,29 @@ namespace emp { namespace sgp_v2 {
           }
         };
 
-      flow_handler[FlowType::ROUTINE].open_flow_fun = [](exec_state_t & exec_state, const FlowInfo & new_flow) { ; };
-      flow_handler[FlowType::ROUTINE].close_flow_fun = [](exec_state_t & exec_state) { ; };
-      flow_handler[FlowType::ROUTINE].break_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::ROUTINE].open_flow_fun =
+        [](exec_state_t & exec_state, const FlowInfo & new_flow) {
+          emp_assert(exec_state.call_stack.size(), "Failed to open ROUTINE flow. No calls on call stack.");
+          CallState & call_state = exec_state.GetTopCallState();
+          call_state.flow_stack.emplace_back(new_flow);
+        };
+
+      flow_handler[FlowType::ROUTINE].close_flow_fun =
+        [](exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to close ROUTINE flow. No calls on call stack.");
+          CallState & call_state = exec_state.call_stack.back();
+          emp_assert(call_state.IsFlow(), "Failed to break ROUTINE flow. No flow to close.");
+          // Closing a ROUTINE flow:
+          // - Pop flow from flow stack
+          // - No need to pass IP and MP down (we want to return to previous IP/MP)
+          call_state.flow_stack.pop_back();
+        };
+
+      // breaking from a routine is the same as closing a routine
+      flow_handler[FlowType::ROUTINE].break_flow_fun =
+        [this](exec_state_t & exec_state) {
+          flow_handler.CloseFlow(FlowType::ROUTINE, exec_state);
+        };
 
       flow_handler[FlowType::CALL].open_flow_fun =
         [](exec_state_t & exec_state, const FlowInfo & new_flow) {
@@ -336,7 +359,10 @@ namespace emp { namespace sgp_v2 {
           }
         };
 
-      flow_handler[FlowType::CALL].break_flow_fun = [](exec_state_t & exec_state) { ; };
+      flow_handler[FlowType::CALL].break_flow_fun =
+        [this](exec_state_t & exec_state) {
+          flow_handler.CloseFlow(FlowType::CALL, exec_state);
+        };
     }
 
   public:
@@ -390,10 +416,14 @@ namespace emp { namespace sgp_v2 {
           emp_assert(mp < GetNumModules(), "Invalid module pointer: ", mp);
           // Process current instruction (if any)!
           if (modules[mp].InModule(ip)) {
-            // The instruction pointer is looking at a valid instruction in the current module.
             // NOTE - should we increment the IP before or after executing?
-            inst_lib->ProcessInst(hardware, program[ip]);
+            // Only BEFORE executing an instruction do we have any guarantees about
+            // the state of our flow info. After processing an instruction, this
+            // flow info reference could be invalid. Our call state reference could
+            // even be invalid. Thus, we must increment the IP before processing
+            // the current instruction.
             ++flow_info.ip; // Move instruction pointer forward (might be invalid location).
+            inst_lib->ProcessInst(hardware, program[ip]);
           } else if (ip >= program.GetSize()
                     && modules[mp].InModule(0)
                     && modules[mp].end < modules[mp].begin) {
@@ -401,8 +431,8 @@ namespace emp { namespace sgp_v2 {
             // HERE, we handle if this module wraps back to the beginning of the program.
             // in which case, we need to move the IP.
             ip = 0;
+            flow_info.ip = 1; // See comment above for why we do this before ProcessInst.
             inst_lib->ProcessInst(hardware, program[ip]);
-            ++flow_info.ip;
           } else {
             // IP not valid for this module. Close flow.
             flow_handler.CloseFlow(flow_info.type, exec_state);
@@ -414,6 +444,10 @@ namespace emp { namespace sgp_v2 {
           ReturnCall(exec_state);
         }
         break; // We executed *something*, break from loop.
+      }
+      // If execution state's call stack is empty, mark thread as dead.
+      if (exec_state.call_stack.empty()) {
+        hardware.GetCurThread().SetDead(true);
       }
     }
 
@@ -585,6 +619,7 @@ namespace emp { namespace sgp_v2 {
     }
 
     emp::vector<module_t> & GetModules() { return modules;  }
+    module_t & GetModule(size_t i) { emp_assert(i < modules.size()); return modules[i]; }
     size_t GetNumModules() const { return modules.size(); }
 
     program_t & GetProgram() { return program; }
