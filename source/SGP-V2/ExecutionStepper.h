@@ -184,6 +184,8 @@ namespace emp { namespace sgp_v2 {
         return call_stack.back();
       }
 
+      emp::vector<CallState> & GetCallStack() { return call_stack; }
+
     };
 
     /// Module definition.
@@ -381,6 +383,19 @@ namespace emp { namespace sgp_v2 {
     {
       // Configure default flow control
       SetupDefaultFlowControl();
+    }
+
+    // Reset hardware state
+    void ResetHardwareState() {
+      // Reset global memory
+      memory_model.Reset();
+    }
+
+    // Reset loaded program.
+    void ResetProgram() {
+      modules.clear(); // Clear modules.
+      program.Clear(); // Clear program.
+      ResetMatchBin();
     }
 
     void ResetMatchBin() {

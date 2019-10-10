@@ -16,42 +16,21 @@ TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
 }
 
-// TEST_CASE( "Instruction Library", "[general]" ) {
-//   using SignalGP_t = emp::SignalGP<emp::SimpleProgram, emp::SimpleMemory, emp::SimpleEvent>;
-//   emp::InstructionLibrary<SignalGP_t> inst_lib;
-// }
-
-// TEST_CASE( "Event Library", "[general]" ) {
-//   using SignalGP_t = emp::SignalGP<emp::SimpleProgram, emp::SimpleMemory, emp::SimpleEvent>;
-//   emp::EventLibrary<SignalGP_t> event_lib;
-// }
-
-// TEST_CASE( "SignalGP - v0", "[general]" ) {
-//   using SignalGP_t = emp::SignalGP<emp::SimpleProgramModule, emp::SimpleMemoryModule, emp::SimpleEvent>;
-//   emp::InstructionLibrary<SignalGP_t> inst_lib;
-//   emp::EventLibrary<SignalGP_t> event_lib;
-//   emp::Random random(2);
-
-//   std::cout << "Constructing hardware." << std::endl;
-//   SignalGP_t hardware(&inst_lib, &event_lib, &random);
-//   std::cout << "Hardware constructed." << std::endl;
-
-//   hardware.SingleProcess();
-
-// }
-
-
-TEST_CASE( "SignalGP - v2 - if instruction", "[instruction]" ) {
-
+TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[instructions]" ) {
+  // General setup.
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
   using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t>;
   using exec_state_t = typename exec_stepper_t::exec_state_t;
-  using tag_t = typename exec_stepper_t::tag_t;
+  // using tag_t = typename exec_stepper_t::tag_t;
   using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t>;
   using inst_lib_t = typename exec_stepper_t::inst_lib_t;
   using inst_t = typename exec_stepper_t::inst_t;
   using inst_prop_t = typename exec_stepper_t::inst_prop_t;
   using program_t = typename exec_stepper_t::program_t; // SimpleProgram<TAG_T, INST_ARGUMENT_T>
+
+  using mem_buffer_t = typename mem_model_t::mem_buffer_t;
+
+  const size_t THREAD_LIMIT = 8;
 
   inst_lib_t inst_lib;
   emp::EventLibrary<signalgp_t> event_lib;
@@ -78,12 +57,16 @@ TEST_CASE( "SignalGP - v2 - if instruction", "[instruction]" ) {
 
   std::cout << "Constructing hardware." << std::endl;
   signalgp_t hardware(&event_lib, &random);
-  std::cout << "=> Hardware constructed." << std::endl;
+  std::cout << "=> Hardware constructed successfully." << std::endl;
 
   std::cout << "Initializing execution stepper." << std::endl;
   hardware.InitExecStepper(&inst_lib, &random);
-  std::cout << "=> Execution stepper initialized." << std::endl;
+  std::cout << "=> Execution stepper initialized successfully." << std::endl;
 
+  // Configure hardware
+  hardware.SetThreadLimit(THREAD_LIMIT);
+
+  // Setup custom hardware printing functions.
   hardware.SetPrintProgramFun([&hardware, &inst_lib](std::ostream & os) {
     program_t & program = hardware.GetProgram();
     for (size_t i = 0; i < program.GetSize(); ++i) {
@@ -103,18 +86,22 @@ TEST_CASE( "SignalGP - v2 - if instruction", "[instruction]" ) {
       os << ")\n";
     }
   });
+
   hardware.SetPrintModulesFun([&hardware](std::ostream & os) {
     hardware.GetExecStepper().PrintModules();
   });
+
   hardware.SetPrintExecStepperStateFun([&hardware](std::ostream & os) {
     hardware.PrintModules(os);
     os << "\n";
     // todo - print matchbin state
     hardware.GetExecStepper().GetMemoryModel().PrintState(os);
   });
+
   hardware.SetPrintExecutionStateFun([&hardware](const exec_state_t & state, std::ostream & os) {
     hardware.GetExecStepper().PrintExecutionState(state, os);
   });
+
   hardware.SetPrintHardwareStateFun([&hardware](std::ostream & os) {
     // -- Print thread usage --
     hardware.PrintThreadUsage(os);
@@ -129,53 +116,154 @@ TEST_CASE( "SignalGP - v2 - if instruction", "[instruction]" ) {
     hardware.PrintActiveThreadStates(os);
   });
 
-  // Construct a program
   program_t program;
-  program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
-  program.PushInst(inst_lib, "Nop", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
-  program.PushInst(inst_lib, "Inc", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
-  program.PushInst(inst_lib, "If", {0, 0, 0}, {tag_t(), tag_t(), tag_t()});
 
+  SECTION ("Inst_Inc") {
+    std::cout << "-- Testing Inst_Inc --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
 
-  std::cout << "Loading program." << std::endl;
-  hardware.SetProgram(program);
-  std::cout << "=> Program loaded." << std::endl;
-  hardware.SetThreadLimit(8);
-  // Todo - print program to verify!
-  // Todo - print modules to verify!
-  std::cout << "======= MODULES =======" << std::endl;
-  hardware.PrintModules(); std::cout << std::endl;
-  std::cout << "=======================" << std::endl;
-  std::cout << "======= PROGRAMS =======" << std::endl;
-  hardware.PrintProgram();
-  std::cout << "========================" << std::endl;
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {0, 0, 0});
+    program.PushInst(inst_lib, "Inc", {1, 0, 0});
+    program.PushInst(inst_lib, "Inc", {1, 0, 0});
+    program.PushInst(inst_lib, "Inc", {2, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
 
-  // hardware.SingleProcess(); // This should do nothing!
+    // Load program on hardware.
+    hardware.SetProgram(program);
 
-  std::cout << "============= HARDWARE STATE =============" << std::endl;
-  hardware.PrintHardwareState();
-  std::cout << "==========================================" << std::endl;
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
 
-  // Spawn a thread!
-  std::cout << ">>Spawn a thread (module 0)" << std::endl;
-  hardware.SpawnThread(0);
-  std::cout << "============= HARDWARE STATE =============" << std::endl;
-  hardware.PrintHardwareState();
-  std::cout << "==========================================" << std::endl;
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
 
-  while (true) {
-    char cmd;
-    std::cin >> cmd;
-    if (cmd == 'q') {
-      break;
-    }
-    hardware.SingleProcess();
-    std::cout << "============= HARDWARE STATE =============" << std::endl;
-    hardware.PrintHardwareState();
-    std::cout << "==========================================" << std::endl;
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetExecStepper().GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // Inc(0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}}));
+    hardware.SingleProcess(); // Inc(1)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 1.0}}));
+    hardware.SingleProcess(); // Inc(1)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}}));
+    hardware.SingleProcess(); // Inc(2)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 1.0}}));
+    hardware.SingleProcess(); // Inc(3)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 1.0}, {3, 1.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_Dec") {
+
+  }
+  SECTION ("Inst_Not") {
+
+  }
+  SECTION ("Inst_Add") {
+
+  }
+  SECTION ("Inst_Sub") {
+
+  }
+  SECTION ("Inst_Mult") {
+
+  }
+  SECTION ("Inst_Div") {
+
+  }
+  SECTION ("Inst_Mod") {
+
+  }
+  SECTION ("Inst_TestEqu") {
+
+  }
+  SECTION ("Inst_TestNEqu") {
+
+  }
+  SECTION ("Inst_TestLess") {
+
+  }
+  SECTION ("Inst_TestLessEqu") {
+
+  }
+  SECTION ("Inst_TestGreater") {
+
+  }
+  SECTION ("Inst_TestGreaterEqu") {
+
+  }
+  SECTION ("Inst_If") {
+
+  }
+  SECTION ("Inst_While") {
+
+  }
+  SECTION ("Inst_Countdown") {
+
+  }
+  SECTION ("Inst_Break") {
+
+  }
+  SECTION ("Inst_Close") {
+
+  }
+  SECTION ("Inst_Call") {
+
+  }
+  SECTION ("Inst_Routine") {
+
+  }
+  SECTION ("Inst_Return") {
+
+  }
+  SECTION ("Inst_SetMem") {
+
+  }
+  SECTION ("Inst_CopyMem") {
+
+  }
+  SECTION ("Inst_SwapMem") {
+
+  }
+  SECTION ("Inst_InputToWorking") {
+
+  }
+  SECTION ("Inst_WorkingToOutput") {
+
+  }
+  SECTION ("Inst_WorkingToGlobal") {
+
+  }
+  SECTION ("Inst_GlobalToWorking") {
+
+  }
+  SECTION ("Inst_Fork") {
+
+  }
+  SECTION ("Inst_Terminate") {
+
+  }
+  SECTION ("Inst_Nop") {
+
   }
 }
 
+/*
 TEST_CASE( "SignalGP - v2", "[general]" ) {
 
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
@@ -316,3 +404,4 @@ TEST_CASE( "SignalGP - v2", "[general]" ) {
     std::cout << "==========================================" << std::endl;
   }
 }
+*/

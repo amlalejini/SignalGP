@@ -84,6 +84,10 @@ namespace emp { namespace sgp_v2 {
                                         const mem_buffer_t & output=mem_buffer_t())
     { return {working, input, output}; }
 
+    void Reset() {
+      global_mem.clear();
+    }
+
     void PrintMemoryBuffer(const mem_buffer_t & buffer, std::ostream & os=std::cout) const {
       os << "[";
       bool comma = false;
@@ -124,6 +128,8 @@ namespace emp { namespace sgp_v2 {
     double GetGlobal(int key) {
       return Find(global_mem, key, 0.0);
     }
+
+    mem_buffer_t & GetGlobalBuffer() { return global_mem; }
 
     void OnModuleCall(memory_state_t & caller_mem, memory_state_t & callee_mem) {
       for (auto & mem : caller_mem.working_mem) {

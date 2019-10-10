@@ -154,6 +154,35 @@ namespace emp { namespace sgp_v2 {
       initialized = true;
     }
 
+    // Full reset:
+    // - program + hardware state
+    void Reset() {
+      emp_assert(!is_executing, "Cannot reset hardware while executing.");
+      emp_assert(initialized);
+      // todo - on reset signal!
+      exec_stepper->ResetProgram();
+      ResetHardwareState();
+    }
+
+    void ResetHardwareState() {
+      emp_assert(initialized);
+      // todo - signal!
+      exec_stepper->ResetHardwareState();
+      event_queue.clear();
+      for (auto & thread : threads) {
+        thread.Reset();
+      }
+      active_threads.clear();
+      pending_threads.clear();
+      unused_threads.resize(max_threads);
+      // Add all available threads to unused.
+      for (size_t i = 0; i < unused_threads.size(); ++i) {
+        unused_threads[i] = (unused_threads.size() - 1) - i;
+      }
+      cur_thread_id = (size_t)-1;
+      is_executing = false;
+    }
+
     // Todo - Resets
     void ResetMatchBin() {
       // todo!
@@ -161,10 +190,6 @@ namespace emp { namespace sgp_v2 {
         exec_stepper->ResetMatchBin();
       }
     }
-
-    // todo - get execution stepper
-
-    // Accessors
 
     /// Get the maximum number of threads allowed to run simultaneously on this hardware
     /// object.
@@ -182,7 +207,9 @@ namespace emp { namespace sgp_v2 {
     /// Get a reference to active threads.
     /// NOTE: use responsibly! No safety gloves here!
     emp::vector<thread_t> & GetThreads() { return threads; }
-    thread_t & GetThread(size_t i) { emp_assert(i < threads.size); return threads[i]; }
+    thread_t & GetThread(size_t i) { emp_assert(i < threads.size()); return threads[i]; }
+
+    const emp::vector<size_t> & GetActiveThreadIDs() const { return active_threads; }
 
     /// Get the ID of the currently executing thread. If hardware is not in midst
     /// of an execution cycle, this will return (size_t)-1.
