@@ -19,10 +19,10 @@ TEST_CASE( "Hello World", "[general]" ) {
 TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[instructions]" ) {
   // General setup.
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
-  using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t>;
+  using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t,size_t>;
   using exec_state_t = typename exec_stepper_t::exec_state_t;
   // using tag_t = typename exec_stepper_t::tag_t;
-  using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t>;
+  using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t,size_t>;
   using inst_lib_t = typename exec_stepper_t::inst_lib_t;
   using inst_t = typename exec_stepper_t::inst_t;
   using inst_prop_t = typename exec_stepper_t::inst_prop_t;
@@ -1846,37 +1846,32 @@ TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[
   // SECTION ("Inst_Routine") {
 
   // }
+
   // SECTION ("Inst_Return") {
 
   // }
-  // SECTION ("Inst_SetMem") {
 
-  // }
   // SECTION ("Inst_CopyMem") {
 
   // }
+
   // SECTION ("Inst_SwapMem") {
 
   // }
-  // SECTION ("Inst_InputToWorking") {
 
-  // }
-  // SECTION ("Inst_WorkingToOutput") {
-
-  // }
   // SECTION ("Inst_WorkingToGlobal") {
 
   // }
+
   // SECTION ("Inst_GlobalToWorking") {
 
   // }
+
   // SECTION ("Inst_Fork") {
 
   // }
-  // SECTION ("Inst_Terminate") {
 
-  // }
-  // SECTION ("Inst_Nop") {
+  // SECTION ("Inst_Terminate") {
 
   // }
 }
