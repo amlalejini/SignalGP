@@ -39,25 +39,26 @@ namespace emp { namespace sgp_v2 {
                   const emp::vector<tag_t> & _tags=emp::vector<tag_t>())
         : id(_id), args(_args), tags(_tags) { ; }
 
+      bool operator==(const Instruction & other) const {
+        return std::tie(id, args, tags) == std::tie(other.id, other.args, other.tags);
+      }
+
+      bool operator!=(const Instruction & other) const {
+        return !(*this == other);
+      }
+
+      bool operator<(const Instruction & other) const {
+        return std::tie(id, args, tags) < std::tie(other.id, other.args, other.tags);
+      }
+
       void SetID(size_t _id) { id = _id; }
       size_t GetID() const { return id; }
 
       emp::vector<arg_t> & GetArgs() { return args; }
       emp::vector<tag_t> & GetTags() { return tags; }
 
-      bool operator==(const Instruction & other) const {
-        return std::tie(id, args, tags) == std::tie(other.id, other.args, other.tags);
-      }
-
-      bool operator!=(const Instruction & other) const { return !(*this == other); }
-
-      bool operator<(const Instruction & other) const {
-        return std::tie(id, args, tags) < std::tie(other.id, other.args, other.tags);
-      }
-
       const arg_t & GetArg(size_t i) const { return args[i]; }
       const tag_t & GetTag(size_t i) const { return tags[i]; }
-
     };
 
   protected:
@@ -94,8 +95,6 @@ namespace emp { namespace sgp_v2 {
     /// Is a given position valid in this program?
     bool IsValidPosition(size_t pos) const { return pos < GetSize(); }
 
-    // ----- Program modifications -----
-
     /// Set program's instruction sequence to the one given.
     void SetProgram(const emp::vector<Instruction> & p) { inst_seq = p; }
 
@@ -127,7 +126,6 @@ namespace emp { namespace sgp_v2 {
       return inst.id < ilib.GetSize();
     }
   };
-
 }}
 
 #endif

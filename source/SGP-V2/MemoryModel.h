@@ -21,16 +21,14 @@ namespace emp { namespace sgp_v2 {
   public:
     struct SimpleMemoryState;
     using memory_state_t = SimpleMemoryState;
-    // using memory_buffer_t = std::unordered
     using mem_buffer_t = std::unordered_map<int, double>;
-    // global memory
-    // local memory
+
+    /// SimpleMemoryModel's memory state struct.
+    /// - Consists of: working, input, and output memory buffers.
     struct SimpleMemoryState {
-      mem_buffer_t working_mem;      // Single buffer!
-      mem_buffer_t input_mem;
-      mem_buffer_t output_mem;
-      // NOTE - memory state does not own this pointer!
-      // Ptr<mem_buffer_t> global_mem_ptr;   // Check with others that this is a somewhat safe thing to do...
+      mem_buffer_t working_mem;      // Working memory buffer!
+      mem_buffer_t input_mem;        // Input memory buffer!
+      mem_buffer_t output_mem;       // Output memory buffer!
 
       SimpleMemoryState(const mem_buffer_t & w=mem_buffer_t(),
                         const mem_buffer_t & i=mem_buffer_t(),
@@ -39,43 +37,43 @@ namespace emp { namespace sgp_v2 {
       SimpleMemoryState(const SimpleMemoryState &) = default;
       SimpleMemoryState(SimpleMemoryState &&) = default;
 
-      void SetWorking(int key, double value) {
-        working_mem[key] = value;
-      }
+      /// Set value at given key in working memory. No questions asked.
+      void SetWorking(int key, double value) { working_mem[key] = value;  }
 
-      void SetInput(int key, double value) {
-        input_mem[key] = value;
-      }
+      /// Set value at given key in input memory. No questions asked.
+      void SetInput(int key, double value) { input_mem[key] = value; }
 
-      void SetOutput(int key, double value) {
-        output_mem[key] = value;
-      }
+      /// Set value at given key in output memory. No questions asked.
+      void SetOutput(int key, double value) { output_mem[key] = value; }
 
+      /// Get a reference to value at particular key in working memory. If key
+      /// not yet in buffer, add key w/value of 0.
       double & AccessWorking(int key) {
         if (!Has(working_mem, key)) working_mem[key] = 0;
         return working_mem[key];
       }
 
+      /// Get a reference to value at particular key in input memory. If key
+      /// not yet in buffer, add key w/value of 0.
       double & AccessInput(int key) {
         if (!Has(input_mem, key)) input_mem[key] = 0;
         return input_mem[key];
       }
 
+      /// Get a reference to value at particular key in output memory. If key
+      /// not yet in buffer, add key w/value of 0.
       double & AccessOutput(int key) {
         if (!Has(output_mem, key)) output_mem[key] = 0;
         return output_mem[key];
       }
 
       double GetWorking(int key) { return Find(working_mem, key, 0.0); }
-
       double GetInput(int key) { return Find(input_mem, key, 0.0); }
-
       double GetOutput(int key) { return Find(output_mem, key, 0.0); }
-
     };
 
   protected:
-    mem_buffer_t global_mem=mem_buffer_t();
+    mem_buffer_t global_mem=mem_buffer_t(); /// 'Global memory' buffer.
 
   public:
 
@@ -84,10 +82,12 @@ namespace emp { namespace sgp_v2 {
                                         const mem_buffer_t & output=mem_buffer_t())
     { return {working, input, output}; }
 
+    /// Reset memory model state.
     void Reset() {
       global_mem.clear();
     }
 
+    /// Print a single memory buffer.
     void PrintMemoryBuffer(const mem_buffer_t & buffer, std::ostream & os=std::cout) const {
       os << "[";
       bool comma = false;
@@ -99,6 +99,7 @@ namespace emp { namespace sgp_v2 {
       os << "]";
     }
 
+    /// Print the state of memory.
     void PrintMemoryState(const memory_state_t & state, std::ostream & os=std::cout) const {
       os << "Working memory (" << state.working_mem.size() << "): ";
       PrintMemoryBuffer(state.working_mem, os);
@@ -116,20 +117,16 @@ namespace emp { namespace sgp_v2 {
       PrintMemoryBuffer(global_mem, os);
     }
 
-    void SetGlobal(int key, double val) {
-      global_mem[key] = val;
-    }
+    mem_buffer_t & GetGlobalBuffer() { return global_mem; }
+
+    void SetGlobal(int key, double val) { global_mem[key] = val; }
+
+    double GetGlobal(int key) { return Find(global_mem, key, 0.0); }
 
     double & AccessGlobal(int key) {
       if (!Has(global_mem, key)) global_mem[key] = 0;
       return global_mem[key];
     }
-
-    double GetGlobal(int key) {
-      return Find(global_mem, key, 0.0);
-    }
-
-    mem_buffer_t & GetGlobalBuffer() { return global_mem; }
 
     void OnModuleCall(memory_state_t & caller_mem, memory_state_t & callee_mem) {
       for (auto & mem : caller_mem.working_mem) {
