@@ -1628,15 +1628,44 @@ TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[
     ////////////////////////////////////////////////////////////////////////////
   }
 
-  // SECTION ("Inst_Countdown") {
+  SECTION ("Inst_Countdown") {
+    std::cout << "-- Testing Inst_Countdown --" << std::endl;
+    // Countdown instruction is pretty much the same as the While.
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Close",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {6, 0, 0});
+    program.PushInst(inst_lib, "ModuleDef", {0, 0, 0}, {tag_t()});
+    program.PushInst(inst_lib, "Inc",     {3, 0, 0});
+    program.PushInst(inst_lib, "Countdown",   {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
 
-  // }
+    size_t thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+
+    hardware.SingleProcess(); // Inc(3)
+    hardware.SingleProcess(); // While(true)
+    hardware.SingleProcess(); // Inc(6)
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}}));
+    for (size_t i = 0; i < 10; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}}));
+    REQUIRE(hardware.GetActiveThreadIDs().size());
+  }
+
   // SECTION ("Inst_Break") {
 
   // }
-  // SECTION ("Inst_Close") {
 
-  // }
   // SECTION ("Inst_Call") {
 
   // }
