@@ -1,5 +1,5 @@
-#ifndef EMP_SIGNALGP_V2_EXECSTEPPER_H
-#define EMP_SIGNALGP_V2_EXECSTEPPER_H
+#ifndef EMP_SIGNALGP_V2_LINEAR_PRG_EXECSTEPPER_H
+#define EMP_SIGNALGP_V2_LINEAR_PRG_EXECSTEPPER_H
 
 #include <iostream>
 #include <utility>
@@ -30,7 +30,7 @@ namespace emp { namespace sgp_v2 {
            typename INST_ARGUMENT_T=int,
            typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>
            >
-  class SimpleExecutionStepper {
+  class LinearProgramExecutionStepper {
   public:
     struct ExecState;
     struct Module;
@@ -40,11 +40,11 @@ namespace emp { namespace sgp_v2 {
     // Blocks are within-module flow control segments (e.g., while loops, if statements, etc)
     enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
 
-    using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T,
-                                                  SGP_CUSTOM_COMPONENT_T,
-                                                  TAG_T,
-                                                  INST_ARGUMENT_T,
-                                                  MATCHBIN_T>;
+    using exec_stepper_t = LinearProgramExecutionStepper<MEMORY_MODEL_T,
+                                                         SGP_CUSTOM_COMPONENT_T,
+                                                         TAG_T,
+                                                         INST_ARGUMENT_T,
+                                                         MATCHBIN_T>;
     using exec_state_t = ExecState;
 
     using tag_t = TAG_T;
@@ -374,8 +374,8 @@ namespace emp { namespace sgp_v2 {
     }
 
   public:
-    SimpleExecutionStepper(Ptr<inst_lib_t> ilib,
-                           Ptr<Random> rnd)
+    LinearProgramExecutionStepper(Ptr<inst_lib_t> ilib,
+                                  Ptr<Random> rnd)
       : inst_lib(ilib),
         flow_handler(),
         memory_model(),

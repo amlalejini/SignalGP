@@ -8,7 +8,7 @@
 #include "EventLibrary.h"
 #include "SGP-V2/SignalGP.h"
 #include "SGP-V2/MemoryModel.h"
-#include "SGP-V2/ExecutionStepper.h"
+#include "SGP-V2/LinearProgramExecutionStepper.h"
 #include "SGP-V2/LinearProgram.h"
 #include "SGP-V2/instructions_impl.h"
 
@@ -19,7 +19,7 @@ TEST_CASE( "Hello World", "[general]" ) {
 TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[instructions]" ) {
   // General setup.
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
-  using exec_stepper_t = emp::sgp_v2::SimpleExecutionStepper<mem_model_t,size_t>;
+  using exec_stepper_t = emp::sgp_v2::LinearProgramExecutionStepper<mem_model_t,size_t>;
   using exec_state_t = typename exec_stepper_t::exec_state_t;
   // using tag_t = typename exec_stepper_t::tag_t;
   using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t,size_t>;
