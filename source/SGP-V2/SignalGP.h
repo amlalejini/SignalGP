@@ -64,10 +64,11 @@ namespace emp { namespace sgp_v2 {
       bool dead;
 
       Thread(const exec_state_t & _exec_state=exec_state_t())
-        : exec_state(_exec_state), dead(false) { ; }
+        : exec_state(_exec_state), dead(true) { ; }
 
       void Reset() {
         exec_state.Clear(); // TODO - make this functionality more flexible! Currently assumes exec_state_t has a Clear function!
+        dead = true;
       }
 
       exec_state_t & GetExecState() { return exec_state; }
@@ -364,6 +365,7 @@ namespace emp { namespace sgp_v2 {
 
       // Initialize thread state.
       exec_stepper->InitThread(thread, module_id); // TODO - this is somewhat gross; requires yet another function of the exec_stepper.
+      thread.SetDead(false);
 
       // Mark thread as pending if hardware is currently executing. Otherwise,
       // mark it is active.

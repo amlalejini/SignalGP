@@ -902,9 +902,206 @@ TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[
     REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
   }
 
-  // SECTION ("Inst_If") {
+  SECTION ("Inst_If") {
+    std::cout << "-- Testing Inst_TestIf --" << std::endl;
 
-  // }
+    ////////////////////////////////////////////////////////////////////////////
+    // If(true), ____, ____, ____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "If", {1, 0, 0});
+    program.PushInst(inst_lib, "Inc", {2, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+    size_t thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 1.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , If(true), ____, ____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "If",  {1, 0, 0});
+    program.PushInst(inst_lib, "Inc", {2, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 1.0}, {3, 1.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , ____ , ____, If(true)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "If",  {3, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 3.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // if(false) , ____ , ____, ____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "If",  {0, 0, 0});
+    program.PushInst(inst_lib, "Inc", {2, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , if(false) , ____, ____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "If",  {0, 0, 0});
+    program.PushInst(inst_lib, "Inc", {2, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , ____ , ____, If(false)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "If",  {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 3.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+
+    /*
+        std::cout << "=================== INITIAL STATE ===================" << std::endl;
+    hardware.PrintHardwareState();
+    std::cout << "=====================================================" << std::endl;
+    hardware.SingleProcess();
+    hardware.PrintHardwareState();
+    std::cout << "=====================================================" << std::endl;
+    hardware.SingleProcess();
+    hardware.PrintHardwareState();
+    std::cout << "=====================================================" << std::endl;
+    hardware.SingleProcess();
+    hardware.PrintHardwareState();
+    std::cout << "=====================================================" << std::endl;
+    hardware.SingleProcess();
+    hardware.PrintHardwareState();
+    std::cout << "=====================================================" << std::endl;
+    hardware.SingleProcess();
+    hardware.PrintHardwareState();
+    std::cout << "=====================================================" << std::endl;
+    */
+
+  }
+
   // SECTION ("Inst_While") {
 
   // }

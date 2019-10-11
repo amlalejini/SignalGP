@@ -469,7 +469,6 @@ namespace emp { namespace sgp_v2 {
     void InitThread(thread_t & thread, size_t module_id) {
       emp_assert(module_id < modules.size(), "Invalid module ID.");
       // Initialize new thread!
-      std::cout << "InitThread!" << std::endl;
       exec_state_t & state = thread.GetExecState();
       if (state.call_stack.size()) { state.Clear(); }
       // TODO - switch code below to just use call module function!
@@ -552,7 +551,6 @@ namespace emp { namespace sgp_v2 {
 
     // todo - test!
     void ReturnCall(exec_state_t & exec_state) {
-      std::cout << "Return!" << std::endl;
       // TODO - finish
       if (exec_state.call_stack.empty()) return; // Nothing to return from.
       // Get the current call state.
@@ -677,7 +675,7 @@ namespace emp { namespace sgp_v2 {
           os << "Instruction: ";
           if (IsValidProgramPosition(flow.mp, flow.ip)) {
             // Name[tags](args)
-            const inst_t & inst = program[i];
+            const inst_t & inst = program[flow.ip];
             os << inst_lib->GetName(inst.id);
             os << "[";
             for (size_t ti = 0; ti < inst.tags.size(); ++ti) {
