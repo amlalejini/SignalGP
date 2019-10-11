@@ -1803,9 +1803,46 @@ TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[
     ////////////////////////////////////////////////////////////////////////////
   }
 
-  // SECTION ("Inst_Call") {
+  SECTION ("Inst_Call") {
+    std::cout << "-- Testing Inst_Call --" << std::endl;
+    ////////////////////////////////////////////////////////////////////////////
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
 
-  // }
+    // Build program to test inc instruction.
+    tag_t zeros, ones;
+    ones.SetUInt(0, (uint32_t)-1);
+    // SetUInt
+    program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {zeros});
+    program.PushInst(inst_lib,   "SetMem", {2, 2});
+    program.PushInst(inst_lib,   "SetMem", {3, 3});
+    program.PushInst(inst_lib,   "Call", {0, 0, 0}, {ones});
+
+    program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {ones});
+    program.PushInst(inst_lib,   "InputToWorking", {2, 1, 0});
+    program.PushInst(inst_lib,   "InputToWorking", {3, 2, 0});
+    program.PushInst(inst_lib,   "Inc", {1, 0, 0});
+    program.PushInst(inst_lib,   "Inc", {2, 0, 0});
+    program.PushInst(inst_lib,   "WorkingToOutput", {1, 4, 0});
+    program.PushInst(inst_lib,   "WorkingToOutput", {2, 5, 0});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    size_t thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+
+    for (size_t i = 0; i < 10; ++i) hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{4, 3.0}, {1, 1.0}, {0, 0.0}, {5, 4.0}, {2, 2.0}, {3, 3.0}}));
+    ////////////////////////////////////////////////////////////////////////////
+  }
+
   // SECTION ("Inst_Routine") {
 
   // }
