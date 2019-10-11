@@ -181,18 +181,31 @@ namespace emp { namespace sgp_v2 { namespace inst_impl {
     auto & call_state = hw.GetCurExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
     const size_t prog_len = exec_stepper.GetProgram().GetSize();
-    const size_t cur_ip = call_state.GetIP();
+    size_t cur_ip = call_state.GetIP();
     const size_t cur_mp = call_state.GetMP();
+    const auto & module = exec_stepper.GetModule(cur_mp);
+    const size_t module_begin = module.GetBegin();
+    const size_t module_end = module.GetEnd();
     // Beginning of block (if instruction).
     const size_t bob = (cur_ip == 0) ? prog_len - 1 : cur_ip - 1;
-    // Find end of flow.
+    // Find end of flow. ==> PROBLEM: what if 'If' is last instruction
+    cur_ip = (cur_ip == prog_len
+              && module_begin > module_end
+              && module.InModule(0)) ? 0 : cur_ip;
+
     const size_t eob = exec_stepper.FindEndOfBlock(cur_mp, cur_ip); // CurIP is next instruction (not the one currently executing)
     const bool skip = mem_state.AccessWorking(inst.GetArg(0)) == 0.0;
+    std::cout << "====" << std::endl;
+    std::cout << "cur ip = " << cur_ip << std::endl;
+    std::cout << "eob = " << eob << std::endl;
     if (skip) {
+      std::cout << "SKIP!" << std::endl;
+      std::cout << "  " << eob << std::endl;
       // Skip to EOB
       call_state.SetIP(eob);
       // Advance past the block close if not at end of module.
       if (exec_stepper.IsValidProgramPosition(cur_mp, eob)) {
+        std::cout << "  Advance ip" << std::endl;
         ++call_state.IP();
       }
     } else {
