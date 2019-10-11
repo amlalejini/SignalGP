@@ -33,7 +33,7 @@ namespace emp { namespace sgp_v2 {
   // todo - move function implementations outside of class
   // todo - make signalgp hardware not awful (& safe) to make copies of
   // @discussion - template/organization structure
-  template<typename EXEC_STEPPER_T>
+  template<typename EXEC_STEPPER_T, typename CUSTOM_COMPONENT_T=size_t>
   class SignalGP {
   public:
     struct Thread;
@@ -41,7 +41,7 @@ namespace emp { namespace sgp_v2 {
     static constexpr size_t THREAD_LIMIT = (size_t)-2;
 
     using exec_stepper_t = EXEC_STEPPER_T;
-    // using custom_comp_t = CUSTOM_COMPONENT_T;
+    using custom_comp_t = CUSTOM_COMPONENT_T;
     using exec_state_t = typename exec_stepper_t::exec_state_t;
     using program_t = typename exec_stepper_t::program_t;
     using tag_t = typename exec_stepper_t::tag_t;
@@ -52,7 +52,7 @@ namespace emp { namespace sgp_v2 {
 
     // using custom_comp_t = CUSTOM_COMPONENT_T;
 
-    using hardware_t = SignalGP<exec_stepper_t>;
+    using hardware_t = SignalGP<exec_stepper_t, custom_comp_t>;
 
     using event_t = BaseEvent;
     using event_lib_t = EventLibrary<hardware_t>;
@@ -93,6 +93,8 @@ namespace emp { namespace sgp_v2 {
 
     bool initialized=false;             ///< Has this hardware unit been initialized? I.e., has its execution stepper been constructed?
     Ptr<exec_stepper_t> exec_stepper;   ///< The execution stepper manages how programs are executed.
+
+    custom_comp_t custom_component;     ///< Configurable hardware component.
 
     // Thread management
     size_t max_threads=64;              ///< Maximum number of concurrently running threads.
@@ -292,6 +294,10 @@ namespace emp { namespace sgp_v2 {
       return exec_stepper->GetProgram();
     }
 
+    custom_comp_t & GetCustomComponent() { return custom_component; }
+    const custom_comp_t & GetCustomComponent() const { return custom_component; }
+    void SetCustomComponent(const custom_comp_t & val) { custom_component = val; }
+
     /// Set current program (pass through to execution stepper, which manages programs).
     void SetProgram(const program_t & program) {
       emp_assert(initialized, "Hardware must be initialized!");
@@ -393,8 +399,8 @@ namespace emp { namespace sgp_v2 {
     }
   };
 
-  template<typename EXEC_STEPPER_T>
-  void SignalGP<EXEC_STEPPER_T>::Reset() {
+  template<typename ES_T, typename CC_T>
+  void SignalGP<ES_T, CC_T>::Reset() {
     emp_assert(!is_executing, "Cannot reset hardware while executing.");
     emp_assert(initialized);
     // todo - on reset signal!
@@ -402,8 +408,8 @@ namespace emp { namespace sgp_v2 {
     ResetHardwareState();
   }
 
-  template<typename EXEC_STEPPER_T>
-  void SignalGP<EXEC_STEPPER_T>::ResetHardwareState() {
+  template<typename ES_T, typename CC_T>
+  void SignalGP<ES_T, CC_T>::ResetHardwareState() {
     emp_assert(initialized);
     // todo - signal!
     exec_stepper->ResetHardwareState();
@@ -422,22 +428,22 @@ namespace emp { namespace sgp_v2 {
     is_executing = false;
   }
 
-  template<typename EXEC_STEPPER_T>
-  void SignalGP<EXEC_STEPPER_T>::ResetMatchBin() {
+  template<typename ES_T, typename CC_T>
+  void SignalGP<ES_T, CC_T>::ResetMatchBin() {
     if (initialized) {
       exec_stepper->ResetMatchBin();
     }
   }
 
-  template<typename EXEC_STEPPER_T>
-  typename SignalGP<EXEC_STEPPER_T>::Thread & SignalGP<EXEC_STEPPER_T>::GetCurThread() {
+  template<typename ES_T, typename CC_T>
+  typename SignalGP<ES_T, CC_T>::Thread & SignalGP<ES_T, CC_T>::GetCurThread() {
     emp_assert(is_executing, "Hardware is not executing! No current thread.");
     emp_assert(cur_thread_id < threads.size());
     return threads[cur_thread_id];
   }
 
-  template<typename EXEC_STEPPER_T>
-  void SignalGP<EXEC_STEPPER_T>::SetThreadLimit(size_t n) {
+  template<typename ES_T, typename CC_T>
+  void SignalGP<ES_T, CC_T>::SetThreadLimit(size_t n) {
     emp_assert(n, "Max thread count must be greater than 0.");
     emp_assert(n <= THREAD_LIMIT, "Max thread count must be less than or equal to", THREAD_LIMIT);
     emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
@@ -500,16 +506,16 @@ namespace emp { namespace sgp_v2 {
     max_threads = n; // update max threads
   }
 
-  template<typename EXEC_STEPPER_T>
-  void SignalGP<EXEC_STEPPER_T>::NewRandom(int seed) {
+  template<typename ES_T, typename CC_T>
+  void SignalGP<ES_T, CC_T>::NewRandom(int seed) {
     if (random_owner) random_ptr.Delete();
     else random_ptr = nullptr;
     random_ptr.New(seed);
     random_owner = true;
   }
 
-  template<typename EXEC_STEPPER_T>
-  emp::vector<size_t> SignalGP<EXEC_STEPPER_T>::SpawnThreads(const tag_t & tag, size_t n) {
+  template<typename ES_T, typename CC_T>
+  emp::vector<size_t> SignalGP<ES_T, CC_T>::SpawnThreads(const tag_t & tag, size_t n) {
     emp::vector<size_t> matches(exec_stepper->FindModuleMatch(tag, n));
     emp::vector<size_t> thread_ids;
     for (size_t match : matches) {
@@ -520,8 +526,8 @@ namespace emp { namespace sgp_v2 {
     return thread_ids;
   }
 
-  template<typename EXEC_STEPPER_T>
-  size_t SignalGP<EXEC_STEPPER_T>::SpawnThread(size_t module_id) {
+  template<typename ES_T, typename CC_T>
+  size_t SignalGP<ES_T, CC_T>::SpawnThread(size_t module_id) {
     if (!unused_threads.size()) return (size_t)-1; // If no unused threads, return.
     // Which thread should we spawn?
     size_t thread_id = unused_threads.back();
@@ -543,8 +549,8 @@ namespace emp { namespace sgp_v2 {
     return thread_id;
   }
 
-  template<typename EXEC_STEPPER_T>
-  void SignalGP<EXEC_STEPPER_T>::SingleProcess() {
+  template<typename ES_T, typename CC_T>
+  void SignalGP<ES_T, CC_T>::SingleProcess() {
     // todo - validate that program exists!
     emp_assert(initialized, "SignalGP Hardware has not been properly initialized!");
 
@@ -595,8 +601,8 @@ namespace emp { namespace sgp_v2 {
     cur_thread_id = (size_t)-1; // Update current thread (to be nonsense while not executing)
   }
 
-  template<typename EXEC_STEPPER_T>
-  void SignalGP<EXEC_STEPPER_T>::PrintActiveThreadStates(std::ostream & os) const {
+  template<typename ES_T, typename CC_T>
+  void SignalGP<ES_T, CC_T>::PrintActiveThreadStates(std::ostream & os) const {
     for (size_t i = 0; i < active_threads.size(); ++i) {
       size_t thread_id = active_threads[i];
       const thread_t & thread = threads[thread_id];
@@ -606,8 +612,8 @@ namespace emp { namespace sgp_v2 {
     }
   }
 
-  template<typename EXEC_STEPPER_T>
-  void SignalGP<EXEC_STEPPER_T>::PrintThreadUsage(std::ostream & os) const {
+  template<typename ES_T, typename CC_T>
+  void SignalGP<ES_T, CC_T>::PrintThreadUsage(std::ostream & os) const {
     // Active threads
     os << "Active threads (" << active_threads.size() << "): [";
     for (size_t i = 0; i < active_threads.size(); ++i) {
@@ -631,8 +637,8 @@ namespace emp { namespace sgp_v2 {
     os << "]";
   }
 
-  template<typename EXEC_STEPPER_T>
-  void SignalGP<EXEC_STEPPER_T>::PrintEventQueue(std::ostream & os) const {
+  template<typename ES_T, typename CC_T>
+  void SignalGP<ES_T, CC_T>::PrintEventQueue(std::ostream & os) const {
     os << "Event queue (" << event_queue.size() << "): [";
     for (size_t i = 0; i < event_queue.size(); ++i) {
       if (i) os << ", ";

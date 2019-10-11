@@ -23,7 +23,9 @@ namespace emp { namespace sgp_v2 {
   // - knows how to make programs
   // - knows how to execute programs
   // TODO - turn everything into configurable lambdas?
+  // @discussion - SGP_CUSTOM_COMPONENT_T?
   template<typename MEMORY_MODEL_T,
+           typename SGP_CUSTOM_COMPONENT_T,   // Need to know this to know SignalGP type.
            typename TAG_T=emp::BitSet<16>,
            typename INST_ARGUMENT_T=int,
            typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>
@@ -38,7 +40,11 @@ namespace emp { namespace sgp_v2 {
     // Blocks are within-module flow control segments (e.g., while loops, if statements, etc)
     enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
 
-    using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T, TAG_T, INST_ARGUMENT_T, MATCHBIN_T>;
+    using exec_stepper_t = SimpleExecutionStepper<MEMORY_MODEL_T,
+                                                  SGP_CUSTOM_COMPONENT_T,
+                                                  TAG_T,
+                                                  INST_ARGUMENT_T,
+                                                  MATCHBIN_T>;
     using exec_state_t = ExecState;
 
     using tag_t = TAG_T;
@@ -51,7 +57,7 @@ namespace emp { namespace sgp_v2 {
 
     using program_t = SimpleProgram<tag_t, arg_t>;
 
-    using hardware_t = SignalGP<exec_stepper_t>;
+    using hardware_t = SignalGP<exec_stepper_t, SGP_CUSTOM_COMPONENT_T>;
     using thread_t = typename hardware_t::thread_t;
 
     using inst_t = typename program_t::inst_t;
