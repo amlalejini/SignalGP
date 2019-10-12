@@ -14,7 +14,7 @@
 #include "../EventLibrary.h"
 #include "../InstructionLibrary.h"
 
-#include "SignalGP.h"
+#include "../SignalGP.h"
 
 namespace emp { namespace sgp_v2 { namespace inst_impl {
 

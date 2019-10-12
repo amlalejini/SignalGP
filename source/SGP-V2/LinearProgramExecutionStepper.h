@@ -13,7 +13,7 @@
 #include "../EventLibrary.h"
 #include "../InstructionLibrary.h"
 
-#include "SignalGP.h"
+#include "../SignalGP.h"
 #include "LinearProgram.h"
 
 namespace emp { namespace sgp_v2 {
@@ -23,7 +23,7 @@ namespace emp { namespace sgp_v2 {
   // - knows how to make programs
   // - knows how to execute programs
   // TODO - turn everything into configurable lambdas?
-  // @discussion - SGP_CUSTOM_COMPONENT_T?
+  // @discussion - SGP_CUSTOM_COMPONENT_T? Gross, but necessary?
   template<typename MEMORY_MODEL_T,
            typename SGP_CUSTOM_COMPONENT_T,   // Need to know this to know SignalGP type.
            typename TAG_T=emp::BitSet<16>,
@@ -55,7 +55,7 @@ namespace emp { namespace sgp_v2 {
     using memory_model_t = MEMORY_MODEL_T;
     using memory_state_t = typename memory_model_t::memory_state_t;
 
-    using program_t = SimpleProgram<tag_t, arg_t>;
+    using program_t = LinearProgram<tag_t, arg_t>;
 
     using hardware_t = SignalGP<exec_stepper_t, SGP_CUSTOM_COMPONENT_T>;
     using thread_t = typename hardware_t::thread_t;

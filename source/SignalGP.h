@@ -7,16 +7,53 @@
 #include "base/Ptr.h"
 #include "base/vector.h"
 #include "tools/Random.h"
-#include "tools/MatchBin.h"
-#include "tools/matchbin_utils.h"
+// #include "tools/MatchBin.h"
+// #include "tools/matchbin_utils.h"
 
-#include "../EventLibrary.h"
-#include "../InstructionLibrary.h"
+#include "EventLibrary.h"
+#include "InstructionLibrary.h"
 
 // @discussion - how could I use concepts to clean this up?
 // @discussion - where should I put configurable lambdas?
 
 // @todo - add custom component
+
+/*******************************************************************************
+ * SignalGP<EXEC_STEPPER_T, CUSTOM_COMPONENT_T>
+ * ..
+ * EXEC_STEPPER_T - Execution Stepper
+ *   - The execution stepper knows how to execute programs. What type of programs?
+ *     That's entirely up to the particular implementation of the execution stepper.
+ *     So long as the execution stepper provides an appropriate interface, SignalGP
+ *     does not care about the particulars.
+ *   - Execution stepper interface requirements:
+ *     - Required types:
+ *       - exec_state_t => execution state information
+ *       - program_t    => what type of program does the execution stepper run?
+ *       - tag_t        => what type of tag does the execution stepper use to reference modules?
+ *       - ?module_t?
+ *     - Required function signatures:
+ *       - EXEC_STEPPER_T(const EXEC_STEPPER_T&)
+ *         - Copy constructor.
+ *       - program_t & GetProgram()
+ *         - Returns the program currently loaded on the execution stepper.
+ *       - void SetProgram(const program_t&)
+ *         - Loads a new program on the execution stepper. Handles all appropriate
+ *           cleanup and internal state resetting necessary when switching to running
+ *           a new program.
+ *       - void ResetProgram()
+ *         - Clear out the old program (if any). Reset internal state as appropriate.
+ *       - void ResetHardwareState()
+ *         - Reset internal state of execution stepper without resetting the program.
+ *       - vector<size_t> FindModuleMatch(const tag_t&, size_t N)
+ *         - Return a vector (max size N) of module IDs that match with specified
+ *           tag.
+ *       - void InitThread(Thread &, size_t module_id)
+ *         - Initialize given thread by calling the module specified by module_id.
+ *       - void SingleExecutionStep(SignalGP<EXEC_STEPPER_T, CUSTOM_COMPONENT_T> &, exec_state_t&)
+ *         - Advance a single execution stepper on the given execution state using
+ *           the given SignalGP hardware state.
+ *******************************************************************************/
 
 namespace emp { namespace sgp_v2 {
 
@@ -40,17 +77,17 @@ namespace emp { namespace sgp_v2 {
 
     static constexpr size_t THREAD_LIMIT = (size_t)-2;
 
+    // @discussion - can I assert that execution stepper knows about SignalGP_t?
+
     using exec_stepper_t = EXEC_STEPPER_T;
     using custom_comp_t = CUSTOM_COMPONENT_T;
     using exec_state_t = typename exec_stepper_t::exec_state_t;
     using program_t = typename exec_stepper_t::program_t;
     using tag_t = typename exec_stepper_t::tag_t;
-    using module_t = typename exec_stepper_t::module_t;
-    using memory_model_t = typename exec_stepper_t::memory_model_t;
-    using memory_state_t = typename memory_model_t::memory_state_t;
-    using matchbin_t = typename exec_stepper_t::matchbin_t;
-
-    // using custom_comp_t = CUSTOM_COMPONENT_T;
+    using module_t = typename exec_stepper_t::module_t; //@discussion - any reason signalgp needs to know this?
+    // using memory_model_t = typename exec_stepper_t::memory_model_t;  //@discussion - any reason for signalgp to know about memory model?
+    // using memory_state_t = typename memory_model_t::memory_state_t;
+    // using matchbin_t = typename exec_stepper_t::matchbin_t;      // @discussion - any reason top-level signalgp needs to know about matchbins?
 
     using hardware_t = SignalGP<exec_stepper_t, custom_comp_t>;
 
@@ -236,7 +273,7 @@ namespace emp { namespace sgp_v2 {
 
     /// MatchBin reset.
     /// Convenience function for resetting the matchbin.
-    void ResetMatchBin();
+    // void ResetMatchBin();
 
     /// Has this virtual hardware unit been initialized?
     bool IsInitialized() const { return initialized; }
@@ -409,7 +446,7 @@ namespace emp { namespace sgp_v2 {
   }
 
   template<typename ES_T, typename CC_T>
-  void SignalGP<ES_T, CC_T>::ResetHardwareState() {
+  void SignalGP<ES_T, CC_T>::ResetHardwareState() {   // @discussion - best name for this (and for exec stepper equivalent function)?
     emp_assert(initialized);
     // todo - signal!
     exec_stepper->ResetHardwareState();
@@ -428,12 +465,12 @@ namespace emp { namespace sgp_v2 {
     is_executing = false;
   }
 
-  template<typename ES_T, typename CC_T>
-  void SignalGP<ES_T, CC_T>::ResetMatchBin() {
-    if (initialized) {
-      exec_stepper->ResetMatchBin();
-    }
-  }
+  // template<typename ES_T, typename CC_T>
+  // void SignalGP<ES_T, CC_T>::ResetMatchBin() {
+  //   if (initialized) {
+  //     exec_stepper->ResetMatchBin();
+  //   }
+  // }
 
   template<typename ES_T, typename CC_T>
   typename SignalGP<ES_T, CC_T>::Thread & SignalGP<ES_T, CC_T>::GetCurThread() {

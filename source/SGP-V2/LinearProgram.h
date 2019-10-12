@@ -19,7 +19,7 @@ namespace emp { namespace sgp_v2 {
   // - Linear.
   // - Instructions can have tag or numeric arguments.
   template<typename TAG_T, typename ARGUMENT_T=int>
-  class SimpleProgram {
+  class LinearProgram {
   public:
     struct Instruction;
     using tag_t = TAG_T;
@@ -65,14 +65,14 @@ namespace emp { namespace sgp_v2 {
     emp::vector<Instruction> inst_seq;
 
   public:
-    SimpleProgram(const emp::vector<Instruction> & iseq=emp::vector<Instruction>())
+    LinearProgram(const emp::vector<Instruction> & iseq=emp::vector<Instruction>())
       : inst_seq(iseq) { ; }
 
-    SimpleProgram(const SimpleProgram &) = default;
+    LinearProgram(const LinearProgram &) = default;
 
-    bool operator==(const SimpleProgram & other) const { return inst_seq == other.inst_seq; }
-    bool operator!=(const SimpleProgram & other) const { return !(*this == other); }
-    bool operator<(const SimpleProgram & other) const { return inst_seq < other.inst_seq; }
+    bool operator==(const LinearProgram & other) const { return inst_seq == other.inst_seq; }
+    bool operator!=(const LinearProgram & other) const { return !(*this == other); }
+    bool operator<(const LinearProgram & other) const { return inst_seq < other.inst_seq; }
 
     /// Allow program's instruction sequence to be indexed as if a vector.
     Instruction & operator[](size_t id) {

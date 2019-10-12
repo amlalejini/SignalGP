@@ -6,11 +6,12 @@
 
 #include "InstructionLibrary.h"
 #include "EventLibrary.h"
-#include "SGP-V2/SignalGP.h"
+#include "SignalGP.h"
 #include "SGP-V2/MemoryModel.h"
 #include "SGP-V2/LinearProgramExecutionStepper.h"
 #include "SGP-V2/LinearProgram.h"
 #include "SGP-V2/instructions_impl.h"
+#include "SGP-V2/NandMachineExecutionStepper.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
@@ -1874,6 +1875,10 @@ TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[
   // SECTION ("Inst_Terminate") {
 
   // }
+}
+
+TEST_CASE("SignalGP[NANDMachine]", "[general]") {
+
 }
 
 /*
