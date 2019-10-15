@@ -83,7 +83,7 @@ namespace emp { namespace sgp_v2 {
     using exec_state_t = typename exec_stepper_t::exec_state_t;
     using program_t = typename exec_stepper_t::program_t;
     using tag_t = typename exec_stepper_t::tag_t;
-    using module_t = typename exec_stepper_t::module_t; //@discussion - any reason signalgp needs to know this?
+    // using module_t = typename exec_stepper_t::module_t; //@discussion - any reason signalgp needs to know this?
     // using memory_model_t = typename exec_stepper_t::memory_model_t;  //@discussion - any reason for signalgp to know about memory model?
     // using memory_state_t = typename memory_model_t::memory_state_t;
     // using matchbin_t = typename exec_stepper_t::matchbin_t;      // @discussion - any reason top-level signalgp needs to know about matchbins?
@@ -333,6 +333,11 @@ namespace emp { namespace sgp_v2 {
     // custom_comp_t & GetCustomComponent() { return custom_component; }
     // const custom_comp_t & GetCustomComponent() const { return custom_component; }
     // void SetCustomComponent(const custom_comp_t & val) { custom_component = val; }
+
+    additional_comps_t & GetAdditionalComponents() {
+      emp_assert(std::tuple_size<additional_comps_t>::value, "No additional components to return.");
+      return additional_components;
+    }
 
     /// Set current program (pass through to execution stepper, which manages programs).
     void SetProgram(const program_t & program) {
@@ -614,7 +619,7 @@ namespace emp { namespace sgp_v2 {
         active_threads[active_thread_id - adjust] = cur_thread_id;
       }
       // Execute the thread (outsourced to execution stepper)!
-      exec_stepper->SingleExecutionStep(*this, threads[cur_thread_id].exec_state); //@discussion should just pass the entire thread?
+      exec_stepper->SingleExecutionStep(*this, threads[cur_thread_id]); //@discussion should just pass the entire thread?
 
       // Is this thread dead?
       if (threads[cur_thread_id].IsDead()) {

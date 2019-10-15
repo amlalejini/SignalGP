@@ -327,7 +327,7 @@ namespace emp { namespace sgp_v2 {
 
     /// Advance given execution state on given hardware by a single step. I.e.,
     /// process a single instruction on this hardware.
-    void SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state);
+    void SingleExecutionStep(hardware_t & hardware, thread_t & thread);
 
     /// Initialize thread by calling given module id on it.
     void InitThread(thread_t & thread, size_t module_id);
@@ -580,8 +580,9 @@ namespace emp { namespace sgp_v2 {
   }
 
   template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state){
+  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::SingleExecutionStep(hardware_t & hardware, thread_t & thread){
     // If there's a call state on the call stack, execute an instruction.
+    exec_state_t & exec_state = thread.GetExecState();
     while (exec_state.call_stack.size()) {
       // There's something on the call stack.
       CallState & call_state = exec_state.call_stack.back();
@@ -626,7 +627,7 @@ namespace emp { namespace sgp_v2 {
     }
     // If execution state's call stack is empty, mark thread as dead.
     if (exec_state.call_stack.empty()) {
-      hardware.GetCurThread().SetDead(true);
+      thread.SetDead(true);
     }
   }
 
