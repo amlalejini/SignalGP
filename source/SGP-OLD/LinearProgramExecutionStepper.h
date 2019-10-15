@@ -18,30 +18,6 @@
 
 namespace emp { namespace sgp_v2 {
 
-  // template<typename DERIVED_T>
-  // class BaseExecutionStepper {
-  // public:
-  //   using program_t = typename DERIVED_T::program_t;
-  //   using tag_t = typename DERIVED_T::tag_t;
-  //   using hardware_t = typename DERIVED_T::hardware_t;
-  //   using exec_state_t = typename DERIVED_T::exec_state_t;
-
-  //   // todo - dissallow this from being constructed?
-  //   virtual program_t & GetProgram() { emp_assert(false, "!!"); }
-
-  //   virtual void SetProgram(const program_t &) { emp_assert(false, "!!"); }
-
-  //   virtual void ResetProgram() { emp_assert(false, "!!"); }
-
-  //   virtual void ResetHardwareState() { emp_assert(false, "!!"); }
-
-  //   virtual emp::vector<size_t> FindModuleMatch(const tag_t&, size_t N) { emp_assert(false, "!!"); }
-
-  //   virtual void InitThread(typename hardware_t::Thread &, size_t module_id) { emp_assert(false, "!!"); }
-
-  //   virtual void SingleExecutionStep( hardware_t &, exec_state_t&) { emp_assert(false, "!!"); }
-  // };
-
   // Each program type needs their own 'ExecutionStepper' to manage execution
   // - knows about program structure
   // - knows how to make programs
@@ -49,17 +25,12 @@ namespace emp { namespace sgp_v2 {
   // TODO - turn everything into configurable lambdas?
   // @discussion - SGP_CUSTOM_COMPONENT_T? Gross, but necessary?
   template<typename MEMORY_MODEL_T,
+           typename SGP_CUSTOM_COMPONENT_T,   // Need to know this to know SignalGP type.
            typename TAG_T=emp::BitSet<16>,
            typename INST_ARGUMENT_T=int,
-           typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>,
-           typename ...SGP_Ts>
-  class LinearProgramExecutionStepper
-        //:  public BaseExecutionStepper<LinearProgramExecutionStepper<MEMORY_MODEL_T,
-        //                                                           TAG_T,
-        //                                                           INST_ARGUMENT_T,
-        //                                                           MATCHBIN_T,
-        //                                                           SGP_Ts...>>
-  {
+           typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>
+           >
+  class LinearProgramExecutionStepper {
   public:
     struct ExecState;
     struct Module;
@@ -70,10 +41,10 @@ namespace emp { namespace sgp_v2 {
     enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
 
     using exec_stepper_t = LinearProgramExecutionStepper<MEMORY_MODEL_T,
+                                                         SGP_CUSTOM_COMPONENT_T,
                                                          TAG_T,
                                                          INST_ARGUMENT_T,
-                                                         MATCHBIN_T,
-                                                         SGP_Ts...>;
+                                                         MATCHBIN_T>;
     using exec_state_t = ExecState;
 
     using tag_t = TAG_T;
@@ -86,8 +57,8 @@ namespace emp { namespace sgp_v2 {
 
     using program_t = LinearProgram<tag_t, arg_t>;
 
-    using hardware_t = SignalGP<exec_stepper_t, SGP_Ts...>;
-    using thread_t = typename hardware_t::Thread;
+    using hardware_t = SignalGP<exec_stepper_t, SGP_CUSTOM_COMPONENT_T>;
+    using thread_t = typename hardware_t::thread_t;
 
     using inst_t = typename program_t::inst_t;
     using inst_prop_t = InstProperty;
@@ -409,10 +380,8 @@ namespace emp { namespace sgp_v2 {
   };
 
   // template<typename ...Ts>
-  // @discussion - do lambdas with captures by reference (e.g., this) work appropriately
-  //               when copied? => probably not...
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::SetupDefaultFlowControl() {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::SetupDefaultFlowControl() {
     // --- BASIC Flow ---
     // On open:
     flow_handler[FlowType::BASIC].open_flow_fun =
@@ -547,21 +516,21 @@ namespace emp { namespace sgp_v2 {
   }
 
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::ResetHardwareState() {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::ResetHardwareState() {
     memory_model.Reset(); // Reset global memory
   }
 
   // Reset loaded program.
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::ResetProgram() {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::ResetProgram() {
     modules.clear(); // Clear modules.
     program.Clear(); // Clear program.
     ResetMatchBin(); // Reset matchbin.
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::ResetMatchBin() {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::ResetMatchBin() {
     matchbin.Clear();
     is_matchbin_cache_dirty = false;
     for (size_t i = 0; i < modules.size(); ++i) {
@@ -569,8 +538,8 @@ namespace emp { namespace sgp_v2 {
     }
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  bool LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  bool LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::
         IsValidProgramPosition(size_t mp, size_t ip) const
   {
     if (mp < modules.size()) {
@@ -579,8 +548,8 @@ namespace emp { namespace sgp_v2 {
     return false;
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state){
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state){
     // If there's a call state on the call stack, execute an instruction.
     while (exec_state.call_stack.size()) {
       // There's something on the call stack.
@@ -631,16 +600,16 @@ namespace emp { namespace sgp_v2 {
   }
 
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::InitThread(thread_t & thread, size_t module_id) {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::InitThread(thread_t & thread, size_t module_id) {
     emp_assert(module_id < modules.size(), "Invalid module ID.");
     exec_state_t & state = thread.GetExecState();
     if (state.call_stack.size()) { state.Clear(); } /// Reset thread's call stack.
     CallModule(module_id, state);
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  size_t LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::FindEndOfBlock(size_t mp, size_t ip) const {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  size_t LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::FindEndOfBlock(size_t mp, size_t ip) const {
     emp_assert(mp < modules.size(), "Invalid module!");
     int depth = 1;
     std::unordered_set<size_t> seen;
@@ -660,8 +629,8 @@ namespace emp { namespace sgp_v2 {
     return ip;
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  emp::vector<size_t> LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::FindModuleMatch(const tag_t & tag, size_t n) {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  emp::vector<size_t> LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::FindModuleMatch(const tag_t & tag, size_t n) {
     // Find n matches.
     if(is_matchbin_cache_dirty){
       ResetMatchBin();
@@ -671,16 +640,16 @@ namespace emp { namespace sgp_v2 {
     return matchbin.Match(tag, n);
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::CallModule(const tag_t & tag, exec_state_t & exec_state, bool circular) {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::CallModule(const tag_t & tag, exec_state_t & exec_state, bool circular) {
     emp::vector<size_t> matches(FindModuleMatch(tag));
     if (matches.size()) {
       CallModule(matches[0], exec_state, circular);
     }
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::CallModule(size_t module_id, exec_state_t & exec_state, bool circular) {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::CallModule(size_t module_id, exec_state_t & exec_state, bool circular) {
     emp_assert(module_id < modules.size());
     if (exec_state.call_stack.size() >= max_call_depth) return;
     // Push new state onto stack.
@@ -694,8 +663,8 @@ namespace emp { namespace sgp_v2 {
     }
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::ReturnCall(exec_state_t & exec_state) {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::ReturnCall(exec_state_t & exec_state) {
     if (exec_state.call_stack.empty()) return; // Nothing to return from.
     // Get the current call state.
     CallState & returning_state = exec_state.call_stack.back();
@@ -710,8 +679,8 @@ namespace emp { namespace sgp_v2 {
     exec_state.call_stack.pop_back();
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::UpdateModules() {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::UpdateModules() {
     // std::cout << "Update modules!" << std::endl;
     // Clear out the current modules.
     modules.clear();
@@ -759,8 +728,8 @@ namespace emp { namespace sgp_v2 {
     ResetMatchBin();
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::PrintModules(std::ostream & os) const {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::PrintModules(std::ostream & os) const {
     os << "Modules: [";
     for (size_t i = 0; i < modules.size(); ++i) {
       if (i) os << ",";
@@ -769,8 +738,8 @@ namespace emp { namespace sgp_v2 {
     os << "]";
   }
 
-  template<typename MM_T, typename T_T, typename IA_T, typename MB_T, typename ...Ts>
-  void LinearProgramExecutionStepper<MM_T,T_T,IA_T,MB_T,Ts...>::PrintExecutionState(const exec_state_t & state, std::ostream & os) const {
+  template<typename MM_T, typename SGP_CC_T, typename T_T, typename IA_T, typename MB_T>
+  void LinearProgramExecutionStepper<MM_T,SGP_CC_T,T_T,IA_T,MB_T>::PrintExecutionState(const exec_state_t & state, std::ostream & os) const {
     // -- Call stack --
     // todo
     os << "Call stack (" << state.call_stack.size() << "):\n";
