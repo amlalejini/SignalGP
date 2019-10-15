@@ -14,9 +14,9 @@ public:
 
   using exec_stepper_t = ToyExecutionStepper<SGP_Ts...>;
 
-  using program_t = emp::vector<size_t>;     ///< What types of programs does this stepper execute?
-  using tag_t = size_t;                      ///< What does this stepper use to reference different modules?
-  using exec_state_t = ExecState;            ///< Thread state information.
+  using program_t = emp::vector<size_t>;     ///< REQUIRED. What types of programs does this stepper execute?
+  using tag_t = size_t;                      ///< REQUIRED. What does this stepper use to reference different modules?
+  using exec_state_t = ExecState;            ///< REQUIRED. Thread state information.
 
   using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t, SGP_Ts...>;
   using thread_t = typename signalgp_t::Thread;
@@ -31,18 +31,24 @@ protected:
 
 public:
 
+  /// REQUIRED
   program_t & GetProgram() { return program; }
+
+  /// REQUIRED
   void SetProgram(const program_t & p) {
     program = p;
   }
 
+  /// REQUIRED
   void ResetProgram() {
     program.clear();
   }
 
   // No extra hardware state to reset.
+  /// REQUIRED
   void ResetHardwareState() { ; }
 
+  /// REQUIRED
   emp::vector<size_t> FindModuleMatch(const tag_t & tag, size_t N) {
     // tag_t => size_t
     // Let tag % program.size() index into program.
@@ -55,12 +61,13 @@ public:
   }
 
   /// Module ids index into program directly (each module is a size_t)
+  /// REQUIRED
   void InitThread(thread_t & thread, size_t module_id) {
     emp_assert(module_id < program.size());
     thread.exec_state.value = program[module_id];
   }
 
-  /// exec_state => size_t
+  /// REQUIRED
   void SingleExecutionStep(signalgp_t & hw, thread_t & thread) {
     if (thread.GetExecState().value == 0) {
       thread.SetDead(true);
