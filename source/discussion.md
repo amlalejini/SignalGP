@@ -2,6 +2,10 @@
 
 ## Questions/Discussion Points
 
+- Design
+  - SignalGP<DERIVED_T>
+  - ExecutionStepper<...> : SignalGP<ExecutionStepper<...>>
+
 - SignalGP.h
   - how could I use concepts to clean this up?
   - SignalGP: where should I put configurable lambdas/Signals?

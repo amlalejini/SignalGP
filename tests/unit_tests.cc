@@ -9,12 +9,64 @@
 #include "SignalGP.h"
 #include "SGP-V2/MemoryModel.h"
 #include "SGP-V2/LinearProgramExecutionStepper.h"
+#include "SGP-V2/ToyExecutionStepper.h"
 #include "SGP-V2/LinearProgram.h"
 #include "SGP-V2/instructions_impl.h"
 // #include "SGP-V2/NandMachineExecutionStepper.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
+}
+
+TEST_CASE( "ToyExecutionStepper", "[signalgp]") {
+  using exec_stepper_t = ToyExecutionStepper<>;             // gross <>
+  using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t>;
+
+  size_t THREAD_LIMIT = 8;
+
+  emp::EventLibrary<signalgp_t> event_lib;
+  emp::Random random(2);
+
+  signalgp_t hardware(&event_lib, &random);
+  hardware.InitExecStepper();
+
+  // Configure hardware
+  hardware.SetThreadLimit(THREAD_LIMIT);
+
+  // Make a toy program.
+  emp::vector<size_t> prog1({0,1,2,3,4,5});
+
+  // Load program onto hardware.
+  hardware.SetProgram(prog1);
+
+  hardware.SetPrintHardwareStateFun([&hardware](std::ostream & os) {
+    os << "Thread states: [";
+    for (size_t ti = 0; ti < hardware.GetActiveThreadIDs().size(); ++ti) {
+      if (ti) os << ", ";
+      size_t thread_id = hardware.GetActiveThreadIDs()[ti];
+      os << "{" << thread_id << ": " << hardware.GetThread(thread_id).GetExecState().value << "}";
+    }
+    os << "]\n";
+  });
+
+  std::cout << "--- Initial hardware state ---" << std::endl;
+  hardware.PrintHardwareState();
+  // Spawn a few threads.
+  hardware.SpawnThread(0);
+  hardware.SpawnThreads(1, 2);
+  hardware.SpawnThreads(6, 1);
+  // print hardware state.
+  std::cout << "--- after spawning threads ---" << std::endl;
+  hardware.PrintHardwareState();
+  std::cout << "--- single process ---" << std::endl;
+  hardware.SingleProcess();
+  hardware.PrintHardwareState();
+  std::cout << "--- single process ---" << std::endl;
+  hardware.SingleProcess();
+  hardware.PrintHardwareState();
+  std::cout << "--- single process ---" << std::endl;
+  hardware.SingleProcess();
+  hardware.PrintHardwareState();
 }
 
 TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[instructions]" ) {

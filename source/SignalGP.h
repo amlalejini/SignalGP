@@ -108,7 +108,7 @@ namespace emp { namespace sgp_v2 {
       Thread(const exec_state_t & _exec_state=exec_state_t())
         : exec_state(_exec_state), dead(true) { ; }
 
-      void Reset() {
+      void Reset() {  // TODO - exec_state.Clear() => should be exec_state.Reset()
         exec_state.Clear(); // TODO - make this functionality more flexible! Currently assumes exec_state_t has a Clear function!
         dead = true;
       }
