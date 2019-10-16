@@ -53,13 +53,7 @@ namespace emp { namespace sgp_v2 {
            typename INST_ARGUMENT_T=int,
            typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>,
            typename ...SGP_Ts>
-  class LinearProgramExecutionStepper
-        //:  public BaseExecutionStepper<LinearProgramExecutionStepper<MEMORY_MODEL_T,
-        //                                                           TAG_T,
-        //                                                           INST_ARGUMENT_T,
-        //                                                           MATCHBIN_T,
-        //                                                           SGP_Ts...>>
-  {
+  class LinearProgramExecutionStepper {
   public:
     struct ExecState;
     struct Module;
