@@ -1,5 +1,5 @@
 /*******************************************************************************
- * SignalGP<EXEC_STEPPER_T, CUSTOM_COMPONENT_T>
+ * BaseSignalGP<EXEC_STEPPER_T, CUSTOM_COMPONENT_T>
  * ..
  * EXEC_STEPPER_T - Execution Stepper
  *   - The execution stepper knows how to execute programs. What type of programs?
@@ -35,17 +35,16 @@
  *           the given SignalGP hardware state.
  *******************************************************************************/
 
-#ifndef EMP_CR_SIGNALGP_VHARDWARE_H
-#define EMP_CR_SIGNALGP_VHARDWARE_H
+#ifndef EMP_SIGNALGP_BASE_H
+#define EMP_SIGNALGP_BASE_H
 
 #include <iostream>
 #include <utility>
+#include <limits>
 
 #include "base/Ptr.h"
 #include "base/vector.h"
 #include "tools/Random.h"
-// #include "tools/MatchBin.h"
-// #include "tools/matchbin_utils.h"
 
 #include "EventLibrary.h"
 #include "InstructionLibrary.h"
@@ -53,9 +52,7 @@
 // @discussion - how could I use concepts to clean this up?
 // @discussion - where should I put configurable lambdas?
 
-// @todo - add custom component
-
-namespace emp { namespace sgp_cr {
+namespace emp { namespace signalgp {
 
   struct BaseEvent {
     size_t id;
@@ -67,46 +64,54 @@ namespace emp { namespace sgp_cr {
     }
   };
 
+  /// Placeholder additional component type.
+  struct DefaultCustomComponent { };
+
   // todo - move function implementations outside of class
   // todo - make signalgp hardware not awful (& safe) to make copies of
   // @discussion - template/organization structure
-  template<typename DERIVED_T, typename e_t, typename p_t, typename t_t>
-  class crBaseSignalGP {
+  // What about program_t?
+  template<typename DERIVED_T,
+           typename EXEC_STATE_T,
+           typename TAG_T,
+           typename CUSTOM_COMPONENT_T=DefaultCustomComponent>  // @DISCUSSION - additional component here versus in derived? arg for: signaling to derived devs?
+  class BaseSignalGP {
   public:
     struct Thread;
 
-    static constexpr size_t THREAD_LIMIT = (size_t)-2;
+    /// Theoretical thread limit for hardware.
+    /// Some function use max size_t to indicate no threads... TODO - internal thread_id struct
+    static constexpr size_t THREAD_LIMIT = std::numeric_limits<size_t>::max() - 1;
 
-    // @discussion - can I assert that execution stepper knows about SignalGP_t?
-    // using additional_comps_t = std::tuple<ADDITIONAL_COMPONENT_Ts...>;
+    // Types that base signalgp functionality needs to know about.
     using hardware_t = DERIVED_T;
-    using exec_state_t = e_t;
-    using program_t = p_t;
-    using tag_t = t_t;
-    // using module_t = typename exec_stepper_t::module_t; //@discussion - any reason signalgp needs to know this?
-    // using memory_model_t = typename exec_stepper_t::memory_model_t;  //@discussion - any reason for signalgp to know about memory model?
-    // using memory_state_t = typename memory_model_t::memory_state_t;
-    // using matchbin_t = typename exec_stepper_t::matchbin_t;      // @discussion - any reason top-level signalgp needs to know about matchbins?
+    using exec_state_t = EXEC_STATE_T;
+    // using program_t = PROGRAM_T; @discussion - ??
+    using tag_t = TAG_T;
+    using custom_comp_t = CUSTOM_COMPONENT_T;
 
     using event_t = BaseEvent;
     using event_lib_t = EventLibrary<hardware_t>;
 
     using thread_t = Thread;
 
-    using fun_print_event_t = std::function<void(const event_t &, std::ostream &)>;
-    using fun_print_execution_state_t = std::function<void(const exec_state_t &, std::ostream &)>;
+    using fun_print_hardware_state_t = std::function<void(const hardware_t&, std::ostream &)>;
+    // using fun_print_program_t = std::function<void(const program_t&, const hardware_t&, std::ostream &)>;
+    using fun_print_execution_state_t = std::function<void(const exec_state_t &, const hardware_t&, std::ostream &)>;
+    using fun_print_event_t = std::function<void(const event_t &, const hardware_t&, std::ostream &)>;
 
     // QUESTION - Pros/cons of nesting Thread type in SignalGP class?
-    // @DISCUSSION
     struct Thread {
-      // label?
+      // comment => labels can exist inside execution state.
       exec_state_t exec_state;
       bool dead;
+      double priority;
 
       Thread(const exec_state_t & _exec_state=exec_state_t())
         : exec_state(_exec_state), dead(true) { ; }
 
       void Reset() {
+        // @discussion - How do we want to handle this?
         exec_state.Clear(); // TODO - make this functionality more flexible! Currently assumes exec_state_t has a Clear function!
         dead = true;
       }
@@ -119,13 +124,11 @@ namespace emp { namespace sgp_cr {
     };
 
   protected:
-    Ptr<event_lib_t> event_lib;   ///< These are the events this hardware knows about.
+    Ptr<event_lib_t> event_lib;         ///< These are the events this hardware knows about.
     std::deque<event_t> event_queue;    ///< Queue of events to be processed every time step.
 
-    Ptr<Random> random_ptr;             ///< Random number generator.
+    Ptr<Random> random_ptr;             ///< Random number generator. (TODO - make this a smart pointer)
     bool random_owner;                  ///< Is this hardware unit responsible for cleaning up the random number generator memory?
-
-    bool initialized=false;             ///< Has this hardware unit been initialized? I.e., has its execution stepper been constructed?
 
     // Thread management
     size_t max_threads=64;              ///< Maximum number of concurrently running threads.
@@ -137,21 +140,25 @@ namespace emp { namespace sgp_cr {
     size_t cur_thread_id=(size_t)-1;    ///< Currently executing thread.
     bool is_executing=false;            ///< Is this hardware unit currently executing (within a SingleProcess)?
 
-    // Configurable print functions
-    std::function<void(std::ostream &)> fun_print_program = [](this_t, program, std::ostream & os) { return; };
-    // std::function<void(std::ostream &)> fun_print_modules = [](this_t, modules, std::ostream & os) { return; };
-    std::function<void(std::ostream &)> fun_print_hardware_state = [](this, std::ostream & os) { return; };
-    std::function<void(std::ostream &)> fun_print_exec_stepper_state = [](std::ostream & os) { return; };
-    fun_print_execution_state_t fun_print_execution_state = [](const exec_state_t & state, std::ostream & os) { return; };
-    fun_print_event_t fun_print_event = [](const event_t & event, std::ostream & os) { event.Print(os); };
+    custom_comp_t custom_component;
+
+    // Configurable print functions. @NOTE: should these emp_assert(false)?
+    fun_print_hardware_state_t fun_print_hardware_state = [](const hardware_t& hw, std::ostream & os) { return; };
+    // fun_print_program_t fun_print_program = [](const program_t& p, const hardware_t& hw, std::ostream & os) { return; };
+    fun_print_execution_state_t fun_print_execution_state = [](const exec_state_t & e, const hardware_t& hw, std::ostream & os) { return; };
+    fun_print_event_t fun_print_event = [](const event_t & e, const hardware_t& hw, std::ostream & os) { e.Print(os); };
 
   public:
-    crBaseSignalGP(Ptr<event_lib_t> elib,
+    BaseSignalGP(Ptr<event_lib_t> elib,
                    Ptr<Random> rnd=nullptr)
       : event_lib(elib),
+        event_queue(),
         random_ptr(rnd),
         random_owner(false),
-        threads(max_threads), active_threads(), unused_threads(max_threads), pending_threads()
+        threads(max_threads),
+        active_threads(),
+        unused_threads(max_threads),
+        pending_threads()
     {
       std::cout << "Base constructor" << std::endl;
       // If no random provided, create one.
@@ -165,7 +172,7 @@ namespace emp { namespace sgp_cr {
     // Todo - test!
     // @discussion => Double check this!?
     /// Move constructor.
-    crBaseSignalGP(crBaseSignalGP && in)
+    BaseSignalGP(BaseSignalGP && in)
       : event_lib(in.event_lib),
         event_queue(in.event_queue),
         random_ptr(in.random_ptr),
@@ -177,11 +184,9 @@ namespace emp { namespace sgp_cr {
         pending_threads(in.pending_threads),
         cur_thread_id(in.cur_thread_id),
         is_executing(in.is_executing),
-        initialized(in.initialized),
-        fun_print_program(in.fun_print_program),
-        fun_print_modules(in.fun_print_modules),
+        // fun_print_program(in.fun_print_program),
         fun_print_hardware_state(in.fun_print_hardware_state),
-        fun_print_exec_stepper_state(in.fun_print_exec_stepper_state),
+        // fun_print_exec_stepper_state(in.fun_print_exec_stepper_state),
         fun_print_execution_state(in.fun_print_execution_state),
         fun_print_event(in.fun_print_event)
     {
@@ -189,12 +194,11 @@ namespace emp { namespace sgp_cr {
       in.random_ptr = nullptr;
       in.random_owner = false;
       in.event_lib = nullptr;
-      in.initialized = false;
     }
 
     /// Copy constructor.
     /// todo - test!
-    crBaseSignalGP(const crBaseSignalGP & in)
+    BaseSignalGP(const BaseSignalGP & in)
       : event_lib(in.event_lib),
         event_queue(in.event_queue),
         random_ptr(nullptr),
@@ -206,11 +210,8 @@ namespace emp { namespace sgp_cr {
         pending_threads(in.pending_threads),
         cur_thread_id(in.cur_thread_id),
         is_executing(in.is_executing),
-        initialized(false),
-        fun_print_program(in.fun_print_program),
-        fun_print_modules(in.fun_print_modules),
+        // fun_print_program(in.fun_print_program),
         fun_print_hardware_state(in.fun_print_hardware_state),
-        fun_print_exec_stepper_state(in.fun_print_exec_stepper_state),
         fun_print_execution_state(in.fun_print_execution_state),
         fun_print_event(in.fun_print_event)
     {
@@ -223,7 +224,7 @@ namespace emp { namespace sgp_cr {
 
     /// Destructor.
     // todo - test!
-    ~crBaseSignalGP() {
+    ~BaseSignalGP() {
       if (random_owner && random_ptr != nullptr) {
         random_ptr.Delete();
       }
@@ -231,16 +232,16 @@ namespace emp { namespace sgp_cr {
 
     /// Full virtual hardware reset:
     /// Required
-    virtual void Reset() = 0; //{ emp_assert(false); } /// REQUIRED TO OVERRIDE
+    virtual void Reset() = 0;
 
     /// Required
-    virtual void SingleExecutionStep(hardware_t & hardware, exec_state_t & exec_state) =0; //{ emp_assert(false); }
+    virtual void SingleExecutionStep(hardware_t &, exec_state_t &) = 0;
 
     /// Required
-    virtual vector<size_t> FindModuleMatch(const tag_t &, size_t N) =0;//{ emp_assert(false); }
+    virtual vector<size_t> FindModuleMatch(const tag_t &, size_t) = 0;
 
     /// Required
-    virtual void InitThread(thread_t & thread, size_t module_id) =0;//{ emp_assert(false); }
+    virtual void InitThread(thread_t &, size_t) = 0;
 
     /// HardwareState reset:
     /// - Reset execution stepper hardware state.
@@ -248,7 +249,6 @@ namespace emp { namespace sgp_cr {
     /// - Reset all threads, move all to unused; clear pending.
     void BaseResetState() {
       emp_assert(!is_executing, "Cannot reset hardware while executing.");
-      emp_assert(initialized);
       event_queue.clear();
       for (auto & thread : threads) {
         thread.Reset();
@@ -264,9 +264,6 @@ namespace emp { namespace sgp_cr {
       is_executing = false;
     }
 
-    /// Has this virtual hardware unit been initialized?
-    bool IsInitialized() const { return initialized; }
-
     /// Get event library associated with hardware.
     Ptr<const event_lib_t> GetEventLib() const { return event_lib; }
 
@@ -277,7 +274,12 @@ namespace emp { namespace sgp_cr {
     Ptr<Random> GetRandomPtr() { return random_ptr; }
 
     /// Get reference to this hardware's execution stepper object.
-    DERIVED_T & GetHardware() { return static_cast<DERIVED_T>(*this); } // ???
+    DERIVED_T & GetHardware() { return static_cast<DERIVED_T>(*this); }
+    const DERIVED_T & GetHardware() const { return static_cast<DERIVED_T>(*this); }
+
+    custom_comp_t & GetCustomComponent() { return custom_component; }
+    const custom_comp_t & GetCustomComponent() const { return custom_component; }
+    void SetCustomComponent(const custom_comp_t & val) { custom_component = val; }
 
     /// Get the maximum number of threads allowed to run simultaneously on this hardware
     /// object.
@@ -440,15 +442,11 @@ namespace emp { namespace sgp_cr {
 
     /// Advance the hardware by a single step.
     void SingleProcess() {
-      // todo - validate that program exists!
-      emp_assert(initialized, "SignalGP Hardware has not been properly initialized!");
-
       // Handle events
       while (!event_queue.empty()) {
         HandleEvent(event_queue.front());
         event_queue.pop_front();
       }
-
       // Distribute one unit of computational time to each thread.
       is_executing = true;
       size_t active_thread_id = 0;
@@ -498,22 +496,12 @@ namespace emp { namespace sgp_cr {
     }
 
     /// How should programs be printed?
-    void SetPrintProgramFun(const std::function<void(std::ostream &)> & print_fun) {
-      fun_print_program = print_fun;
-    }
-
-    /// How should modules be printed?
-    void SetPrintModulesFun(const std::function<void(std::ostream &)> & print_fun) {
-      fun_print_modules = print_fun;
-    }
-
-    /// How does the state of the execution stepper get printed?
-    void SetPrintExecStepperStateFun(const std::function<void(std::ostream &)> & print_fun) {
-      fun_print_exec_stepper_state = print_fun;
-    }
+    // void SetPrintProgramFun(const fun_print_program_t & print_fun) {
+    //   fun_print_program = print_fun;
+    // }
 
     /// How does the hardware state get printed?
-    void SetPrintHardwareStateFun(const std::function<void(std::ostream &)> & print_fun) {
+    void SetPrintHardwareStateFun(const fun_print_hardware_state_t & print_fun) {
       fun_print_hardware_state = print_fun;
     }
 
@@ -533,22 +521,16 @@ namespace emp { namespace sgp_cr {
         size_t thread_id = active_threads[i];
         const thread_t & thread = threads[thread_id];
         os << "Thread " << i << " (ID="<< thread_id << "):\n";
-        PrintExecutionState(thread.GetExecState(), os);
+        PrintExecutionState(thread.GetExecState(), GetHardware(), os);
         os << "\n";
       }
     }
 
     /// Print loaded program.
-    void PrintProgram(std::ostream & os=std::cout) const { fun_print_program(os); }
-
-    /// Print current modules.
-    void PrintModules(std::ostream & os=std::cout) const { fun_print_modules(os); }
-
-    /// Print state of execution stepper.
-    void PrintExecStepperState(std::ostream & os=std::cout) const { fun_print_exec_stepper_state(os); }
+    // void PrintProgram(std::ostream & os=std::cout) const { fun_print_program(os); }
 
     /// Print overall state of hardware.
-    void PrintHardwareState(std::ostream & os=std::cout) const { fun_print_hardware_state(os); }
+    void PrintHardwareState(std::ostream & os=std::cout) const { fun_print_hardware_state(GetHardware(), os); }
 
     /// Print thread usage status (active, unused, and pending thread ids).
     void PrintThreadUsage(std::ostream & os=std::cout) const {
@@ -580,7 +562,7 @@ namespace emp { namespace sgp_cr {
       os << "Event queue (" << event_queue.size() << "): [";
       for (size_t i = 0; i < event_queue.size(); ++i) {
         if (i) os << ", ";
-        fun_print_event(event_queue[i], os);
+        fun_print_event(event_queue[i], GetHardware(), os);
       }
       os << "]";
     }

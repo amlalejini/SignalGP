@@ -2,22 +2,36 @@
 
 #include "catch.hpp"
 
+#include <limits>
+
 #include "tools/BitSet.h"
 
 #include "InstructionLibrary.h"
 #include "EventLibrary.h"
-#include "SignalGP.h"
-#include "SGP-V2/MemoryModel.h"
-#include "SGP-V2/LinearProgramExecutionStepper.h"
-#include "SGP-V2/ToyExecutionStepper.h"
-#include "SGP-V2/LinearProgram.h"
-#include "SGP-V2/instructions_impl.h"
-// #include "SGP-V2/NandMachineExecutionStepper.h"
+
+#include "BaseSignalGP.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
 }
 
+/*
+TEST_CASE("crSGP", "[!!]") {
+  using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
+  using signalgp_t = emp::sgp_cr::crLinearProgramSignalGP<mem_model_t>;
+  using inst_lib_t = typename signalgp_t::inst_lib_t;
+
+  // const size_t THREAD_LIMIT = 8;
+
+  inst_lib_t inst_lib;
+  emp::EventLibrary<signalgp_t> event_lib;
+  emp::Random random(2);
+  signalgp_t hardware(&inst_lib, &event_lib, &random);
+
+}
+*/
+
+/*
 TEST_CASE( "ToyExecutionStepper", "[signalgp]") {
   using exec_stepper_t = ToyExecutionStepper<>;             // gross <>
   using signalgp_t = emp::sgp_v2::SignalGP<exec_stepper_t>;
@@ -68,7 +82,9 @@ TEST_CASE( "ToyExecutionStepper", "[signalgp]") {
   hardware.SingleProcess();
   hardware.PrintHardwareState();
 }
+*/
 
+/*
 TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[instructions]" ) {
   // General setup.
   using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
@@ -1928,3 +1944,4 @@ TEST_CASE( "SignalGP_V2::LinearProgram::SimpleMemory - Default Instructions", "[
 
   // }
 }
+*/
