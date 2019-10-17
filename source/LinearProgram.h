@@ -10,10 +10,10 @@
 #include "tools/MatchBin.h"
 #include "tools/matchbin_utils.h"
 
-#include "../EventLibrary.h"
-#include "../InstructionLibrary.h"
+#include "EventLibrary.h"
+#include "InstructionLibrary.h"
 
-namespace emp { namespace sgp_v2 {
+namespace emp { namespace signalgp {
 
   // Simple program:
   // - Linear.

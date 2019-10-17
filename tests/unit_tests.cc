@@ -10,6 +10,7 @@
 #include "EventLibrary.h"
 
 #include "BaseSignalGP.h"
+#include "LinearProgramSignalGP.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
