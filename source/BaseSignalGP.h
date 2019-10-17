@@ -183,7 +183,7 @@ namespace emp { namespace signalgp {
     virtual void Reset() = 0;
 
     /// Required
-    virtual void SingleExecutionStep(hardware_t &, exec_state_t &) = 0;
+    virtual void SingleExecutionStep(DERIVED_T &, thread_t &) = 0;
 
     /// Required
     virtual vector<size_t> FindModuleMatch(const tag_t &, size_t) = 0;

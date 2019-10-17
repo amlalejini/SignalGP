@@ -81,7 +81,8 @@ namespace emp { namespace signalgp {
 
     using base_hw_t = BaseSignalGP<this_t, exec_state_t, tag_t, CUSTOM_COMPONENT_T>;
     using thread_t = typename base_hw_t::Thread;
-    using event_lib_t = typename base_hw_t::event_lib_t;
+    using event_lib_t = emp::EventLibrary<this_t>;
+    using event_t = typename base_hw_t::event_t;
 
     /// Blocks are within-module flow control segments (e.g., while loops, if statements, etc)
     enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
@@ -470,310 +471,310 @@ namespace emp { namespace signalgp {
       }
     }
 
-  //   /// Return whether a given a module ID and an instruction position is a valid
-  //   /// position in the program. I.e., mp is a valid module and ip is inside of
-  //   /// module mp.
-  //   bool IsValidProgramPosition(size_t mp, size_t ip) const {
-  //     if (mp < modules.size()) {
-  //       if (modules[mp].InModule(ip)) return true;
-  //     }
-  //     return false;
-  //   }
+    /// Return whether a given a module ID and an instruction position is a valid
+    /// position in the program. I.e., mp is a valid module and ip is inside of
+    /// module mp.
+    bool IsValidProgramPosition(size_t mp, size_t ip) const {
+      if (mp < modules.size()) {
+        if (modules[mp].InModule(ip)) return true;
+      }
+      return false;
+    }
 
-  //   /// Advance given execution state on given hardware by a single step. I.e.,
-  //   /// process a single instruction on this hardware.
-  //   void SingleExecutionStep(signalgp_t & hardware, thread_t & thread) {
-  //     exec_state_t & exec_state = thread.GetExecState();
-  //     // If there's a call state on the call stack, execute an instruction.
-  //     while (exec_state.call_stack.size()) {
-  //       // There's something on the call stack.
-  //       CallState & call_state = exec_state.call_stack.back();
-  //       // Is there anything on the flow stack?
-  //       if (call_state.IsFlow()) {
-  //         // std::cout << "- There's some flow." << std::endl;
-  //         FlowInfo & flow_info = call_state.flow_stack.back();
-  //         size_t mp = flow_info.mp;
-  //         size_t ip = flow_info.ip;
-  //         // std::cout << ">> MP=" << mp << "; IP=" << ip << std::endl;
-  //         emp_assert(mp < GetNumModules(), "Invalid module pointer: ", mp);
-  //         // Process current instruction (if any)!
-  //         if (modules[mp].InModule(ip)) {
-  //           // NOTE - should we increment the IP before or after executing?
-  //           // Only BEFORE executing an instruction do we have any guarantees about
-  //           // the state of our flow info. After processing an instruction, this
-  //           // flow info reference could be invalid. Our call state reference could
-  //           // even be invalid. Thus, we must increment the IP before processing
-  //           // the current instruction.
-  //           ++flow_info.ip; // Move instruction pointer forward (might be invalid location).
-  //           inst_lib->ProcessInst(hardware, program[ip]);
-  //         } else if (ip >= program.GetSize()
-  //                   && modules[mp].InModule(0)
-  //                   && modules[mp].end < modules[mp].begin) {
-  //           // The instruction pointer is off the edge of the program.
-  //           // HERE, we handle if this module wraps back to the beginning of the program.
-  //           // in which case, we need to move the IP.
-  //           ip = 0;
-  //           flow_info.ip = 1; // See comment above for why we do this before ProcessInst.
-  //           inst_lib->ProcessInst(hardware, program[ip]);
-  //         } else {
-  //           // IP not valid for this module. Close flow.
-  //           flow_handler.CloseFlow(flow_info.type, exec_state);
-  //           continue;
-  //         }
-  //       } else {
-  //         // No flow!
-  //         // todo - return from call?
-  //         ReturnCall(exec_state);
-  //       }
-  //       break; // We executed *something*, break from loop.
-  //     }
-  //     // If execution state's call stack is empty, mark thread as dead.
-  //     if (exec_state.call_stack.empty()) {
-  //       thread.SetDead(true);
-  //     }
-  //   }
+    /// Advance given execution state on given hardware by a single step. I.e.,
+    /// process a single instruction on this hardware.
+    void SingleExecutionStep(this_t & hardware, thread_t & thread) {
+      exec_state_t & exec_state = thread.GetExecState();
+      // If there's a call state on the call stack, execute an instruction.
+      while (exec_state.call_stack.size()) {
+        // There's something on the call stack.
+        CallState & call_state = exec_state.call_stack.back();
+        // Is there anything on the flow stack?
+        if (call_state.IsFlow()) {
+          // std::cout << "- There's some flow." << std::endl;
+          FlowInfo & flow_info = call_state.flow_stack.back();
+          size_t mp = flow_info.mp;
+          size_t ip = flow_info.ip;
+          // std::cout << ">> MP=" << mp << "; IP=" << ip << std::endl;
+          emp_assert(mp < GetNumModules(), "Invalid module pointer: ", mp);
+          // Process current instruction (if any)!
+          if (modules[mp].InModule(ip)) {
+            // NOTE - should we increment the IP before or after executing?
+            // Only BEFORE executing an instruction do we have any guarantees about
+            // the state of our flow info. After processing an instruction, this
+            // flow info reference could be invalid. Our call state reference could
+            // even be invalid. Thus, we must increment the IP before processing
+            // the current instruction.
+            ++flow_info.ip; // Move instruction pointer forward (might be invalid location).
+            inst_lib->ProcessInst(hardware, program[ip]);
+          } else if (ip >= program.GetSize()
+                    && modules[mp].InModule(0)
+                    && modules[mp].end < modules[mp].begin) {
+            // The instruction pointer is off the edge of the program.
+            // HERE, we handle if this module wraps back to the beginning of the program.
+            // in which case, we need to move the IP.
+            ip = 0;
+            flow_info.ip = 1; // See comment above for why we do this before ProcessInst.
+            inst_lib->ProcessInst(hardware, program[ip]);
+          } else {
+            // IP not valid for this module. Close flow.
+            flow_handler.CloseFlow(hardware, flow_info.type, exec_state);
+            continue;
+          }
+        } else {
+          // No flow!
+          // todo - return from call?
+          ReturnCall(exec_state);
+        }
+        break; // We executed *something*, break from loop.
+      }
+      // If execution state's call stack is empty, mark thread as dead.
+      if (exec_state.call_stack.empty()) {
+        thread.SetDead(true);
+      }
+    }
 
-  //   /// Initialize thread by calling given module id on it.
-  //   void InitThread(thread_t & thread, size_t module_id) {
-  //     emp_assert(module_id < modules.size(), "Invalid module ID.");
-  //     exec_state_t & state = thread.GetExecState();
-  //     if (state.call_stack.size()) { state.Clear(); } /// Reset thread's call stack.
-  //     CallModule(module_id, state);
-  //   }
+    /// Initialize thread by calling given module id on it.
+    void InitThread(thread_t & thread, size_t module_id) {
+      emp_assert(module_id < modules.size(), "Invalid module ID.");
+      exec_state_t & state = thread.GetExecState();
+      if (state.call_stack.size()) { state.Clear(); } /// Reset thread's call stack.
+      CallModule(module_id, state);
+    }
 
     /// Get reference to random number generator used by this hardware.
     Random & GetRandom() { return random; }
 
-  //   FlowHandler & GetFlowHandler() { return flow_handler; }
+    FlowHandler & GetFlowHandler() { return flow_handler; }
 
-  //   /// Set open flow handler for given flow type.
-  //   void SetOpenFlowFun(FlowType type, const open_flow_fun_t & fun) {
-  //     flow_handler[type].open_flow_fun = fun;
-  //   }
+    /// Set open flow handler for given flow type.
+    void SetOpenFlowFun(FlowType type, const fun_open_flow_t & fun) {
+      flow_handler[type].open_flow_fun = fun;
+    }
 
-  //   // Set close flow handler for a given flow type.
-  //   void SetCloseFlowFun(FlowType type, const end_flow_fun_t & fun) {
-  //     flow_handler[type].close_flow_fun = fun;
-  //   }
+    // Set close flow handler for a given flow type.
+    void SetCloseFlowFun(FlowType type, const fun_end_flow_t & fun) {
+      flow_handler[type].close_flow_fun = fun;
+    }
 
-  //   // Set break flow handler for a given flow type.
-  //   void SetBreakFlowFun(FlowType type, const end_flow_fun_t & fun) {
-  //     flow_handler[type].break_flow_fun = fun;
-  //   }
+    // Set break flow handler for a given flow type.
+    void SetBreakFlowFun(FlowType type, const fun_end_flow_t & fun) {
+      flow_handler[type].break_flow_fun = fun;
+    }
 
-  //   /// Find end of code block (i.e., internal flow control code segment).
-  //   // @todo - test explicitly!
-  //   size_t FindEndOfBlock(size_t mp, size_t ip) const {
-  //     emp_assert(mp < modules.size(), "Invalid module!");
-  //     int depth = 1;
-  //     std::unordered_set<size_t> seen;
-  //     while (true) {
-  //       if (!IsValidProgramPosition(mp, ip)) break;
-  //       const inst_t & inst = program[ip];
-  //       if (inst_lib->HasProperty(inst.GetID(), inst_prop_t::BLOCK_DEF)) {
-  //         ++depth;
-  //       } else if (inst_lib->HasProperty(inst.GetID(), inst_prop_t::BLOCK_CLOSE)) {
-  //         --depth;
-  //         if (depth == 0) break;
-  //       }
-  //       seen.emplace(ip);
-  //       ++ip;
-  //       if (ip >= program.GetSize() && seen.size() < modules[mp].GetSize()) ip %= program.GetSize();
-  //     }
-  //     return ip;
-  //   }
+    /// Find end of code block (i.e., internal flow control code segment).
+    // @todo - test explicitly!
+    size_t FindEndOfBlock(size_t mp, size_t ip) const {
+      emp_assert(mp < modules.size(), "Invalid module!");
+      int depth = 1;
+      std::unordered_set<size_t> seen;
+      while (true) {
+        if (!IsValidProgramPosition(mp, ip)) break;
+        const inst_t & inst = program[ip];
+        if (inst_lib->HasProperty(inst.GetID(), InstProperty::BLOCK_DEF)) {
+          ++depth;
+        } else if (inst_lib->HasProperty(inst.GetID(), InstProperty::BLOCK_CLOSE)) {
+          --depth;
+          if (depth == 0) break;
+        }
+        seen.emplace(ip);
+        ++ip;
+        if (ip >= program.GetSize() && seen.size() < modules[mp].GetSize()) ip %= program.GetSize();
+      }
+      return ip;
+    }
 
-  //   /// Use the matchbin to find the n matching modules to a given tag.
-  //   emp::vector<size_t> FindModuleMatch(const tag_t & tag, size_t n=1) {
-  //     // Find n matches.
-  //     if(is_matchbin_cache_dirty){
-  //       ResetMatchBin();
-  //     }
-  //     // no need to transform to values because we're using
-  //     // matchbin uids equivalent to function uids
-  //     return matchbin.Match(tag, n);
-  //   }
+    /// Use the matchbin to find the n matching modules to a given tag.
+    emp::vector<size_t> FindModuleMatch(const tag_t & tag, size_t n=1) {
+      // Find n matches.
+      if(is_matchbin_cache_dirty){
+        ResetMatchBin();
+      }
+      // no need to transform to values because we're using
+      // matchbin uids equivalent to function uids
+      return matchbin.Match(tag, n);
+    }
 
-  //   /// Call a module (specified by given tag) on the given execution state.
-  //   void CallModule(const tag_t & tag, exec_state_t & exec_state, bool circular=false) {
-  //     emp::vector<size_t> matches(FindModuleMatch(tag));
-  //     if (matches.size()) {
-  //       CallModule(matches[0], exec_state, circular);
-  //     }
-  //   }
+    /// Call a module (specified by given tag) on the given execution state.
+    void CallModule(const tag_t & tag, exec_state_t & exec_state, bool circular=false) {
+      emp::vector<size_t> matches(FindModuleMatch(tag));
+      if (matches.size()) {
+        CallModule(matches[0], exec_state, circular);
+      }
+    }
 
-  //   /// Call module specified directly by module_id on the given execution state.
-  //   void CallModule(size_t module_id, exec_state_t & exec_state, bool circular=false) {
-  //     emp_assert(module_id < modules.size());
-  //     if (exec_state.call_stack.size() >= max_call_depth) return;
-  //     // Push new state onto stack.
-  //     exec_state.call_stack.emplace_back(memory_model.CreateMemoryState(), circular);
-  //     module_t & module_info = modules[module_id];
-  //     flow_handler.OpenFlow({FlowType::CALL, module_id, module_info.begin, module_info.begin, module_info.end}, exec_state);
-  //     if (exec_state.call_stack.size() > 1) {
-  //       CallState & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
-  //       CallState & new_state = exec_state.call_stack.back();
-  //       memory_model.OnModuleCall(caller_state.GetMemory(), new_state.GetMemory());
-  //     }
-  //   }
+    /// Call module specified directly by module_id on the given execution state.
+    void CallModule(size_t module_id, exec_state_t & exec_state, bool circular=false) {
+      emp_assert(module_id < modules.size());
+      if (exec_state.call_stack.size() >= max_call_depth) return;
+      // Push new state onto stack.
+      exec_state.call_stack.emplace_back(memory_model.CreateMemoryState(), circular);
+      module_t & module_info = modules[module_id];
+      flow_handler.OpenFlow({FlowType::CALL, module_id, module_info.begin, module_info.begin, module_info.end}, exec_state);
+      if (exec_state.call_stack.size() > 1) {
+        CallState & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
+        CallState & new_state = exec_state.call_stack.back();
+        memory_model.OnModuleCall(caller_state.GetMemory(), new_state.GetMemory());
+      }
+    }
 
-  //   // todo - test!
-  //   void ReturnCall(exec_state_t & exec_state) {
-  //     if (exec_state.call_stack.empty()) return; // Nothing to return from.
-  //     // Get the current call state.
-  //     CallState & returning_state = exec_state.call_stack.back();
-  //     // Is there anything to return to?
-  //     if (exec_state.call_stack.size() > 1) {
-  //       // Yes! Copy the returning state's output memory into the caller state's local memory.
-  //       CallState & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
-  //       // @TODO - setup configurable memory return! (lambda)
-  //       memory_model.OnModuleReturn(returning_state.GetMemory(), caller_state.GetMemory());
-  //     }
-  //     // Pop the returning state from call stack.
-  //     exec_state.call_stack.pop_back();
-  //   }
+    // todo - test!
+    void ReturnCall(exec_state_t & exec_state) {
+      if (exec_state.call_stack.empty()) return; // Nothing to return from.
+      // Get the current call state.
+      CallState & returning_state = exec_state.call_stack.back();
+      // Is there anything to return to?
+      if (exec_state.call_stack.size() > 1) {
+        // Yes! Copy the returning state's output memory into the caller state's local memory.
+        CallState & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
+        // @TODO - setup configurable memory return! (lambda)
+        memory_model.OnModuleReturn(returning_state.GetMemory(), caller_state.GetMemory());
+      }
+      // Pop the returning state from call stack.
+      exec_state.call_stack.pop_back();
+    }
 
-  //   /// Set program for this hardware object.
-  //   /// After updating hardware's program, 'compile' the program to extract module
-  //   /// information (i.e., run UpdateModules).
-  //   void SetProgram(const program_t & _program) {
-  //     program = _program;
-  //     UpdateModules();
-  //   }
+    /// Set program for this hardware object.
+    /// After updating hardware's program, 'compile' the program to extract module
+    /// information (i.e., run UpdateModules).
+    void SetProgram(const program_t & _program) {
+      program = _program;
+      UpdateModules();
+    }
 
-  //   /// Configure the default module tag. Assigned to default module if a loaded
-  //   /// program has no module definition in it.
-  //   void SetDefaultTag(const tag_t & _tag) { default_module_tag = _tag; }
+    /// Configure the default module tag. Assigned to default module if a loaded
+    /// program has no module definition in it.
+    void SetDefaultTag(const tag_t & _tag) { default_module_tag = _tag; }
 
-  //   /// Analyze program and extract module information. Use to update modules
-  //   /// vector.
-  //   /// @todo - check to see if this works
-  //   void UpdateModules() {
-  //     // std::cout << "Update modules!" << std::endl;
-  //     // Clear out the current modules.
-  //     modules.clear();
-  //     // Do nothing if there aren't any instructions to look at.
-  //     if (!program.GetSize()) return;
-  //     // Scan program for module definitions.
-  //     std::unordered_set<size_t> dangling_instructions;
-  //     for (size_t pos = 0; pos < program.GetSize(); ++pos) {
-  //       inst_t & inst = program[pos];
-  //       // Is this a module definition?
-  //       if (inst_lib->HasProperty(inst.GetID(), inst_prop_t::MODULE)) {
-  //         // If this isn't the first module we've found, mark this position as the
-  //         // last position of the previous module.
-  //         if (modules.size()) { modules.back().end = pos; }
-  //         emp_assert(inst.GetTags().size(), "MODULE-defining instructions must have tag arguments to be used with this execution stepper.");
-  //         const size_t mod_id = modules.size(); // Module ID for new module.
-  //         modules.emplace_back(mod_id, ( (pos+1) < program.GetSize() ) ? pos+1 : 0, -1, inst.GetTags()[0]);
-  //       } else {
-  //         // We didn't find a new module. Track which module this instruction belongs to:
-  //         // - If we've found a module, add it to the current module.
-  //         // - If we haven't found a module, note that this instruction is dangling.
-  //         if (modules.size()) { modules.back().in_module.emplace(pos); }
-  //         else { dangling_instructions.emplace(pos); }
-  //       }
-  //     }
-  //     // At this point, we know about all of the modules (if any).
-  //     // First, we need to set the end point for the last module we found.
-  //     if (modules.size()) {
-  //       // If the first module begins at the beginning of the instruction, the last
-  //       // module must end at the end of the program.
-  //       // Otherwise, the last module ends where the first module begins.
-  //       // if (modules[0].begin == 0) modules.back().end = program.GetSize();
-  //       // else
-  //       modules.back().end = (modules[0].begin - 1 > 0) ? modules[0].begin - 1 : program.GetSize();
-  //     } else {
-  //       // Found no modules. Add a default module that starts at the beginning and
-  //       // ends at the end.
-  //       modules.emplace_back(0, 0, program.GetSize(), default_module_tag);
-  //     }
-  //     // Now, we need to take care of the dangling instructions.
-  //     // - We're going to assume the program is circular, so dangling instructions
-  //     //   belong to the last module we found.
-  //     for (size_t val : dangling_instructions) modules.back().in_module.emplace(val);
-  //     // Reset matchbin
-  //     ResetMatchBin();
-  //   }
+    /// Analyze program and extract module information. Use to update modules
+    /// vector.
+    /// @todo - check to see if this works
+    void UpdateModules() {
+      // std::cout << "Update modules!" << std::endl;
+      // Clear out the current modules.
+      modules.clear();
+      // Do nothing if there aren't any instructions to look at.
+      if (!program.GetSize()) return;
+      // Scan program for module definitions.
+      std::unordered_set<size_t> dangling_instructions;
+      for (size_t pos = 0; pos < program.GetSize(); ++pos) {
+        inst_t & inst = program[pos];
+        // Is this a module definition?
+        if (inst_lib->HasProperty(inst.GetID(), InstProperty::MODULE)) {
+          // If this isn't the first module we've found, mark this position as the
+          // last position of the previous module.
+          if (modules.size()) { modules.back().end = pos; }
+          emp_assert(inst.GetTags().size(), "MODULE-defining instructions must have tag arguments to be used with this execution stepper.");
+          const size_t mod_id = modules.size(); // Module ID for new module.
+          modules.emplace_back(mod_id, ( (pos+1) < program.GetSize() ) ? pos+1 : 0, -1, inst.GetTags()[0]);
+        } else {
+          // We didn't find a new module. Track which module this instruction belongs to:
+          // - If we've found a module, add it to the current module.
+          // - If we haven't found a module, note that this instruction is dangling.
+          if (modules.size()) { modules.back().in_module.emplace(pos); }
+          else { dangling_instructions.emplace(pos); }
+        }
+      }
+      // At this point, we know about all of the modules (if any).
+      // First, we need to set the end point for the last module we found.
+      if (modules.size()) {
+        // If the first module begins at the beginning of the instruction, the last
+        // module must end at the end of the program.
+        // Otherwise, the last module ends where the first module begins.
+        // if (modules[0].begin == 0) modules.back().end = program.GetSize();
+        // else
+        modules.back().end = (modules[0].begin - 1 > 0) ? modules[0].begin - 1 : program.GetSize();
+      } else {
+        // Found no modules. Add a default module that starts at the beginning and
+        // ends at the end.
+        modules.emplace_back(0, 0, program.GetSize(), default_module_tag);
+      }
+      // Now, we need to take care of the dangling instructions.
+      // - We're going to assume the program is circular, so dangling instructions
+      //   belong to the last module we found.
+      for (size_t val : dangling_instructions) modules.back().in_module.emplace(val);
+      // Reset matchbin
+      ResetMatchBin();
+    }
 
-  //   /// Get a reference to the set of known modules.
-  //   emp::vector<module_t> & GetModules() { return modules;  }
+    /// Get a reference to the set of known modules.
+    emp::vector<module_t> & GetModules() { return modules;  }
 
-  //   /// Get a reference to a particular module. Requested module must be a valid
-  //   /// module id.
-  //   module_t & GetModule(size_t i) { emp_assert(i < modules.size()); return modules[i]; }
+    /// Get a reference to a particular module. Requested module must be a valid
+    /// module id.
+    module_t & GetModule(size_t i) { emp_assert(i < modules.size()); return modules[i]; }
 
-  //   /// How many modules does the current program have?
-  //   size_t GetNumModules() const { return modules.size(); }
+    /// How many modules does the current program have?
+    size_t GetNumModules() const { return modules.size(); }
 
-  //   /// Grab a reference to the current program.
-  //   program_t & GetProgram() { return program; }
+    /// Grab a reference to the current program.
+    program_t & GetProgram() { return program; }
 
-  //   /// Get a const reference to the current program.
-  //   const program_t & GetProgram() const { return program; }
+    /// Get a const reference to the current program.
+    const program_t & GetProgram() const { return program; }
 
-  //   /// Get a reference to the hardware's memory model.
-  //   memory_model_t & GetMemoryModel() { return memory_model; }
+    /// Get a reference to the hardware's memory model.
+    memory_model_t & GetMemoryModel() { return memory_model; }
 
-  //   /// Print information on loaded modules.
-  //   void PrintModules(std::ostream & os=std::cout) const {
-  //     os << "Modules: [";
-  //     for (size_t i = 0; i < modules.size(); ++i) {
-  //       if (i) os << ",";
-  //       os << "{id:" << modules[i].id << ", begin:" << modules[i].begin << ", end:" << modules[i].end << ", tag:" << modules[i].tag << "}";
-  //     }
-  //     os << "]";
-  //   }
+    /// Print information on loaded modules.
+    void PrintModules(std::ostream & os=std::cout) const {
+      os << "Modules: [";
+      for (size_t i = 0; i < modules.size(); ++i) {
+        if (i) os << ",";
+        os << "{id:" << modules[i].id << ", begin:" << modules[i].begin << ", end:" << modules[i].end << ", tag:" << modules[i].tag << "}";
+      }
+      os << "]";
+    }
 
-  //   /// Print a given execution state.
-  //   void PrintExecutionState(const exec_state_t & state, std::ostream & os=std::cout) const {
-  //     // -- Call stack --
-  //     // todo
-  //     os << "Call stack (" << state.call_stack.size() << "):\n";
-  //     os << "------ TOP ------\n";
-  //     for (auto it = state.call_stack.rbegin(); it != state.call_stack.rend(); ++it) {
-  //       const CallState & call_state = *it;
-  //       const size_t num_flow = call_state.flow_stack.size();
-  //       // os << "--- CALL ---\n";
-  //       memory_model.PrintMemoryState(call_state.memory, os);
-  //       os << "Flow Stack:\n";
-  //       for (size_t i = 0; i < num_flow; ++i) {
-  //         // if (i) os << "---\n";
-  //         const FlowInfo & flow = call_state.flow_stack[num_flow - 1 - i];
-  //         // MP, IP, ...
-  //         // type, mp, ip, begin, end
-  //         // todo - print full flow stack!
-  //         os << "  Flow: {mp:" << flow.mp
-  //             << ", ip:" << flow.ip
-  //             << ", flow-begin:" << flow.begin
-  //             << ", flow-end:" << flow.end
-  //             << ", flow-type:" << flow_handler.FlowTypeToString(flow.type)
-  //             << "}; ";
-  //         // if is valid instruction
-  //         os << "Instruction: ";
-  //         if (IsValidProgramPosition(flow.mp, flow.ip)) {
-  //           // Name[tags](args)
-  //           const inst_t & inst = program[flow.ip];
-  //           os << inst_lib->GetName(inst.id);
-  //           os << "[";
-  //           for (size_t ti = 0; ti < inst.tags.size(); ++ti) {
-  //             if (ti) os << ",";
-  //             os << inst.tags[ti];
-  //           }
-  //           os << "](";
-  //           for (size_t ai = 0; ai < inst.args.size(); ++ai) {
-  //             if (ai) os << ",";
-  //             os << inst.args[ai];
-  //           }
-  //           os << ")\n";
-  //         } else {
-  //           os << "NONE\n";
-  //         }
-  //       }
-  //       os << "---\n";
-  //     }
-  //     os << "-----------------";
-  //   }
+    /// Print a given execution state.
+    void PrintExecutionState(const exec_state_t & state, std::ostream & os=std::cout) const {
+      // -- Call stack --
+      // todo
+      os << "Call stack (" << state.call_stack.size() << "):\n";
+      os << "------ TOP ------\n";
+      for (auto it = state.call_stack.rbegin(); it != state.call_stack.rend(); ++it) {
+        const CallState & call_state = *it;
+        const size_t num_flow = call_state.flow_stack.size();
+        // os << "--- CALL ---\n";
+        memory_model.PrintMemoryState(call_state.memory, os);
+        os << "Flow Stack:\n";
+        for (size_t i = 0; i < num_flow; ++i) {
+          // if (i) os << "---\n";
+          const FlowInfo & flow = call_state.flow_stack[num_flow - 1 - i];
+          // MP, IP, ...
+          // type, mp, ip, begin, end
+          // todo - print full flow stack!
+          os << "  Flow: {mp:" << flow.mp
+              << ", ip:" << flow.ip
+              << ", flow-begin:" << flow.begin
+              << ", flow-end:" << flow.end
+              << ", flow-type:" << flow_handler.FlowTypeToString(flow.type)
+              << "}; ";
+          // if is valid instruction
+          os << "Instruction: ";
+          if (IsValidProgramPosition(flow.mp, flow.ip)) {
+            // Name[tags](args)
+            const inst_t & inst = program[flow.ip];
+            os << inst_lib->GetName(inst.id);
+            os << "[";
+            for (size_t ti = 0; ti < inst.tags.size(); ++ti) {
+              if (ti) os << ",";
+              os << inst.tags[ti];
+            }
+            os << "](";
+            for (size_t ai = 0; ai < inst.args.size(); ++ai) {
+              if (ai) os << ",";
+              os << inst.args[ai];
+            }
+            os << ")\n";
+          } else {
+            os << "NONE\n";
+          }
+        }
+        os << "---\n";
+      }
+      os << "-----------------";
+    }
   };
 }}
 

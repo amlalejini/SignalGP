@@ -11,23 +11,48 @@
 
 #include "BaseSignalGP.h"
 #include "LinearProgramSignalGP.h"
+#include "ToySignalGP.h"
+#include "MemoryModel.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
 }
 
+TEST_CASE("Toy SignalGP", "[general]") {
+  using signalgp_t = ToySignalGP<size_t>;
+  using event_lib_t = typename signalgp_t::event_lib_t;
+
+
+  event_lib_t event_lib;
+
+  emp::Random random(2);
+
+  signalgp_t hardware(&event_lib);
+
+  std::cout << "!!" << std::endl;
+}
+
 /*
-TEST_CASE("crSGP", "[!!]") {
-  using mem_model_t = emp::sgp_v2::SimpleMemoryModel;
-  using signalgp_t = emp::sgp_cr::crLinearProgramSignalGP<mem_model_t>;
+TEST_CASE("SignalGP", "[general]") {
+  using mem_model_t = emp::signalgp::SimpleMemoryModel;
+  using signalgp_t = emp::signalgp::LinearProgramSignalGP<mem_model_t,
+                                                          emp::BitSet<16>,
+                                                          int,
+                                                          emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>,
+                                                          emp::signalgp::DefaultCustomComponent>;
   using inst_lib_t = typename signalgp_t::inst_lib_t;
+  using event_lib_t = typename signalgp_t::event_lib_t;
 
   // const size_t THREAD_LIMIT = 8;
 
   inst_lib_t inst_lib;
-  emp::EventLibrary<signalgp_t> event_lib;
+  event_lib_t event_lib;
+
   emp::Random random(2);
-  signalgp_t hardware(&inst_lib, &event_lib, &random);
+
+  signalgp_t hardware(random, &inst_lib, &event_lib);
+
+  std::cout << "!!" << std::endl;
 
 }
 */
