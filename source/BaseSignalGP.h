@@ -127,8 +127,8 @@ namespace emp { namespace signalgp {
     Ptr<event_lib_t> event_lib;         ///< These are the events this hardware knows about.
     std::deque<event_t> event_queue;    ///< Queue of events to be processed every time step.
 
-    Ptr<Random> random_ptr;             ///< Random number generator. (TODO - make this a smart pointer)
-    bool random_owner;                  ///< Is this hardware unit responsible for cleaning up the random number generator memory?
+    // Ptr<Random> random_ptr;             ///< Random number generator. (TODO - make this a smart pointer)
+    // bool random_owner;                  ///< Is this hardware unit responsible for cleaning up the random number generator memory?
 
     // Thread management
     size_t max_threads=64;              ///< Maximum number of concurrently running threads.
@@ -149,12 +149,9 @@ namespace emp { namespace signalgp {
     fun_print_event_t fun_print_event = [](const event_t & e, const hardware_t& hw, std::ostream & os) { e.Print(os); };
 
   public:
-    BaseSignalGP(Ptr<event_lib_t> elib,
-                   Ptr<Random> rnd=nullptr)
+    BaseSignalGP(Ptr<event_lib_t> elib)
       : event_lib(elib),
         event_queue(),
-        random_ptr(rnd),
-        random_owner(false),
         threads(max_threads),
         active_threads(),
         unused_threads(max_threads),
@@ -162,7 +159,7 @@ namespace emp { namespace signalgp {
     {
       std::cout << "Base constructor" << std::endl;
       // If no random provided, create one.
-      if (!rnd) NewRandom();
+      // if (!rnd) NewRandom();
       // Set all threads to unused.
       for (int i = unused_threads.size() - 1; i > 0; --i) {
         unused_threads[i] = i;
@@ -170,65 +167,16 @@ namespace emp { namespace signalgp {
     }
 
     // Todo - test!
-    // @discussion => Double check this!?
     /// Move constructor.
-    BaseSignalGP(BaseSignalGP && in)
-      : event_lib(in.event_lib),
-        event_queue(in.event_queue),
-        random_ptr(in.random_ptr),
-        random_owner(in.random_owner),
-        max_threads(in.max_threads),
-        threads(in.threads),
-        active_threads(in.active_threads),
-        unused_threads(in.unused_threads),
-        pending_threads(in.pending_threads),
-        cur_thread_id(in.cur_thread_id),
-        is_executing(in.is_executing),
-        // fun_print_program(in.fun_print_program),
-        fun_print_hardware_state(in.fun_print_hardware_state),
-        // fun_print_exec_stepper_state(in.fun_print_exec_stepper_state),
-        fun_print_execution_state(in.fun_print_execution_state),
-        fun_print_event(in.fun_print_event)
-    {
-      // null out pointers in old memory location
-      in.random_ptr = nullptr;
-      in.random_owner = false;
-      in.event_lib = nullptr;
-    }
+    BaseSignalGP(BaseSignalGP && in) = default;
 
-    /// Copy constructor.
     /// todo - test!
-    BaseSignalGP(const BaseSignalGP & in)
-      : event_lib(in.event_lib),
-        event_queue(in.event_queue),
-        random_ptr(nullptr),
-        random_owner(false),
-        max_threads(in.max_threads),
-        threads(in.threads),
-        active_threads(in.active_threads),
-        unused_threads(in.unused_threads),
-        pending_threads(in.pending_threads),
-        cur_thread_id(in.cur_thread_id),
-        is_executing(in.is_executing),
-        // fun_print_program(in.fun_print_program),
-        fun_print_hardware_state(in.fun_print_hardware_state),
-        fun_print_execution_state(in.fun_print_execution_state),
-        fun_print_event(in.fun_print_event)
-    {
-      if (in.random_owner) {
-        NewRandom();
-      } else {
-        random_ptr = in.random_ptr;
-      }
-    }
+    /// Copy constructor.
+    BaseSignalGP(const BaseSignalGP & in) = default;
 
     /// Destructor.
     // todo - test!
-    ~BaseSignalGP() {
-      if (random_owner && random_ptr != nullptr) {
-        random_ptr.Delete();
-      }
-    }
+    ~BaseSignalGP() { }
 
     /// Full virtual hardware reset:
     /// Required
@@ -268,10 +216,10 @@ namespace emp { namespace signalgp {
     Ptr<const event_lib_t> GetEventLib() const { return event_lib; }
 
     /// Get reference to random number generator used by this hardware.
-    Random & GetRandom() { return *random_ptr; }
+    // Random & GetRandom() { return *random_ptr; }
 
     /// Get pointer to random number generator used by this hardware.
-    Ptr<Random> GetRandomPtr() { return random_ptr; }
+    // Ptr<Random> GetRandomPtr() { return random_ptr; }
 
     /// Get reference to this hardware's execution stepper object.
     DERIVED_T & GetHardware() { return static_cast<DERIVED_T>(*this); }
@@ -385,12 +333,12 @@ namespace emp { namespace signalgp {
     /// Create a new random number generator with the given seed.
     /// If already own number generator, delete old and create new.
     /// If this does not own number generator, make new and mark ownership.
-    void NewRandom(int seed=-1) {
-      if (random_owner) random_ptr.Delete();
-      else random_ptr = nullptr;
-      random_ptr.New(seed);
-      random_owner = true;
-    }
+    // void NewRandom(int seed=-1) {
+    //   if (random_owner) random_ptr.Delete();
+    //   else random_ptr = nullptr;
+    //   random_ptr.New(seed);
+    //   random_owner = true;
+    // }
 
     /// Spawn number (<= n) of threads, using tag to select which modules.
     /// return vector of spawned thread ids
