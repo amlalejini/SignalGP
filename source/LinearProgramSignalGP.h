@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <utility>
+#include <memory>
 
 #include "base/Ptr.h"
 #include "base/vector.h"
@@ -266,18 +267,22 @@ namespace emp { namespace signalgp {
     };
 
   protected:
-    Ptr<inst_lib_t> inst_lib;       ///< Library of program instructions.
+    emp::Ptr<inst_lib_t> inst_lib;  ///< Library of program instructions.
     FlowHandler flow_handler;       ///< The flow handler manages the behavior of different types of execution flow.
     memory_model_t memory_model;    ///< The memory model manages any global memory state and specifies call state memory.
     program_t program;              ///< Program loaded on this execution stepper.
     emp::vector<module_t> modules;  ///< List of modules in program.
     tag_t default_module_tag;       ///< What is the default tag to used for modules (in case the program doesn't specify)?
 
+    emp::Random& random;            ///< Random number generator. (TODO - make this a smart pointer)
+
     matchbin_t matchbin;            ///< the match bin specifies how modules are referenced
     bool is_matchbin_cache_dirty;
     std::function<void()> fun_clear_matchbin_cache = [this](){ this->ResetMatchBin(); }; // todo - can we do a better job baking this in?
 
     size_t max_call_depth;          ///< Maximum size of a call stack.
+
+
 
     /// Setup default flow control functions for opening, closing, and breaking
     /// each type of control flow: BASIC, WHILE_LOOP, CALL, ROUTINE.
@@ -415,51 +420,55 @@ namespace emp { namespace signalgp {
         };
     }
 
-  // public:
-  //   // todo - base class init --- @bookmark
-  //   crLinearProgramSignalGP(Ptr<inst_lib_t> ilib,
-  //                           Ptr<event_lib_t> elib,
-  //                           Ptr<Random> rnd)
-  //     : base_hw_t(elib, rnd),
-  //       inst_lib(ilib),
-  //       flow_handler(),
-  //       memory_model(),
-  //       program(),
-  //       modules(),
-  //       default_module_tag(),
-  //       matchbin(this->GetRandom()),
-  //       is_matchbin_cache_dirty(true),
-  //       max_call_depth(256)
-  //   {
-  //     std::cout << "Derived constructor" << std::endl;
-  //     // Configure default flow control
-  //     SetupDefaultFlowControl();
-  //   }
+  public:
+    LinearProgramSignalGP(emp::Random & rnd, emp::Ptr<inst_lib_t> ilib, emp::Ptr<event_lib_t> elib)
+      : base_hw_t(elib),
+        inst_lib(ilib),
+        flow_handler(),
+        memory_model(),
+        program(),
+        modules(),
+        default_module_tag(),
+        random(rnd),
+        matchbin(rnd),
+        is_matchbin_cache_dirty(true),
+        max_call_depth(256)
+    {
+      std::cout << "Derived constructor" << std::endl;
+      // Configure default flow control
+      SetupDefaultFlowControl();
+    }
 
-  //   crLinearProgramSignalGP(crLinearProgramSignalGP &&) = default;
-  //   crLinearProgramSignalGP(const crLinearProgramSignalGP &) = default;
+    LinearProgramSignalGP(LinearProgramSignalGP &&) = default;
+    LinearProgramSignalGP(const LinearProgramSignalGP &) = default;
 
-  //   /// Reset hardware state: memory model state.
-  //   void ResetHardwareState() {
-  //     this->BaseResetState();
-  //     memory_model.Reset(); // Reset global memory
-  //   }
+    /// Full reset.
+    void Reset() {
+      ResetHardwareState();
+      ResetProgram();
+    }
 
-  //   /// Reset loaded program.
-  //   void ResetProgram() {
-  //     modules.clear(); // Clear modules.
-  //     program.Clear(); // Clear program.
-  //     ResetMatchBin(); // Reset matchbin.
-  //   }
+    /// Reset hardware state: memory model state.
+    void ResetHardwareState() {
+      this->BaseResetState();
+      memory_model.Reset(); // Reset global memory
+    }
 
-  //   /// Reset match bin.
-  //   void ResetMatchBin() {
-  //     matchbin.Clear();
-  //     is_matchbin_cache_dirty = false;
-  //     for (size_t i = 0; i < modules.size(); ++i) {
-  //       matchbin.Set(i, modules[i].GetTag(), i);
-  //     }
-  //   }
+    /// Reset loaded program.
+    void ResetProgram() {
+      modules.clear(); // Clear modules.
+      program.Clear(); // Clear program.
+      ResetMatchBin(); // Reset matchbin.
+    }
+
+    /// Reset match bin.
+    void ResetMatchBin() {
+      matchbin.Clear();
+      is_matchbin_cache_dirty = false;
+      for (size_t i = 0; i < modules.size(); ++i) {
+        matchbin.Set(i, modules[i].GetTag(), i);
+      }
+    }
 
   //   /// Return whether a given a module ID and an instruction position is a valid
   //   /// position in the program. I.e., mp is a valid module and ip is inside of
@@ -531,6 +540,9 @@ namespace emp { namespace signalgp {
   //     if (state.call_stack.size()) { state.Clear(); } /// Reset thread's call stack.
   //     CallModule(module_id, state);
   //   }
+
+    /// Get reference to random number generator used by this hardware.
+    Random & GetRandom() { return random; }
 
   //   FlowHandler & GetFlowHandler() { return flow_handler; }
 
