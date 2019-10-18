@@ -23,137 +23,13 @@ namespace emp { namespace signalgp {
 // CUSTOM_COMPONENT_T
 
   // TODO - hide this visibility so it doesn't leak
-  namespace LinearProgramSignalGP_Internal {
-
-    /// Execution State. TODO - add label?
-    // template<typename CALL_STATE_T>
-    // struct ExecState {
-    //   emp::vector<CALL_STATE_T> call_stack;   ///< Program call stack.
-
-    //   /// Empty out the call stack.
-    //   void Clear() { call_stack.clear(); }
-
-    //   /// Get a reference to the current (top) call state on the call stack.
-    //   /// Requires the call stack to be not empty.
-    //   CALL_STATE_T & GetTopCallState() {
-    //     emp_assert(call_stack.size(), "Cannot get top call state from empty call stack.");
-    //     return call_stack.back();
-    //   }
-
-    //   /// Get a mutable reference to the entire call stack.
-    //   emp::vector<CALL_STATE_T> & GetCallStack() { return call_stack; }
-    // };
-
-  }
-
-  template<typename MEMORY_MODEL_T,
-           typename TAG_T=emp::BitSet<16>,
-           typename INST_ARGUMENT_T=int,
-           typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>,
-           typename CUSTOM_COMPONENT_T=emp::signalgp::DefaultCustomComponent>
-  class LinearProgramSignalGP : public BaseSignalGP<LinearProgramSignalGP<MEMORY_MODEL_T,TAG_T,INST_ARGUMENT_T,MATCHBIN_T,CUSTOM_COMPONENT_T>,
-                                                    typename LinearProgramSignalGP<MEMORY_MODEL_T,TAG_T,INST_ARGUMENT_T,MATCHBIN_T,CUSTOM_COMPONENT_T>::ExecState,
-                                                    TAG_T,
-                                                    CUSTOM_COMPONENT_T>
-  {
-  public:
-    // Forward declarations.
-    struct ExecState;
-    struct Module;
-    struct FlowInfo;
-    struct CallState;
-    enum class InstProperty;
-
-    // Type aliases.
-    using this_t = LinearProgramSignalGP<MEMORY_MODEL_T,TAG_T,INST_ARGUMENT_T,MATCHBIN_T,CUSTOM_COMPONENT_T>;
-
-    // using exec_state_t = LinearProgramSignalGP_Internal::ExecState;
-    using exec_state_t = ExecState;
-    using tag_t = TAG_T;
-    using arg_t = INST_ARGUMENT_T;
-    using module_t = Module;
-    using matchbin_t = MATCHBIN_T;
-
-    using memory_model_t = MEMORY_MODEL_T;
-    using memory_state_t = typename memory_model_t::memory_state_t;
-
-    using program_t = emp::signalgp::LinearProgram<tag_t, arg_t>;
-
-    using base_hw_t = BaseSignalGP<this_t, exec_state_t, tag_t, CUSTOM_COMPONENT_T>;
-    using thread_t = typename base_hw_t::Thread;
-    using event_lib_t = emp::EventLibrary<this_t>;
-    using event_t = typename base_hw_t::event_t;
-
-    /// Blocks are within-module flow control segments (e.g., while loops, if statements, etc)
-    enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
-    using inst_t = typename program_t::inst_t;
-    using inst_lib_t = InstructionLibrary<this_t, inst_t, InstProperty>;
+  namespace LinearProgramSignalGP_impl {
 
     /// Library of flow types.
     /// e.g., WHILE, IF, ROUTINE, et cetera
     /// NOTE - I'm not sure that I'm a fan of how this is organized/named/setup.
     /// BASIC: if statements (for now)
     enum class FlowType : size_t { BASIC, WHILE_LOOP, ROUTINE, CALL };
-
-    using fun_end_flow_t = std::function<void(this_t&, exec_state_t &)>;                   // note - pass hardware down?
-    using fun_open_flow_t = std::function<void(this_t&, exec_state_t &, const FlowInfo &)>;
-
-    /// Flow control management. Maintains a mapping from FlowTypes (above) to
-    /// a flow control structure. Additionally, provides an interface to open, break,
-    /// and close flow.
-    /// Every type of execution 'flow' has a 'FlowControl' structure that specifies
-    /// how to open, close, and break the flow.
-    struct FlowHandler {
-
-      struct FlowControl {
-        fun_open_flow_t open_flow_fun;
-        fun_end_flow_t close_flow_fun;
-        fun_end_flow_t break_flow_fun;
-      };
-
-      /// Mapping from flow type to flow control structure.
-      // todo - could change this to an array because we know things at compile time
-      std::map<FlowType, FlowControl> lib = { {FlowType::BASIC, FlowControl()},
-                                              {FlowType::WHILE_LOOP, FlowControl()},
-                                              {FlowType::ROUTINE, FlowControl()},
-                                              {FlowType::CALL, FlowControl()} };
-
-      FlowControl & operator[](FlowType type) {
-        emp_assert(Has(lib, type), "FlowType not recognized!");
-        return lib[type];
-      }
-
-      const FlowControl & operator[](FlowType type) const {
-        emp_assert(Has(lib, type), "FlowType not recognized!");
-        return lib[type];
-      }
-
-      std::string FlowTypeToString(FlowType type) const {
-        switch (type) {
-          case FlowType::BASIC: return "BASIC";
-          case FlowType::WHILE_LOOP: return "WHILE_LOOP";
-          case FlowType::ROUTINE: return "ROUTINE";
-          case FlowType::CALL: return "CALL";
-          default: return "UNKNOWN";
-        }
-      }
-
-      void OpenFlow(this_t & hw, const FlowInfo & new_flow, exec_state_t & state) {
-        FlowType type = new_flow.type;
-        emp_assert(Has(lib, type), "FlowType not recognized!");
-        lib[type].open_flow_fun(hw, state, new_flow);
-      }
-
-      void CloseFlow(this_t & hw, FlowType type, exec_state_t & state) {
-        emp_assert(Has(lib, type), "FlowType not recognized!");
-        lib[type].close_flow_fun(hw, state);
-      }
-
-      void BreakFlow(this_t & hw, FlowType type, exec_state_t & state) {
-        emp_assert(Has(lib, type), "FlowType not recognized!");
-        lib[type].break_flow_fun(hw, state);
-      }
-    };
 
     /// Everything the execution stepper needs to know to manage (open, close, break)
     /// any of the execution flow types.
@@ -176,12 +52,13 @@ namespace emp { namespace signalgp {
     };
 
     /// State information for a function call.
+    template<typename MEMORY_STATE_T>
     struct CallState {
-      memory_state_t memory;            ///< Memory local to this call state.
+      MEMORY_STATE_T memory;            ///< Memory local to this call state.
       emp::vector<FlowInfo> flow_stack; ///< Stack of 'Flow' (a stack of fancy read heads)
       bool circular;                    ///< Should call wrap when IP goes off end? Or, implicitly return?
 
-      CallState(const memory_state_t & _mem=memory_state_t(), bool _circular=false)
+      CallState(const MEMORY_STATE_T & _mem=MEMORY_STATE_T(), bool _circular=false)
         : memory(_mem), flow_stack(), circular(_circular) { ; }
 
       bool IsFlow() const { return !flow_stack.empty(); }
@@ -195,7 +72,7 @@ namespace emp { namespace signalgp {
 
       bool IsCircular() const { return circular; }
 
-      memory_state_t & GetMemory() { return memory; }
+      MEMORY_STATE_T & GetMemory() { return memory; }
 
       // --- For your convenience shortcuts: ---
       /// Set the instruction pointer of the 'flow' at the top of the flow stack.
@@ -217,21 +94,133 @@ namespace emp { namespace signalgp {
       size_t & MP() { emp_assert(flow_stack.size()); return flow_stack.back().mp; }
     };
 
+    /// Execution State. TODO - add label?
+    template<typename MEMORY_MODEL_T>
     struct ExecState {
-      emp::vector<CallState> call_stack;   ///< Program call stack.
+      using memory_state_t = typename MEMORY_MODEL_T::memory_state_t;
+      using call_state_t = CallState<memory_state_t>;
+      emp::vector<call_state_t> call_stack;   ///< Program call stack.
 
       /// Empty out the call stack.
       void Clear() { call_stack.clear(); }
 
       /// Get a reference to the current (top) call state on the call stack.
       /// Requires the call stack to be not empty.
-      CallState & GetTopCallState() {
+      call_state_t & GetTopCallState() {
         emp_assert(call_stack.size(), "Cannot get top call state from empty call stack.");
         return call_stack.back();
       }
 
       /// Get a mutable reference to the entire call stack.
-      emp::vector<CallState> & GetCallStack() { return call_stack; }
+      emp::vector<call_state_t> & GetCallStack() { return call_stack; }
+    };
+
+  }
+
+  template<typename MEMORY_MODEL_T,
+           typename TAG_T=emp::BitSet<16>,
+           typename INST_ARGUMENT_T=int,
+           typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>,
+           typename CUSTOM_COMPONENT_T=emp::signalgp::DefaultCustomComponent>
+  class LinearProgramSignalGP : public BaseSignalGP<LinearProgramSignalGP<MEMORY_MODEL_T,TAG_T,INST_ARGUMENT_T,MATCHBIN_T,CUSTOM_COMPONENT_T>,
+                                                    LinearProgramSignalGP_impl::ExecState<MEMORY_MODEL_T>,
+                                                    TAG_T,
+                                                    CUSTOM_COMPONENT_T>
+  {
+  public:
+    // Forward declarations.
+    // struct ExecState;
+    struct Module;
+    // struct CallState;
+    enum class InstProperty;
+
+    // Type aliases.
+    using this_t = LinearProgramSignalGP<MEMORY_MODEL_T,TAG_T,INST_ARGUMENT_T,MATCHBIN_T,CUSTOM_COMPONENT_T>;
+
+    using exec_state_t = LinearProgramSignalGP_impl::ExecState<MEMORY_MODEL_T>;
+    using call_state_t = typename exec_state_t::call_state_t;
+    using flow_t = LinearProgramSignalGP_impl::FlowType;
+    using flow_info_t = LinearProgramSignalGP_impl::FlowInfo;
+
+    // using exec_state_t = ExecState;
+    using tag_t = TAG_T;
+    using arg_t = INST_ARGUMENT_T;
+    using module_t = Module;
+    using matchbin_t = MATCHBIN_T;
+
+    using memory_model_t = MEMORY_MODEL_T;
+    using memory_state_t = typename memory_model_t::memory_state_t;
+
+    using program_t = emp::signalgp::LinearProgram<tag_t, arg_t>;
+
+    using base_hw_t = BaseSignalGP<this_t, exec_state_t, tag_t, CUSTOM_COMPONENT_T>;
+    using thread_t = typename base_hw_t::Thread;
+    using event_lib_t = emp::EventLibrary<this_t>;
+    using event_t = typename base_hw_t::event_t;
+
+    /// Blocks are within-module flow control segments (e.g., while loops, if statements, etc)
+    enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
+    using inst_t = typename program_t::inst_t;
+    using inst_lib_t = InstructionLibrary<this_t, inst_t, InstProperty>;
+
+    using fun_end_flow_t = std::function<void(this_t&, exec_state_t &)>;                   // note - pass hardware down?
+    using fun_open_flow_t = std::function<void(this_t&, exec_state_t &, const flow_info_t &)>;
+
+    /// Flow control management. Maintains a mapping from FlowTypes (above) to
+    /// a flow control structure. Additionally, provides an interface to open, break,
+    /// and close flow.
+    /// Every type of execution 'flow' has a 'FlowControl' structure that specifies
+    /// how to open, close, and break the flow.
+    struct FlowHandler {
+
+      struct FlowControl {
+        fun_open_flow_t open_flow_fun;
+        fun_end_flow_t close_flow_fun;
+        fun_end_flow_t break_flow_fun;
+      };
+
+      /// Mapping from flow type to flow control structure.
+      // todo - could change this to an array because we know things at compile time
+      std::map<flow_t, FlowControl> lib = { {flow_t::BASIC, FlowControl()},
+                                            {flow_t::WHILE_LOOP, FlowControl()},
+                                            {flow_t::ROUTINE, FlowControl()},
+                                            {flow_t::CALL, FlowControl()} };
+
+      FlowControl & operator[](flow_t type) {
+        emp_assert(Has(lib, type), "FlowType not recognized!");
+        return lib[type];
+      }
+
+      const FlowControl & operator[](flow_t type) const {
+        emp_assert(Has(lib, type), "FlowType not recognized!");
+        return lib[type];
+      }
+
+      std::string FlowTypeToString(flow_t type) const {
+        switch (type) {
+          case flow_t::BASIC: return "BASIC";
+          case flow_t::WHILE_LOOP: return "WHILE_LOOP";
+          case flow_t::ROUTINE: return "ROUTINE";
+          case flow_t::CALL: return "CALL";
+          default: return "UNKNOWN";
+        }
+      }
+
+      void OpenFlow(this_t & hw, const flow_info_t & new_flow, exec_state_t & state) {
+        flow_t type = new_flow.type;
+        emp_assert(Has(lib, type), "FlowType not recognized!");
+        lib[type].open_flow_fun(hw, state, new_flow);
+      }
+
+      void CloseFlow(this_t & hw, flow_t type, exec_state_t & state) {
+        emp_assert(Has(lib, type), "FlowType not recognized!");
+        lib[type].close_flow_fun(hw, state);
+      }
+
+      void BreakFlow(this_t & hw, flow_t type, exec_state_t & state) {
+        emp_assert(Has(lib, type), "FlowType not recognized!");
+        lib[type].break_flow_fun(hw, state);
+      }
     };
 
     /// Module definition.
@@ -283,66 +272,64 @@ namespace emp { namespace signalgp {
 
     size_t max_call_depth;          ///< Maximum size of a call stack.
 
-
-
     /// Setup default flow control functions for opening, closing, and breaking
     /// each type of control flow: BASIC, WHILE_LOOP, CALL, ROUTINE.
     void SetupDefaultFlowControl() {
       // --- BASIC Flow ---
       // On open:
-      flow_handler[FlowType::BASIC].open_flow_fun =
-        [](this_t & hw, exec_state_t & exec_state, const FlowInfo & new_flow) {
+      flow_handler[flow_t::BASIC].open_flow_fun =
+        [](this_t & hw, exec_state_t & exec_state, const flow_info_t & new_flow) {
           emp_assert(exec_state.call_stack.size(), "Failed to open BASIC flow. No calls on call stack.");
-          CallState & call_state = exec_state.call_stack.back();
+          call_state_t & call_state = exec_state.call_stack.back();
           call_state.flow_stack.emplace_back(new_flow);
         };
 
       // On close
       // - Pop current flow from stack.
       // - Set new top of flow stack (if any)'s IP and MP to returning IP and MP.
-      flow_handler[FlowType::BASIC].close_flow_fun =
+      flow_handler[flow_t::BASIC].close_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
           emp_assert(exec_state.call_stack.size(), "Failed to close BASIC flow. No calls on call stack.");
-          CallState & call_state = exec_state.call_stack.back();
+          call_state_t & call_state = exec_state.call_stack.back();
           emp_assert(call_state.IsFlow(), "Failed to close BASIC flow. No flow to close.");
           const size_t ip = call_state.GetTopFlow().ip;
           const size_t mp = call_state.GetTopFlow().mp;
           call_state.flow_stack.pop_back();
           if (call_state.IsFlow()) {
-            FlowInfo & top = call_state.GetTopFlow();
+            flow_info_t & top = call_state.GetTopFlow();
             top.ip = ip;
             top.mp = mp;
           }
         };
 
       // On break!
-      flow_handler[FlowType::BASIC].break_flow_fun =
+      flow_handler[flow_t::BASIC].break_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
           emp_assert(exec_state.call_stack.size(), "Failed to break BASIC flow. No calls on call stack.");
-          CallState & call_state = exec_state.call_stack.back();
+          call_state_t & call_state = exec_state.call_stack.back();
           emp_assert(call_state.IsFlow(), "Failed to break BASIC flow. No flow to close.");
           const size_t flow_end = call_state.GetTopFlow().GetEnd();
           call_state.flow_stack.pop_back();
           if (call_state.IsFlow()) {
             call_state.SetIP(flow_end);
-            if (IsValidProgramPosition(call_state.GetMP(), call_state.GetIP())) {
+            if (hw.IsValidProgramPosition(call_state.GetMP(), call_state.GetIP())) {
               ++call_state.IP();
             }
           }
         };
 
-      flow_handler[FlowType::WHILE_LOOP].open_flow_fun =
-        [](this_t & hw, exec_state_t & exec_state, const FlowInfo & new_flow) {
+      flow_handler[flow_t::WHILE_LOOP].open_flow_fun =
+        [](this_t & hw, exec_state_t & exec_state, const flow_info_t & new_flow) {
           emp_assert(exec_state.call_stack.size(), "Failed to open WHILE_LOOP flow. No calls on call stack.");
-          CallState & call_state = exec_state.call_stack.back();
+          call_state_t & call_state = exec_state.call_stack.back();
           call_state.flow_stack.emplace_back(new_flow);
         };
 
-      flow_handler[FlowType::WHILE_LOOP].close_flow_fun =
+      flow_handler[flow_t::WHILE_LOOP].close_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
           emp_assert(exec_state.call_stack.size(), "Failed to close WHILE_LOOP flow. No calls on call stack.");
           // Move IP to start of block
-          CallState & call_state = exec_state.call_stack.back();
+          call_state_t & call_state = exec_state.call_stack.back();
           const size_t loop_begin = call_state.GetTopFlow().begin;
           const size_t mp = call_state.GetTopFlow().mp;
           call_state.flow_stack.pop_back();
@@ -352,32 +339,32 @@ namespace emp { namespace signalgp {
           }
         };
 
-      flow_handler[FlowType::WHILE_LOOP].break_flow_fun =
+      flow_handler[flow_t::WHILE_LOOP].break_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
           emp_assert(exec_state.call_stack.size(), "Failed to break WHILE_LOOP flow. No calls on call stack.");
-          CallState & call_state = exec_state.call_stack.back();
+          call_state_t & call_state = exec_state.call_stack.back();
           emp_assert(call_state.IsFlow(), "Failed to break WHILE_LOOP flow. No flow to close.");
           const size_t flow_end = call_state.GetTopFlow().GetEnd();
           call_state.flow_stack.pop_back();
           if (call_state.IsFlow()) {
             call_state.SetIP(flow_end);
-            if (IsValidProgramPosition(call_state.GetMP(), call_state.GetIP())) {
+            if (hw.IsValidProgramPosition(call_state.GetMP(), call_state.GetIP())) {
               ++call_state.IP();
             }
           }
         };
 
-      flow_handler[FlowType::ROUTINE].open_flow_fun =
-        [](this_t & hw, exec_state_t & exec_state, const FlowInfo & new_flow) {
+      flow_handler[flow_t::ROUTINE].open_flow_fun =
+        [](this_t & hw, exec_state_t & exec_state, const flow_info_t & new_flow) {
           emp_assert(exec_state.call_stack.size(), "Failed to open ROUTINE flow. No calls on call stack.");
-          CallState & call_state = exec_state.GetTopCallState();
+          call_state_t & call_state = exec_state.GetTopCallState();
           call_state.flow_stack.emplace_back(new_flow);
         };
 
-      flow_handler[FlowType::ROUTINE].close_flow_fun =
+      flow_handler[flow_t::ROUTINE].close_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
           emp_assert(exec_state.call_stack.size(), "Failed to close ROUTINE flow. No calls on call stack.");
-          CallState & call_state = exec_state.call_stack.back();
+          call_state_t & call_state = exec_state.call_stack.back();
           emp_assert(call_state.IsFlow(), "Failed to break ROUTINE flow. No flow to close.");
           // Closing a ROUTINE flow:
           // - Pop flow from flow stack
@@ -386,38 +373,38 @@ namespace emp { namespace signalgp {
         };
 
       // breaking from a routine is the same as closing a routine
-      flow_handler[FlowType::ROUTINE].break_flow_fun =
+      flow_handler[flow_t::ROUTINE].break_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
-          hw.GetFlowHandler().CloseFlow(FlowType::ROUTINE, exec_state);
+          hw.GetFlowHandler().CloseFlow(hw, flow_t::ROUTINE, exec_state);
         };
 
-      flow_handler[FlowType::CALL].open_flow_fun =
-        [](this_t & hw, exec_state_t & exec_state, const FlowInfo & new_flow) {
+      flow_handler[flow_t::CALL].open_flow_fun =
+        [](this_t & hw, exec_state_t & exec_state, const flow_info_t & new_flow) {
           emp_assert(exec_state.call_stack.size(), "Failed to open CALL flow. No calls on call stack.");
-          CallState & call_state = exec_state.call_stack.back();
+          call_state_t & call_state = exec_state.call_stack.back();
           call_state.flow_stack.emplace_back(new_flow);
         };
 
-      flow_handler[FlowType::CALL].close_flow_fun =
+      flow_handler[flow_t::CALL].close_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
           emp_assert(exec_state.call_stack.size(), "Failed to close CALL flow. No calls on call stack.");
-          CallState & call_state = exec_state.call_stack.back();
+          call_state_t & call_state = exec_state.call_stack.back();
           emp_assert(call_state.IsFlow(), "Failed to close CALL flow. No flow to close.");
           // Closing a CALL flow:
           // - Pop call flow from flow stack.
           // - No need to pass IP and MP down (presumably, this was the bottom
           //   of the flow stack).
           if (call_state.IsCircular()) {
-            FlowInfo & top = call_state.GetTopFlow();
+            flow_info_t & top = call_state.GetTopFlow();
             top.ip = top.begin;
           } else {
             call_state.GetFlowStack().pop_back();
           }
         };
 
-      flow_handler[FlowType::CALL].break_flow_fun =
+      flow_handler[flow_t::CALL].break_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
-          hw.GetFlowHandler().CloseFlow(hw, FlowType::CALL, exec_state);
+          hw.GetFlowHandler().CloseFlow(hw, flow_t::CALL, exec_state);
         };
     }
 
@@ -488,11 +475,11 @@ namespace emp { namespace signalgp {
       // If there's a call state on the call stack, execute an instruction.
       while (exec_state.call_stack.size()) {
         // There's something on the call stack.
-        CallState & call_state = exec_state.call_stack.back();
+        call_state_t & call_state = exec_state.call_stack.back();
         // Is there anything on the flow stack?
         if (call_state.IsFlow()) {
           // std::cout << "- There's some flow." << std::endl;
-          FlowInfo & flow_info = call_state.flow_stack.back();
+          flow_info_t & flow_info = call_state.flow_stack.back();
           size_t mp = flow_info.mp;
           size_t ip = flow_info.ip;
           // std::cout << ">> MP=" << mp << "; IP=" << ip << std::endl;
@@ -548,17 +535,17 @@ namespace emp { namespace signalgp {
     FlowHandler & GetFlowHandler() { return flow_handler; }
 
     /// Set open flow handler for given flow type.
-    void SetOpenFlowFun(FlowType type, const fun_open_flow_t & fun) {
+    void SetOpenFlowFun(flow_t type, const fun_open_flow_t & fun) {
       flow_handler[type].open_flow_fun = fun;
     }
 
     // Set close flow handler for a given flow type.
-    void SetCloseFlowFun(FlowType type, const fun_end_flow_t & fun) {
+    void SetCloseFlowFun(flow_t type, const fun_end_flow_t & fun) {
       flow_handler[type].close_flow_fun = fun;
     }
 
     // Set break flow handler for a given flow type.
-    void SetBreakFlowFun(FlowType type, const fun_end_flow_t & fun) {
+    void SetBreakFlowFun(flow_t type, const fun_end_flow_t & fun) {
       flow_handler[type].break_flow_fun = fun;
     }
 
@@ -610,10 +597,10 @@ namespace emp { namespace signalgp {
       // Push new state onto stack.
       exec_state.call_stack.emplace_back(memory_model.CreateMemoryState(), circular);
       module_t & module_info = modules[module_id];
-      flow_handler.OpenFlow({FlowType::CALL, module_id, module_info.begin, module_info.begin, module_info.end}, exec_state);
+      flow_handler.OpenFlow(*this, {flow_t::CALL, module_id, module_info.begin, module_info.begin, module_info.end}, exec_state);
       if (exec_state.call_stack.size() > 1) {
-        CallState & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
-        CallState & new_state = exec_state.call_stack.back();
+        call_state_t & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
+        call_state_t & new_state = exec_state.call_stack.back();
         memory_model.OnModuleCall(caller_state.GetMemory(), new_state.GetMemory());
       }
     }
@@ -622,11 +609,11 @@ namespace emp { namespace signalgp {
     void ReturnCall(exec_state_t & exec_state) {
       if (exec_state.call_stack.empty()) return; // Nothing to return from.
       // Get the current call state.
-      CallState & returning_state = exec_state.call_stack.back();
+      call_state_t & returning_state = exec_state.call_stack.back();
       // Is there anything to return to?
       if (exec_state.call_stack.size() > 1) {
         // Yes! Copy the returning state's output memory into the caller state's local memory.
-        CallState & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
+        call_state_t & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
         // @TODO - setup configurable memory return! (lambda)
         memory_model.OnModuleReturn(returning_state.GetMemory(), caller_state.GetMemory());
       }
@@ -733,14 +720,14 @@ namespace emp { namespace signalgp {
       os << "Call stack (" << state.call_stack.size() << "):\n";
       os << "------ TOP ------\n";
       for (auto it = state.call_stack.rbegin(); it != state.call_stack.rend(); ++it) {
-        const CallState & call_state = *it;
+        const call_state_t & call_state = *it;
         const size_t num_flow = call_state.flow_stack.size();
         // os << "--- CALL ---\n";
         memory_model.PrintMemoryState(call_state.memory, os);
         os << "Flow Stack:\n";
         for (size_t i = 0; i < num_flow; ++i) {
           // if (i) os << "---\n";
-          const FlowInfo & flow = call_state.flow_stack[num_flow - 1 - i];
+          const flow_info_t & flow = call_state.flow_stack[num_flow - 1 - i];
           // MP, IP, ...
           // type, mp, ip, begin, end
           // todo - print full flow stack!
