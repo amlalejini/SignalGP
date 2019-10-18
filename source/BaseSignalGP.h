@@ -222,8 +222,8 @@ namespace emp { namespace signalgp {
     // Ptr<Random> GetRandomPtr() { return random_ptr; }
 
     /// Get reference to this hardware's execution stepper object.
-    DERIVED_T & GetHardware() { return static_cast<DERIVED_T>(*this); }
-    const DERIVED_T & GetHardware() const { return static_cast<DERIVED_T>(*this); }
+    DERIVED_T & GetHardware() { return static_cast<DERIVED_T&>(*this); }
+    const DERIVED_T & GetHardware() const { return static_cast<const DERIVED_T&>(*this); }
 
     custom_comp_t & GetCustomComponent() { return custom_component; }
     const custom_comp_t & GetCustomComponent() const { return custom_component; }
@@ -242,6 +242,7 @@ namespace emp { namespace signalgp {
 
     /// Get a reference to a particular thread.
     thread_t & GetThread(size_t i) { emp_assert(i < threads.size()); return threads[i]; }
+    const thread_t & GetThread(size_t i) const { emp_assert(i < threads.size()); return threads[i]; }
 
     /// Get const reference to vector of currently active threads active.
     const emp::vector<size_t> & GetActiveThreadIDs() const { return active_threads; }

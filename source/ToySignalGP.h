@@ -16,7 +16,7 @@ namespace toy_signalgp_impl {
 
 
 template<typename CUSTOM_COMPONET_T=emp::signalgp::DefaultCustomComponent>
-class ToySignalGP : virtual public emp::signalgp::BaseSignalGP< ToySignalGP<CUSTOM_COMPONET_T>,
+class ToySignalGP : public emp::signalgp::BaseSignalGP< ToySignalGP<CUSTOM_COMPONET_T>,
                                                         toy_signalgp_impl::ExecState,
                                                         // typename ToySignalGP<CUSTOM_COMPONET_T>::ExecState,
                                                         size_t,

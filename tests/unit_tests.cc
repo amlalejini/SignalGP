@@ -29,6 +29,41 @@ TEST_CASE("Toy SignalGP", "[general]") {
 
   signalgp_t hardware(&event_lib);
 
+  // Configure hardware
+  hardware.SetThreadLimit(128);
+  // Make a toy program.
+  emp::vector<size_t> prog1({0,1,2,3,4,5});
+  // Load program onto hardware.
+  hardware.SetProgram(prog1);
+  hardware.SetPrintHardwareStateFun([](const signalgp_t & hw, std::ostream & os) {
+    os << "Thread states: [";
+    for (size_t ti = 0; ti < hw.GetActiveThreadIDs().size(); ++ti) {
+      if (ti) os << ", ";
+      size_t thread_id = hw.GetActiveThreadIDs()[ti];
+      os << "{" << thread_id << ": " << hw.GetThread(thread_id).GetExecState().value << "}";
+    }
+    os << "]\n";
+  });
+
+  std::cout << "--- Initial hardware state ---" << std::endl;
+  hardware.PrintHardwareState();
+  // // Spawn a few threads.
+  // hardware.SpawnThread(0);
+  // hardware.SpawnThreads(1, 2);
+  // hardware.SpawnThreads(6, 1);
+  // // print hardware state.
+  // std::cout << "--- after spawning threads ---" << std::endl;
+  // hardware.PrintHardwareState();
+  // std::cout << "--- single process ---" << std::endl;
+  // hardware.SingleProcess();
+  // hardware.PrintHardwareState();
+  // std::cout << "--- single process ---" << std::endl;
+  // hardware.SingleProcess();
+  // hardware.PrintHardwareState();
+  // std::cout << "--- single process ---" << std::endl;
+  // hardware.SingleProcess();
+  // hardware.PrintHardwareState();
+
   std::cout << "!!" << std::endl;
 }
 
