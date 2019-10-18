@@ -47,23 +47,22 @@ TEST_CASE("Toy SignalGP", "[general]") {
 
   std::cout << "--- Initial hardware state ---" << std::endl;
   hardware.PrintHardwareState();
-  // // Spawn a few threads.
-  // hardware.SpawnThread(0);
-  // hardware.SpawnThreads(1, 2);
-  // hardware.SpawnThreads(6, 1);
-  // // print hardware state.
-  // std::cout << "--- after spawning threads ---" << std::endl;
-  // hardware.PrintHardwareState();
-  // std::cout << "--- single process ---" << std::endl;
-  // hardware.SingleProcess();
-  // hardware.PrintHardwareState();
-  // std::cout << "--- single process ---" << std::endl;
-  // hardware.SingleProcess();
-  // hardware.PrintHardwareState();
-  // std::cout << "--- single process ---" << std::endl;
-  // hardware.SingleProcess();
-  // hardware.PrintHardwareState();
-
+  // Spawn a few threads.
+  hardware.SpawnThread(0);
+  hardware.SpawnThreads(1, 2);
+  hardware.SpawnThreads(6, 1);
+  // print hardware state.
+  std::cout << "--- after spawning threads ---" << std::endl;
+  hardware.PrintHardwareState();
+  std::cout << "--- single process ---" << std::endl;
+  hardware.SingleProcess();
+  hardware.PrintHardwareState();
+  std::cout << "--- single process ---" << std::endl;
+  hardware.SingleProcess();
+  hardware.PrintHardwareState();
+  std::cout << "--- single process ---" << std::endl;
+  hardware.SingleProcess();
+  hardware.PrintHardwareState();
   std::cout << "!!" << std::endl;
 }
 
