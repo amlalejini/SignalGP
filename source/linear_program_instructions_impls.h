@@ -64,121 +64,121 @@ namespace emp { namespace signalgp { namespace inst_impl {
     ++call_state.GetMemory().AccessWorking(inst.GetArg(0));
   }
 
-  // /// Decrement
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_Dec(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   // Decrement value in local memory @ [ARG0]
-  //   --call_state.GetMemory().AccessWorking(inst.GetArg(0));
-  // }
+  /// Decrement
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Dec(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    // Decrement value in local memory @ [ARG0]
+    --call_state.GetMemory().AccessWorking(inst.GetArg(0));
+  }
 
-  // /// Not
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_Not(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(0), mem_state.GetWorking(inst.GetArg(0)) == 0.0);
-  // }
+  /// Not
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Not(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(0), mem_state.GetWorking(inst.GetArg(0)) == 0.0);
+  }
 
-  // // - Inst_Add
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_Add(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) + mem_state.AccessWorking(inst.GetArg(1)));
-  // }
+  // - Inst_Add
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Add(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) + mem_state.AccessWorking(inst.GetArg(1)));
+  }
 
-  // // - Inst_Sub
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_Sub(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) - mem_state.AccessWorking(inst.GetArg(1)));
-  // }
+  // - Inst_Sub
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Sub(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) - mem_state.AccessWorking(inst.GetArg(1)));
+  }
 
-  // // - Inst_Mult
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_Mult(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) * mem_state.AccessWorking(inst.GetArg(1)));
-  // }
+  // - Inst_Mult
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Mult(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) * mem_state.AccessWorking(inst.GetArg(1)));
+  }
 
-  // // - Inst_Div
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_Div(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   const auto & denom = mem_state.AccessWorking(inst.GetArg(1));
-  //   if (denom == 0.0) return; // Do nothing.
-  //   const auto & num = mem_state.AccessWorking(inst.GetArg(0));
-  //   mem_state.SetWorking(inst.GetArg(2), num / denom);
-  // }
+  // - Inst_Div
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Div(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    const auto & denom = mem_state.AccessWorking(inst.GetArg(1));
+    if (denom == 0.0) return; // Do nothing.
+    const auto & num = mem_state.AccessWorking(inst.GetArg(0));
+    mem_state.SetWorking(inst.GetArg(2), num / denom);
+  }
 
-  // // - Inst_Mod
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_Mod(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   const int denom = (int)mem_state.AccessWorking(inst.GetArg(1));
-  //   if (denom == 0.0) return; // Do nothing.
-  //   const int num = (int)mem_state.AccessWorking(inst.GetArg(0));
-  //   mem_state.SetWorking(inst.GetArg(2), Mod(num, denom));
-  // }
+  // - Inst_Mod
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_Mod(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    const int denom = (int)mem_state.AccessWorking(inst.GetArg(1));
+    if (denom == 0.0) return; // Do nothing.
+    const int num = (int)mem_state.AccessWorking(inst.GetArg(0));
+    mem_state.SetWorking(inst.GetArg(2), Mod(num, denom));
+  }
 
-  // // - Inst_TestEqu
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_TestEqu(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) == mem_state.AccessWorking(inst.GetArg(1)));
-  // }
+  // - Inst_TestEqu
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_TestEqu(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) == mem_state.AccessWorking(inst.GetArg(1)));
+  }
 
-  // // - Inst_TestNEqu
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_TestNEqu(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) != mem_state.AccessWorking(inst.GetArg(1)));
-  // }
+  // - Inst_TestNEqu
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_TestNEqu(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) != mem_state.AccessWorking(inst.GetArg(1)));
+  }
 
-  // // - Inst_TestLess
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_TestLess(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) < mem_state.AccessWorking(inst.GetArg(1)));
-  // }
+  // - Inst_TestLess
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_TestLess(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) < mem_state.AccessWorking(inst.GetArg(1)));
+  }
 
-  // // - Inst_TestLessEqu
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_TestLessEqu(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) <= mem_state.AccessWorking(inst.GetArg(1)));
-  // }
+  // - Inst_TestLessEqu
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_TestLessEqu(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) <= mem_state.AccessWorking(inst.GetArg(1)));
+  }
 
-  // // - Inst_TestGreater
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_TestGreater(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) > mem_state.AccessWorking(inst.GetArg(1)));
-  // }
+  // - Inst_TestGreater
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_TestGreater(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) > mem_state.AccessWorking(inst.GetArg(1)));
+  }
 
-  // // - Inst_TestGreater
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_TestGreaterEqu(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) >= mem_state.AccessWorking(inst.GetArg(1)));
-  // }
+  // - Inst_TestGreater
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_TestGreaterEqu(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(2), mem_state.AccessWorking(inst.GetArg(0)) >= mem_state.AccessWorking(inst.GetArg(1)));
+  }
 
   // // - Inst_If TODO - TEST EDGE CASES!
   // template<typename HARDWARE_T, typename INSTRUCTION_T>
   // void Inst_If(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
   //   auto & exec_stepper = hw.GetExecStepper();
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   auto & mem_state = call_state.GetMemory();
   //   const size_t prog_len = exec_stepper.GetProgram().GetSize();
   //   size_t cur_ip = call_state.GetIP();
@@ -208,7 +208,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   //                                             cur_ip,
   //                                             bob,
   //                                             eob},
-  //                                             hw.GetCurExecState());
+  //                                             hw.GetCurThread().GetExecState());
   //   }
   // }
 
@@ -216,7 +216,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // template<typename HARDWARE_T, typename INSTRUCTION_T>
   // void Inst_While(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
   //   auto & exec_stepper = hw.GetExecStepper();
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   auto & mem_state = call_state.GetMemory();
   //   const size_t prog_len = exec_stepper.GetProgram().GetSize();
   //   size_t cur_ip = call_state.GetIP();
@@ -246,7 +246,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   //                                             cur_ip,
   //                                             bob,
   //                                             eob},
-  //                                             hw.GetCurExecState());
+  //                                             hw.GetCurThread().GetExecState());
   //   }
   // }
 
@@ -254,7 +254,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // template<typename HARDWARE_T, typename INSTRUCTION_T>
   // void Inst_Countdown(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
   //   auto & exec_stepper = hw.GetExecStepper();
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   auto & mem_state = call_state.GetMemory();
   //   const size_t prog_len = exec_stepper.GetProgram().GetSize();
   //   size_t cur_ip = call_state.GetIP();
@@ -285,7 +285,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   //                                             cur_ip,
   //                                             bob,
   //                                             eob},
-  //                                             hw.GetCurExecState());
+  //                                             hw.GetCurThread().GetExecState());
   //   }
   // }
   // // - Inst_Break
@@ -294,7 +294,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // void Inst_Break(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
   //   using flow_type_t = typename HARDWARE_T::exec_stepper_t::FlowType;
   //   auto & exec_stepper = hw.GetExecStepper();
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   // break out of the nearest loop:
   //   //     loop = false;
   //   // (1) While (true) {
@@ -328,7 +328,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   //       call_state.flow_stack.pop_back(); // todo - CloseFlow?
   //     } else {
   //       emp_assert(call_state.GetTopFlow().GetType() == flow_type_t::WHILE_LOOP);
-  //       exec_stepper.GetFlowHandler().BreakFlow(flow_type_t::WHILE_LOOP, hw.GetCurExecState());
+  //       exec_stepper.GetFlowHandler().BreakFlow(flow_type_t::WHILE_LOOP, hw.GetCurThread().GetExecState());
   //       break;
   //     }
   //   }
@@ -340,10 +340,10 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // void Inst_Close(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
   //   using flow_type_t = typename HARDWARE_T::exec_stepper_t::FlowType;
   //   auto & exec_stepper = hw.GetExecStepper();
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   const flow_type_t cur_flow_type = call_state.GetTopFlow().GetType();
   //   if (cur_flow_type == flow_type_t::BASIC || cur_flow_type == flow_type_t::WHILE_LOOP) {
-  //     exec_stepper.GetFlowHandler().CloseFlow(cur_flow_type, hw.GetCurExecState());
+  //     exec_stepper.GetFlowHandler().CloseFlow(cur_flow_type, hw.GetCurThread().GetExecState());
   //   }
   // }
 
@@ -351,7 +351,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // template<typename HARDWARE_T, typename INSTRUCTION_T>
   // void Inst_Call(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
   //   auto & exec_stepper = hw.GetExecStepper();
-  //   exec_stepper.CallModule(inst.GetTag(0), hw.GetCurExecState());
+  //   exec_stepper.CallModule(inst.GetTag(0), hw.GetCurThread().GetExecState());
   // }
 
   // // - Inst_Routine
@@ -368,7 +368,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   //                                             target_module.begin,
   //                                             target_module.begin,
   //                                             target_module.end},
-  //                                            hw.GetCurExecState());
+  //                                            hw.GetCurThread().GetExecState());
   //   }
   // }
 
@@ -377,31 +377,31 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // void Inst_Return(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
   //   using flow_type_t = typename HARDWARE_T::exec_stepper_t::FlowType;
   //   auto & exec_stepper = hw.GetExecStepper();
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   // Return from CALL or ROUTINE
   //   while (call_state.IsFlow()) {
   //     auto & top = call_state.GetTopFlow();
   //     if (top.GetType() == flow_type_t::CALL || top.GetType() == flow_type_t::ROUTINE) {
-  //       exec_stepper.GetFlowHandler().CloseFlow(top.GetType(), hw.GetCurExecState());
+  //       exec_stepper.GetFlowHandler().CloseFlow(top.GetType(), hw.GetCurThread().GetExecState());
   //       break;
   //     } else {
-  //       exec_stepper.GetFlowHandler().CloseFlow(top.GetType(), hw.GetCurExecState());
+  //       exec_stepper.GetFlowHandler().CloseFlow(top.GetType(), hw.GetCurThread().GetExecState());
   //     }
   //   }
   // }
 
-  // // - Inst_SetMem
-  // template<typename HARDWARE_T, typename INSTRUCTION_T>
-  // void Inst_SetMem(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
-  //   auto & mem_state = call_state.GetMemory();
-  //   mem_state.SetWorking(inst.GetArg(0), (double)inst.GetArg(1));
-  // }
+  // - Inst_SetMem
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_SetMem(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    mem_state.SetWorking(inst.GetArg(0), (double)inst.GetArg(1));
+  }
 
   // // - Inst_CopyMem
   // template<typename HARDWARE_T, typename INSTRUCTION_T>
   // void Inst_CopyMem(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   auto & mem_state = call_state.GetMemory();
   //   mem_state.SetWorking(inst.GetArg(1), mem_state.AccessWorking(inst.GetArg(0)));
   // }
@@ -409,7 +409,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // // - Inst_SwapMem
   // template<typename HARDWARE_T, typename INSTRUCTION_T>
   // void Inst_SwapMem(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   auto & mem_state = call_state.GetMemory();
   //   const double val_0 = mem_state.AccessWorking(inst.GetArg(0));
   //   const double val_1 = mem_state.AccessWorking(inst.GetArg(1));
@@ -420,7 +420,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // // - Inst_Input
   // template<typename HARDWARE_T, typename INSTRUCTION_T>
   // void Inst_InputToWorking(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   auto & mem_state = call_state.GetMemory();
   //   mem_state.SetWorking(inst.GetArg(1), mem_state.AccessInput(inst.GetArg(0)));
   // }
@@ -428,7 +428,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // // - Inst_Output
   // template<typename HARDWARE_T, typename INSTRUCTION_T>
   // void Inst_WorkingToOutput(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   auto & mem_state = call_state.GetMemory();
   //   mem_state.SetOutput(inst.GetArg(1), mem_state.AccessWorking(inst.GetArg(0)));
   // }
@@ -436,7 +436,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // // - Inst_Commit (push value from working to global memory)
   // template<typename HARDWARE_T, typename INSTRUCTION_T>
   // void Inst_WorkingToGlobal(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   auto & mem_state = call_state.GetMemory();
   //   auto & mem_model = hw.GetExecStepper().GetMemoryModel();
   //   mem_model.SetGlobal(inst.GetArg(1), mem_state.AccessWorking(inst.GetArg(0)));
@@ -445,7 +445,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // // - Inst_Pull (pull value from global to working memory)
   // template<typename HARDWARE_T, typename INSTRUCTION_T>
   // void Inst_GlobalToWorking(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-  //   auto & call_state = hw.GetCurExecState().GetTopCallState();
+  //   auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
   //   auto & mem_state = call_state.GetMemory();
   //   auto & mem_model = hw.GetExecStepper().GetMemoryModel();
   //   mem_state.SetWorking(inst.GetArg(1), mem_model.AccessGlobal(inst.GetArg(0)));
@@ -461,7 +461,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   //     if (thread_id < hw.GetMaxThreads()) {
   //       // Spawned valid thread.
   //       // Do whatever it is that the memory model says we should do on a function call.
-  //       auto & forker = hw.GetCurExecState().GetTopCallState();
+  //       auto & forker = hw.GetCurThread().GetExecState().GetTopCallState();
   //       auto & forkee = hw.GetThread(thread_id).GetExecState().GetTopCallState();
   //       exec_stepper.GetMemoryModel().OnModuleCall(forker.GetMemory(), forkee.GetMemory());
   //     }

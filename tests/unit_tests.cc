@@ -9,9 +9,9 @@
 #include "InstructionLibrary.h"
 #include "EventLibrary.h"
 
-#include "BaseSignalGP.h"
-#include "LinearProgramSignalGP.h"
-#include "instructions_impl.h"
+#include "SignalGPBase.h"
+#include "SignalGPLinearProgram.h"
+#include "linear_program_instructions_impls.h"
 #include "ToySignalGP.h"
 #include "MemoryModel.h"
 
@@ -91,21 +91,21 @@ TEST_CASE("SignalGP", "[general]") {
   inst_lib.AddInst("Nop", [](signalgp_t & hw, const inst_t & inst) { ; }, "No operation!");
   // inst_lib.AddInst("ModuleDef", [](signalgp_t & hw, const inst_t & inst) { ; }, "Module definition", {inst_prop_t::MODULE});
   inst_lib.AddInst("Inc", emp::signalgp::inst_impl::Inst_Inc<signalgp_t, inst_t>, "Increment!");
-  // inst_lib.AddInst("Dec", emp::signalgp::inst_impl::Inst_Dec<signalgp_t, inst_t>, "Decrement!");
-  // inst_lib.AddInst("Not", emp::signalgp::inst_impl::Inst_Not<signalgp_t, inst_t>, "Logical not of ARG[0]");
-  // inst_lib.AddInst("Add", emp::signalgp::inst_impl::Inst_Add<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("Sub", emp::signalgp::inst_impl::Inst_Sub<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("Mult", emp::signalgp::inst_impl::Inst_Mult<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("Div", emp::signalgp::inst_impl::Inst_Div<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("Mod", emp::signalgp::inst_impl::Inst_Mod<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("TestEqu", emp::signalgp::inst_impl::Inst_TestEqu<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("TestNEqu", emp::signalgp::inst_impl::Inst_TestNEqu<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("TestLess", emp::signalgp::inst_impl::Inst_TestLess<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("TestLessEqu", emp::signalgp::inst_impl::Inst_TestLessEqu<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("TestGreater", emp::signalgp::inst_impl::Inst_TestGreater<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("TestGreaterEqu", emp::signalgp::inst_impl::Inst_TestGreaterEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Dec", emp::signalgp::inst_impl::Inst_Dec<signalgp_t, inst_t>, "Decrement!");
+  inst_lib.AddInst("Not", emp::signalgp::inst_impl::Inst_Not<signalgp_t, inst_t>, "Logical not of ARG[0]");
+  inst_lib.AddInst("Add", emp::signalgp::inst_impl::Inst_Add<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Sub", emp::signalgp::inst_impl::Inst_Sub<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Mult", emp::signalgp::inst_impl::Inst_Mult<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Div", emp::signalgp::inst_impl::Inst_Div<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Mod", emp::signalgp::inst_impl::Inst_Mod<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestEqu", emp::signalgp::inst_impl::Inst_TestEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestNEqu", emp::signalgp::inst_impl::Inst_TestNEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestLess", emp::signalgp::inst_impl::Inst_TestLess<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestLessEqu", emp::signalgp::inst_impl::Inst_TestLessEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestGreater", emp::signalgp::inst_impl::Inst_TestGreater<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("TestGreaterEqu", emp::signalgp::inst_impl::Inst_TestGreaterEqu<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("SetMem", emp::signalgp::inst_impl::Inst_SetMem<signalgp_t, inst_t>, "");
   // inst_lib.AddInst("If", emp::signalgp::inst_impl::Inst_If<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
-  // inst_lib.AddInst("SetMem", emp::signalgp::inst_impl::Inst_SetMem<signalgp_t, inst_t>, "");
   // inst_lib.AddInst("While", emp::signalgp::inst_impl::Inst_While<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
   // inst_lib.AddInst("Countdown", emp::signalgp::inst_impl::Inst_Countdown<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
   // inst_lib.AddInst("Break", emp::signalgp::inst_impl::Inst_Break<signalgp_t, inst_t>, "");
@@ -175,6 +175,728 @@ TEST_CASE("SignalGP", "[general]") {
     REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 1.0}}));
     hardware.SingleProcess(); // Inc(3)
     REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 1.0}, {3, 1.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_Dec") {
+    std::cout << "-- Testing Inst_Dec --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {0, 0, 0});
+    program.PushInst(inst_lib, "Dec", {0, 0, 0});
+    program.PushInst(inst_lib, "Dec", {0, 0, 0});
+    program.PushInst(inst_lib, "Dec", {1, 0, 0});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // Inc(0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}}));
+    hardware.SingleProcess(); // Dec(0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}}));
+    hardware.SingleProcess(); // Dec(0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, -1.0}}));
+    hardware.SingleProcess(); // Dec(1)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, -1.0}, {1, -1.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_Not") {
+    std::cout << "-- Testing Inst_Not --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {0, 0, 0});
+    program.PushInst(inst_lib, "Not", {0, 0, 0});
+    program.PushInst(inst_lib, "Not", {1, 0, 0});
+    program.PushInst(inst_lib, "Dec", {0, 0, 0});
+    program.PushInst(inst_lib, "Not", {0, 0, 0});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // Inc(0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}}));
+    hardware.SingleProcess(); // Not(0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}}));
+    hardware.SingleProcess(); // Not(1)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 1.0}}));
+    hardware.SingleProcess(); // Dec(0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, -1.0}, {1, 1.0}}));
+    hardware.SingleProcess(); // Not(0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 1.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_Add") {
+    std::cout << "-- Testing Inst_Add --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {0, 0, 0}); // [0] = 1
+    program.PushInst(inst_lib, "Add", {0, 0, 1}); // [1] = 2
+    program.PushInst(inst_lib, "Add", {1, 1, 2}); // [2] = 4
+    program.PushInst(inst_lib, "Add", {1, 2, 3}); // [3] = 6
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // Inc(0, 0, 0) // [0] = 1
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}}));
+    hardware.SingleProcess(); // Add(0, 0, 1) // [1] = 2
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}}));
+    hardware.SingleProcess(); // Add(1, 1, 2) // [2] = 4
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 4.0}}));
+    hardware.SingleProcess(); // Add(1, 2, 3) // [3] = 6
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 4.0}, {3, 6.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_Sub") {
+    std::cout << "-- Testing Inst_Sub --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {0, 0, 0}); // [0] = 1
+    program.PushInst(inst_lib, "Add", {0, 0, 1}); // [1] = 2
+    program.PushInst(inst_lib, "Add", {1, 1, 2}); // [2] = 4
+    program.PushInst(inst_lib, "Add", {1, 2, 3}); // [3] = 6
+
+    program.PushInst(inst_lib, "Sub", {3, 4, 3}); // [4] = 0; [3] = 6
+    program.PushInst(inst_lib, "Sub", {3, 2, 4}); // [4] = 2
+    program.PushInst(inst_lib, "Sub", {2, 3, 4}); // [4] = -2
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    // hardware.SingleProcess(); // Inc(0)
+    // REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}}));
+
+    hardware.SingleProcess(); // Inc(0, 0, 0) // [0] = 1
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}}));
+    hardware.SingleProcess(); // Add(0, 0, 1) // [1] = 2
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}}));
+    hardware.SingleProcess(); // Add(1, 1, 2) // [2] = 4
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 4.0}}));
+    hardware.SingleProcess(); // Add(1, 2, 3) // [3] = 6
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 4.0}, {3, 6.0}}));
+    hardware.SingleProcess(); // Sub(3, 4, 3) // [4] = 0; [3] = 6
+    REQUIRE((mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 4.0}, {3, 6.0}, {4, 0.0}})));
+    hardware.SingleProcess(); // Sub(3, 2, 4) // [4] = 2
+    REQUIRE((mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 4.0}, {3, 6.0}, {4, 2.0}})));
+    hardware.SingleProcess(); // Sub(2, 3, 4) // [4] = -2
+    REQUIRE((mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 4.0}, {3, 6.0}, {4, -2.0}})));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_Mult") {
+    std::cout << "-- Testing Inst_Mult --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {0, 0, 0}); // [0] = 1
+    program.PushInst(inst_lib, "Add", {0, 0, 1}); // [1] = 2
+    program.PushInst(inst_lib, "Dec", {-1, 0, 0}); // [-1] = -1
+    program.PushInst(inst_lib, "Mult", {0, 0, 2}); // [2] = 1
+    program.PushInst(inst_lib, "Mult", {-1, -1, 2}); // [2] = 1
+    program.PushInst(inst_lib, "Mult", {1, 1, 2}); // [2] = 4
+    program.PushInst(inst_lib, "Mult", {-1, 1, 2}); // [2] = -2
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // Inc(0, 0, 0) // [0] = 1
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}}));
+    hardware.SingleProcess(); // Add(0, 0, 1) // [1] = 2
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}}));
+    hardware.SingleProcess(); // Dec(-1, 0, 0) // [-1] = -1
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{-1, -1.0}, {0, 1.0}, {1, 2.0}}));
+    hardware.SingleProcess(); // Mult(0, 0, 2) // [2] = 1
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{-1, -1.0}, {0, 1.0}, {1, 2.0}, {2, 1.0}}));
+    hardware.SingleProcess(); // Mult(-1, -1, 2) // [2] = 1
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{-1, -1.0}, {0, 1.0}, {1, 2.0}, {2, 1.0}}));
+    hardware.SingleProcess(); // Mult(1, 1, 2) // [2] = 4
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{-1, -1.0}, {0, 1.0}, {1, 2.0}, {2, 4.0}}));
+    hardware.SingleProcess(); // Mult(-1, 1, 2) // [2] = -2
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{-1, -1.0}, {0, 1.0}, {1, 2.0}, {2, -2.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_Div") {
+    std::cout << "-- Testing Inst_Div --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {0, 0, 0}); // [0] = 1
+    program.PushInst(inst_lib, "Add", {0, 0, 1}); // [1] = 2
+    program.PushInst(inst_lib, "Div", {2, 2, 2}); // [2] = 0   Do nothing.
+    program.PushInst(inst_lib, "Div", {2, 2, 2}); // [2] = 0   Do nothing.
+    program.PushInst(inst_lib, "Div", {0, 1, 3}); // [3] = 0.5 Do nothing.
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // Inc(0, 0, 0) // [0] = 1
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}}));
+    hardware.SingleProcess(); // Add(0, 0, 1) // [1] = 2
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}}));
+    hardware.SingleProcess(); // Div(2, 2, 2); // [2] = 0   Do nothing.
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 0.0}}));
+    hardware.SingleProcess(); // Div(2, 2, 2); // [2] = 0   Do nothing.
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 0.0}}));
+    hardware.SingleProcess(); // Div(0, 1, 3); // [3] = 0.5 Do nothing.
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 0.0}, {3, 0.5}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_Mod") {
+    std::cout << "-- Testing Inst_Mod --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {0, 0, 0}); // [0] = 1
+    program.PushInst(inst_lib, "Add", {0, 0, 1}); // [1] = 2
+    program.PushInst(inst_lib, "Mod", {2, 2, 2}); // [2] = 0   Do nothing.
+    program.PushInst(inst_lib, "Mod", {2, 2, 2}); // [2] = 0   Do nothing.
+    program.PushInst(inst_lib, "Mod", {0, 1, 3}); // [3] = 1
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // Inc(0, 0, 0) // [0] = 1
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}}));
+    hardware.SingleProcess(); // Add(0, 0, 1) // [1] = 2
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}}));
+    hardware.SingleProcess(); // Mod(2, 2, 2); // [2] = 0   Do nothing.
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 0.0}}));
+    hardware.SingleProcess(); // Mod(2, 2, 2); // [2] = 0   Do nothing.
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 0.0}}));
+    hardware.SingleProcess(); // Mod(0, 1, 3); // [3] = 1
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 1.0}, {1, 2.0}, {2, 0.0}, {3, 1.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_SetMem") {
+    std::cout << "-- Testing Inst_SetMem --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "SetMem", {0, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {1, 1, 0});
+    program.PushInst(inst_lib, "SetMem", {2, 2, 0});
+    program.PushInst(inst_lib, "SetMem", {3, -128, 0});
+    program.PushInst(inst_lib, "SetMem", {4, 256, 0});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // SetMem(0, 0, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}}));
+    hardware.SingleProcess(); // SetMem(1, 1, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 1.0}}));
+    hardware.SingleProcess(); // SetMem(2, 2, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 2.0}}));
+    hardware.SingleProcess(); // SetMem(3, -128, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 2.0}, {3, -128.0}}));
+    hardware.SingleProcess(); // SetMem(4, 256, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 2.0}, {3, -128.0}, {4, 256}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_TestEqu") {
+    std::cout << "-- Testing Inst_TestEqu --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "SetMem", {0, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {1, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {2, 2, 0});
+    program.PushInst(inst_lib, "TestEqu", {0, 1, 3});
+    program.PushInst(inst_lib, "TestEqu", {0, 2, 3});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // SetMem(0, 0, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}}));
+    hardware.SingleProcess(); // SetMem{1, 0, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}}));
+    hardware.SingleProcess(); // SetMem{2, 2, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}}));
+    hardware.SingleProcess(); // TestEqu{0, 1, 3}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 1.0}}));
+    hardware.SingleProcess(); // TestEqu{0, 2, 3}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 0.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_TestNEqu") {
+    std::cout << "-- Testing Inst_TestNEqu --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "SetMem", {0, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {1, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {2, 2, 0});
+    program.PushInst(inst_lib, "TestNEqu", {0, 1, 3});
+    program.PushInst(inst_lib, "TestNEqu", {0, 2, 3});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // SetMem(0, 0, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}}));
+    hardware.SingleProcess(); // SetMem{1, 0, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}}));
+    hardware.SingleProcess(); // SetMem{2, 2, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 0.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 1.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_TestLess") {
+    std::cout << "-- Testing Inst_TestLess --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "SetMem", {0, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {1, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {2, 2, 0});
+    program.PushInst(inst_lib, "TestLess", {0, 1, 3});
+    program.PushInst(inst_lib, "TestLess", {0, 2, 3});
+    program.PushInst(inst_lib, "TestLess", {2, 0, 3});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // SetMem(0, 0, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}}));
+    hardware.SingleProcess(); // SetMem{1, 0, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}}));
+    hardware.SingleProcess(); // SetMem{2, 2, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 0.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 1.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 0.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_TestLessEqu") {
+    std::cout << "-- Testing Inst_TestLessEqu --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "SetMem", {0, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {1, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {2, 2, 0});
+    program.PushInst(inst_lib, "TestLessEqu", {0, 1, 3});
+    program.PushInst(inst_lib, "TestLessEqu", {0, 2, 3});
+    program.PushInst(inst_lib, "TestLessEqu", {2, 0, 3});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // SetMem(0, 0, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}}));
+    hardware.SingleProcess(); // SetMem{1, 0, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}}));
+    hardware.SingleProcess(); // SetMem{2, 2, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 1.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 1.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 0.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_TestGreater") {
+    std::cout << "-- Testing Inst_TestGreater --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "SetMem", {0, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {1, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {2, 2, 0});
+    program.PushInst(inst_lib, "TestGreater", {0, 1, 3});
+    program.PushInst(inst_lib, "TestGreater", {0, 2, 3});
+    program.PushInst(inst_lib, "TestGreater", {2, 0, 3});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // SetMem(0, 0, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}}));
+    hardware.SingleProcess(); // SetMem{1, 0, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}}));
+    hardware.SingleProcess(); // SetMem{2, 2, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 0.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 0.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 1.0}}));
+
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
+
+  SECTION ("Inst_TestGreaterEqu") {
+    std::cout << "-- Testing Inst_TestGreaterEqu --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "SetMem", {0, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {1, 0, 0});
+    program.PushInst(inst_lib, "SetMem", {2, 2, 0});
+    program.PushInst(inst_lib, "TestGreaterEqu", {0, 1, 3});
+    program.PushInst(inst_lib, "TestGreaterEqu", {0, 2, 3});
+    program.PushInst(inst_lib, "TestGreaterEqu", {2, 0, 3});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+
+    // Spawn a thread to run the program.
+    hardware.SpawnThread(0);
+
+    // Assert state of memory.
+    auto & thread_ids = hardware.GetActiveThreadIDs();
+    REQUIRE(thread_ids.size() == 1);
+
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+
+    hardware.SingleProcess(); // SetMem(0, 0, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}}));
+    hardware.SingleProcess(); // SetMem{1, 0, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}}));
+    hardware.SingleProcess(); // SetMem{2, 2, 0}
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 1.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 0.0}}));
+    hardware.SingleProcess();
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{0, 0.0}, {1, 0.0}, {2, 2.0}, {3, 1.0}}));
 
     hardware.SingleProcess(); // IP off edge of program
     REQUIRE(hardware.GetActiveThreadIDs().size() == 0);

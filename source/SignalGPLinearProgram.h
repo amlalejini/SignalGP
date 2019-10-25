@@ -14,7 +14,7 @@
 #include "EventLibrary.h"
 #include "InstructionLibrary.h"
 
-#include "BaseSignalGP.h"
+#include "SignalGPBase.h"
 #include "LinearProgram.h"
 
 namespace emp { namespace signalgp {
@@ -114,7 +114,6 @@ namespace emp { namespace signalgp {
       /// Get a mutable reference to the entire call stack.
       emp::vector<call_state_t> & GetCallStack() { return call_stack; }
     };
-
   }
 
   template<typename MEMORY_MODEL_T,
@@ -172,7 +171,6 @@ namespace emp { namespace signalgp {
     /// Every type of execution 'flow' has a 'FlowControl' structure that specifies
     /// how to open, close, and break the flow.
     struct FlowHandler {
-
       struct FlowControl {
         fun_open_flow_t open_flow_fun;
         fun_end_flow_t close_flow_fun;
@@ -510,7 +508,6 @@ namespace emp { namespace signalgp {
           }
         } else {
           // No flow!
-          // todo - return from call?
           ReturnCall(exec_state);
         }
         break; // We executed *something*, break from loop.

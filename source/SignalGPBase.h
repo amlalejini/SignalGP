@@ -71,6 +71,7 @@ namespace emp { namespace signalgp {
   // todo - make signalgp hardware not awful (& safe) to make copies of
   // @discussion - template/organization structure
   // What about program_t?
+  // TODO - rename to SignalGPBase.h
   template<typename DERIVED_T,
            typename EXEC_STATE_T,
            typename TAG_T,
@@ -126,9 +127,6 @@ namespace emp { namespace signalgp {
   protected:
     Ptr<event_lib_t> event_lib;         ///< These are the events this hardware knows about.
     std::deque<event_t> event_queue;    ///< Queue of events to be processed every time step.
-
-    // Ptr<Random> random_ptr;             ///< Random number generator. (TODO - make this a smart pointer)
-    // bool random_owner;                  ///< Is this hardware unit responsible for cleaning up the random number generator memory?
 
     // Thread management
     size_t max_threads=64;              ///< Maximum number of concurrently running threads.
