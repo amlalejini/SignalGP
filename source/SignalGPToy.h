@@ -18,28 +18,17 @@ namespace toy_signalgp_impl {
 template<typename CUSTOM_COMPONET_T=emp::signalgp::DefaultCustomComponent>
 class ToySignalGP : public emp::signalgp::BaseSignalGP< ToySignalGP<CUSTOM_COMPONET_T>,
                                                         toy_signalgp_impl::ExecState,
-                                                        // typename ToySignalGP<CUSTOM_COMPONET_T>::ExecState,
                                                         size_t,
                                                         CUSTOM_COMPONET_T> {
 public:
   using this_t = ToySignalGP<CUSTOM_COMPONET_T>;
-
-  // struct ExecState {
-  //   size_t value=0;
-  //   void Clear() { value = 0; }
-  // };
   using exec_state_t = toy_signalgp_impl::ExecState;            ///< REQUIRED. Thread state information.
-  // using exec_state_t = ExecState;
-
   using base_hw_t = emp::signalgp::BaseSignalGP<this_t,
                                                 exec_state_t,
                                                 size_t,
                                                 CUSTOM_COMPONET_T>;
-
   using program_t = emp::vector<size_t>;     ///< REQUIRED. What types of programs does this stepper execute?
   using tag_t = size_t;                      ///< REQUIRED. What does this stepper use to reference different modules?
-
-
   using event_lib_t = typename base_hw_t::event_lib_t;
   using event_t = typename base_hw_t::event_t;
   using thread_t = typename base_hw_t::Thread;
@@ -50,9 +39,7 @@ protected:
 public:
   ToySignalGP(emp::Ptr<event_lib_t> elib)
     : base_hw_t(elib)
-  {
-    std::cout << "Derived constructor!" << std::endl;
-  }
+  { }
 
   program_t & GetProgram() { return program; }
 
