@@ -414,14 +414,17 @@ namespace emp { namespace signalgp {
       emp::vector<size_t> matches(GetHardware().FindModuleMatch(tag, n));
       emp::vector<size_t> thread_ids;
       for (size_t match : matches) {
-        // TODO!
+        const auto thread_id = SpawnThreadWithID(match, priority);
+        if (thread_id) {
+          thread_ids.emplace_back(thread_id.value());
+        }
       }
       return thread_ids;
     }
 
-    size_t SpawnThreadWithTag(const tag_t & tag, double priority=1.0) {
-      // TODO
-      emp_assert(false);
+    std::optional<size_t> SpawnThreadWithTag(const tag_t & tag, double priority=1.0) {
+      emp::vector<size_t> match(GetHardware().FindModuleMatch(tag, 1));
+      return (match.size()) ? SpawnThreadWithID(match[0], priority) : std::nullopt;
     }
 
     /// Spawn a new thread with given ID.
