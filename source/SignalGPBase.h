@@ -154,7 +154,7 @@ namespace emp { namespace signalgp {
     // @discussion - can't really track thread priorities separate from threads, as they can get updated on the fly
     emp::vector<size_t> thread_exec_order;  ///< Thread execution order.
     std::unordered_set<size_t> active_threads;        ///< Active thread ids.
-    emp::vector<size_t> unused_threads;     ///< Unused thread ids.
+    emp::vector<size_t> unused_threads;     ///< Unused thread ids. DISCUSSION: Should this be a set?
     std::deque<size_t> pending_threads;     ///< Pending thread ids.
 
     size_t cur_thread_id=(size_t)-1;    ///< Currently executing thread.
@@ -182,6 +182,7 @@ namespace emp { namespace signalgp {
       emp_assert(thread_id < threads.size());
       active_threads.erase(thread_id);
       threads[thread_id].SetDead();
+      unused_threads.emplace_back(thread_id);
     }
 
     void ActivatePendingThreads() {
@@ -247,6 +248,7 @@ namespace emp { namespace signalgp {
           // This pending thread won't replace any active threads (not high enough priority).
           pending_threads.pop_front();
           threads[pending_id].SetDead(); // no longer pending
+          unused_threads.emplace_back(pending_id); // Reclaim pending_id for future use
         }
       }
 
@@ -256,6 +258,7 @@ namespace emp { namespace signalgp {
         const size_t pending_id = pending_threads.front();
         threads[pending_id].SetDead();  // no longer pending
         pending_threads.pop_front();
+        unused_threads.emplace_back(pending_id); // Reclaim pending id for future use.
       }
     }
 
@@ -483,16 +486,46 @@ namespace emp { namespace signalgp {
 
       // Begin execution!
       is_executing = true;
-      size_t active_thread_id = 0;
-      size_t active_thread_cnt = active_threads.size();
+      size_t exec_order_id = 0;
+      size_t thread_exec_cnt = thread_exec_order.size();
       size_t adjust = 0;
+      while (exec_order_id < thread_exec_cnt) {
+        emp_assert(exec_order_id < threads.size()); // Exec order ID should always be valid thread.
+        cur_thread_id = thread_exec_order[exec_order_id];
 
-      while (active_thread_id < thread_cnt) {
-        // todo!
+        // Do we need to move the current thread id over in the execution ordering
+        // to make our execution order contiguous?
+        if (adjust) {
+          // If we need to adjust, invalidate current position and move current
+          // thread id up by 'adjust'.
+          thread_exec_order[exec_order_id] = max_thread_space; // Invalid position!
+          thread_exec_order[exec_order_id - adjust] = cur_thread_id;
+        }
+
+        // Is this thread dead?
+        if (threads[cur_thread_id].IsDead()) {
+          // If so, move on!
+          KillThread(cur_thread_id);
+          ++adjust;
+          ++exec_order_id;
+          continue;
+        }
+
+        // Execute the thread (defined by derived class)
+        GetHardware().SingleExecutionStep(GetHardware(), threads[cur_thread_id]);
+
+        // Did the thread die?
+        if (threads[cur_thread_id].IsDead()) {
+          KillThread(cur_thread_id);
+          ++adjust;
+        }
+        ++exec_order_id;
       }
-
-      // todo
-      emp_assert(false);
+      is_executing = false;
+      // Update the thread execution ordering to be accurate.
+      thread_exec_order.resize(thread_exec_cnt - adjust);
+      emp_assert(thread_exec_order.size() == active_threads.size()); // discussion - right?
+      cur_thread_id = max_thread_space; // Invalidate the current thread id.
     }
 
     /// Advance hardware by some arbitrary number of steps.
