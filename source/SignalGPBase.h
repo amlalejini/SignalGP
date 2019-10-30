@@ -85,10 +85,6 @@ namespace emp { namespace signalgp {
   public:
     struct Thread;
 
-    /// Theoretical thread limit for hardware.
-    /// Some function use max size_t to indicate no threads... TODO - internal thread_id struct
-    static constexpr size_t THREAD_LIMIT = std::numeric_limits<size_t>::max() - 1;
-
     // Types that base signalgp functionality needs to know about.
     using hardware_t = DERIVED_T;
     using exec_state_t = EXEC_STATE_T;
@@ -388,16 +384,48 @@ namespace emp { namespace signalgp {
       return threads[cur_thread_id];
     }
 
-    /// TODO - TEST => PULLED FROM ORIGINAL SIGNALGP
+    /// TODO - TEST
     // Warning: If you decrease max threads, you may kill actively running threads.
-    // Warning: If you decrease max threads
     // Slow operation.
     // TODO - fix set thread limit function
-    void SetThreadLimit(size_t n) {
+    void SetActiveThreadLimit(size_t n) {
       emp_assert(n, "Max thread count must be greater than 0.");
-      emp_assert(n <= THREAD_LIMIT, "Max thread count must be less than or equal to", THREAD_LIMIT);
       emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
-      emp_assert(false, "TODO");
+      // NOTE - this cannot DECREASE the capacity of the 'threads' member variable.
+      //        It can, however, INCREASE the capacity of the 'threads' member variable.
+      // Adjust max_thread_space if necessary.
+      max_thread_space = (n > max_thread_space) ? n : max_thread_space;
+      if (n > max_active_threads) {
+        // Increasing total threads able to run simultaneously. This might increase
+        // thread storage (threads).
+        for (size_t i = threads.size(); i < n; ++i) {
+          // add any new thread ids to unused threads.
+          unused_threads.emplace_back(i);
+        }
+        // If requesting more possible active threads than space, resize.
+        if (n > threads.size()) threads.resize(n);
+      } else if (n < active_threads.size()) {
+        // new thread limit is lower than current number of active threads.
+        emp_assert(thread_exec_order.size() >= active_threads.size());
+        // need to kill active threads to abide by new active thread limit.
+        size_t num_kill = active_threads.size() - n;
+        while (num_kill) {
+          const size_t thread_id = thread_exec_order.back();
+          if (threads[thread_id].IsRunning()) {
+            KillThread(thread_id);
+            --num_kill;
+          }
+          // Either thread was running and we killed it or thread was already dead.
+          // - either way, we needed to remove the thread from exec order.
+          thread_exec_order.pop_back();
+        }
+      }
+      max_active_threads = n;
+    }
+
+    /// Maximum allowed number of pending + active threads.
+    void SetThreadCapacity(size_t n) {
+      emp_assert(false);
     }
 
     /// Spawn a number of threads (<= n). Use tag to select which modules to call.
@@ -603,6 +631,11 @@ namespace emp { namespace signalgp {
         fun_print_event(event_queue[i], GetHardware(), os);
       }
       os << "]";
+    }
+
+    bool ValidateThreadState() {
+      emp_assert(false);
+      // TODO!
     }
 
   };
