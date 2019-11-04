@@ -698,23 +698,25 @@ namespace emp { namespace signalgp {
     /// Primarily used for testing.
     bool ValidateThreadState() {
       emp_assert(!is_executing);
+      // std::cout << "--VALIDATE THREAD STATE--" << std::endl;
       // (1) Thread storage should not exceed max_thread_capacity
       if (threads.size() > max_thread_space) return false;
-      std::cout << "(1) OKAY" << std::endl;
+      // std::cout << "(1) OKAY" << std::endl;
       // (2) # of active threads should not exceed max_active_threads
       if (active_threads.size() > max_active_threads) return false;
-      std::cout << "(2) OKAY" << std::endl;
+      // std::cout << "(2) OKAY" << std::endl;
       // (3) No thread ID should appear more than once in the execution order.
       std::unordered_set<size_t> exec_order_set(thread_exec_order.begin(), thread_exec_order.end());
       if (exec_order_set.size() != thread_exec_order.size()) return false;
-      std::cout << "(3) OKAY" << std::endl;
+      // std::cout << "(3) OKAY" << std::endl;
       // (4) No thread ID should appear more than once in the unused threads tracker.
       std::unordered_set<size_t> unused_set(unused_threads.begin(), unused_threads.end());
       if (unused_set.size() != unused_threads.size()) return false;
-      std::cout << "(4) OKAY" << std::endl;
+      // std::cout << "(4) OKAY" << std::endl;
       // (5) No thread ID should appear more than once in the pending threads tracker.
       std::unordered_set<size_t> pending_set(pending_threads.begin(), pending_threads.end());
       if (pending_set.size() != pending_threads.size()) return false;
+      // std::cout << "(5) OKAY" << std::endl;
       // (6) No thread ID should appear more than once across ACTIVE, UNUSED, & PENDING threads.
       //     - Also, all thread IDs should be valid (id < threads.size())!
       emp::vector<size_t> id_appearances(threads.size(), 0);
@@ -731,12 +733,14 @@ namespace emp { namespace signalgp {
         id_appearances[id] += 1;
       }
       for (size_t id = 0; id < id_appearances.size(); ++id) {
-        if (id != 1) return false;
+        if (id_appearances[id] != 1) return false;
       }
+      // std::cout << "(6) OKAY" << std::endl;
       // (7) Every thread in active threads should NOT be marked as pending (either dead or active OKAY)
       for (size_t id : active_threads) {
         if (threads[id].IsPending()) return false;
       }
+      // std::cout << "(7) OKAY" << std::endl;
       // If all of that passed, return true (i.e., thread management is valid).
       return true;
     }
