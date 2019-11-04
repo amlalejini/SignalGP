@@ -424,8 +424,44 @@ namespace emp { namespace signalgp {
     }
 
     /// Maximum allowed number of pending + active threads.
+    // todo - test!
     void SetThreadCapacity(size_t n) {
-      emp_assert(false);
+      emp_assert(n, "Max thread count must be greater than 0.");
+      emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
+      // This function can both decrease AND increase the size of the threads
+      // vector.
+
+      // If new thread cap < max active threads, decrease max active threads to new cap.
+      if (n < max_active_threads) {
+        SetActiveThreadLimit(n);
+      }
+
+      // If new thread cap < current thread storage, decrease thread storage, and
+      // update thread tracking.
+      if (n < threads.size()) {
+        // Lazily update
+        emp::vector<size_t> new_thread_exec_order;
+        emp::vector<size_t> new_unused_threads;
+        std::deque<size_t> new_pending_threads;
+        for (size_t id : thread_exec_order) {
+          if (id < n && !threads[id].IsDead()) new_thread_exec_order.emplace_back(id);
+        }
+        for (size_t id : unused_threads) {
+          if (id < n) new_unused_threads.emplace_back(id);
+        }
+        for (size_t id : new_pending_threads) {
+          if (id < n) new_pending_threads.emplace_back(id);
+        }
+        for (size_t id : active_threads) {
+          if (id >= n) active_threads.erase(n);
+        }
+        thread_exec_order = new_thread_exec_order;
+        unused_threads = new_unused_threads;
+        pending_threads = new_pending_threads;
+        threads.resize(n); // Decrease thread storage.
+      }
+
+      max_thread_space = n;
     }
 
     /// Spawn a number of threads (<= n). Use tag to select which modules to call.
@@ -633,9 +669,47 @@ namespace emp { namespace signalgp {
       os << "]";
     }
 
+    /// Does the current state of thread management make sense?
+    /// Primarily used for testing.
     bool ValidateThreadState() {
-      emp_assert(false);
-      // TODO!
+      emp_assert(!is_executing);
+      // (1) Thread storage should not exceed max_thread_capacity
+      if (threads.size() > max_thread_capacity) return false;
+      // (2) # of active threads should not exceed max_active_threads
+      if (active_threads.size() > max_active_threads) return false;
+      // (3) No thread ID should appear more than once in the execution order.
+      std::unordered_set<size_t> exec_order_set(thread_exec_order.begin(), thread_exec_order.end());
+      if (exec_order_set.size() != thread_exec_order.size()) return false;
+      // (4) No thread ID should appear more than once in the unused threads tracker.
+      std::unordered_set<size_t> unused_set(unused_threads.begin(), unused_threads.end());
+      if (unused_set.size() != unused_threads.size()) return false;
+      // (5) No thread ID should appear more than once in the pending threads tracker.
+      std::unordered_set<size_t> pending_set(pending_threads.begin(), pending_threads.end());
+      if (pending_set.size() != pending_threads.size()) return false;
+      // (6) No thread ID should appear more than once across ACTIVE, UNUSED, & PENDING threads.
+      //     - Also, all thread IDs should be valid (id < threads.size())!
+      emp::vector<size_t> id_appearances(threads.size(), 0);
+      for (size_t id : active_threads) {
+        if (id >= threads.size()) return false;
+        id_appearances[id] += 1;
+      }
+      for (size_t id : unused_threads) {
+        if (id >= threads.size()) return false;
+        id_appearances[id] += 1;
+      }
+      for (size_t id : pending_threads) {
+        if (id >= threads.size()) return false;
+        id_appearances[id] += 1;
+      }
+      for (size_t id = 0; id < id_appearances.size(); ++id) {
+        if (id != 1) return false;
+      }
+      // (7) Every thread in active threads should NOT be marked as pending (either dead or active OKAY)
+      for (size_t id : active_threads) {
+        if (threads[id].IsPending()) return false;
+      }
+      // If all of that passed, return true (i.e., thread management is valid).
+      return true;
     }
 
   };
