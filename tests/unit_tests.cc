@@ -31,16 +31,17 @@ TEST_CASE("Toy SignalGP", "[general]") {
   signalgp_t hardware(&event_lib);
 
   // Configure hardware
-  hardware.SetThreadLimit(128);
+  hardware.SetActiveThreadLimit(16);
   // Make a toy program.
   emp::vector<size_t> prog1({0,1,2,3,4,5});
   // Load program onto hardware.
   hardware.SetProgram(prog1);
   hardware.SetPrintHardwareStateFun([](const signalgp_t & hw, std::ostream & os) {
     os << "Thread states: [";
-    for (size_t ti = 0; ti < hw.GetActiveThreadIDs().size(); ++ti) {
+    for (size_t ti = 0; ti < hw.GetThreadExecOrder().size(); ++ti) {
+      const size_t thread_id = hw.GetThreadExecOrder()[ti];
+      if (!hw.GetThread(thread_id).IsRunning()) continue;
       if (ti) os << ", ";
-      size_t thread_id = hw.GetActiveThreadIDs()[ti];
       os << "{" << thread_id << ": " << hw.GetThread(thread_id).GetExecState().value << "}";
     }
     os << "]\n";
@@ -49,7 +50,7 @@ TEST_CASE("Toy SignalGP", "[general]") {
   std::cout << "--- Initial hardware state ---" << std::endl;
   hardware.PrintHardwareState();
   // Spawn a few threads.
-  hardware.SpawnThread(0);
+  hardware.SpawnThreadWithID(0);
   hardware.SpawnThreads(1, 2);
   hardware.SpawnThreads(6, 1);
   // print hardware state.
@@ -126,7 +127,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
   emp::Random random(2);
 
   signalgp_t hardware(random, &inst_lib, &event_lib);
-  hardware.SetThreadLimit(64);
+  hardware.SetActiveThreadLimit(16);
+  hardware.PrintThreadUsage();
+  emp_assert(hardware.ValidateThreadState(), "Bad thread initial state.");
 
   program_t program;
 
@@ -134,6 +137,7 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     std::cout << "-- Testing Inst_Inc --" << std::endl;
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
+    emp_assert(hardware.ValidateThreadState());
 
     // Build program to test inc instruction.
     program.PushInst(inst_lib, "Inc", {0, 0, 0});
@@ -146,14 +150,12 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    // Assert state of memory.
-    auto & thread_ids = hardware.GetActiveThreadIDs();
-    REQUIRE(thread_ids.size() == 1);
+    auto spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    size_t thread_id = spawned.value();
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(thread_id).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -195,14 +197,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -243,14 +245,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -292,14 +294,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -343,14 +345,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -402,14 +404,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -456,14 +458,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -506,14 +508,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -556,14 +558,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -606,14 +608,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -656,14 +658,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -707,14 +709,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -760,14 +762,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -813,14 +815,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -866,14 +868,14 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     hardware.SetProgram(program);
 
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
+    hardware.SpawnThreadWithID(0);
 
     // Assert state of memory.
     auto & thread_ids = hardware.GetActiveThreadIDs();
     REQUIRE(thread_ids.size() == 1);
 
     // Assert call stack has only 1 call.
-    auto & call_stack = hardware.GetThread(thread_ids[0]).GetExecState().GetCallStack();
+    auto & call_stack = hardware.GetThread(*(thread_ids.begin())).GetExecState().GetCallStack();
     REQUIRE(call_stack.size() == 1);
 
     auto & call_state = call_stack.back();
@@ -916,8 +918,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-    size_t thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    size_t thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -945,9 +948,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -975,9 +978,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1005,8 +1008,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1031,9 +1035,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1059,9 +1063,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1092,9 +1096,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1127,9 +1131,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1161,9 +1165,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1195,9 +1199,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1226,9 +1230,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1258,8 +1262,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-    size_t thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    size_t thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1288,9 +1293,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1321,9 +1326,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1354,8 +1359,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1378,8 +1384,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1405,8 +1412,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1437,9 +1445,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1475,9 +1483,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1512,9 +1520,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1548,9 +1556,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1579,9 +1587,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1609,9 +1617,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1642,9 +1650,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1674,9 +1682,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1704,9 +1712,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    size_t thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    size_t thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1742,9 +1750,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    size_t thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    size_t thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1778,9 +1786,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
@@ -1828,9 +1836,9 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
-    hardware.SpawnThread(0);
-
-    size_t thread_id = hardware.GetActiveThreadIDs()[0];
+    hardware.SpawnThreadWithID(0);
+    emp_assert(hardware.GetActiveThreadIDs().size() == 1);
+    size_t thread_id = *(hardware.GetActiveThreadIDs().begin());
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()

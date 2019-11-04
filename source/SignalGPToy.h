@@ -78,7 +78,7 @@ public:
   /// REQUIRED
   void SingleExecutionStep(this_t & hw, thread_t & thread) {
     if (thread.GetExecState().value == 0) {
-      thread.SetDead(true);
+      thread.SetDead();
     } else {
       thread.exec_state.value -= 1;
     }

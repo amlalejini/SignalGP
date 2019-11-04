@@ -450,8 +450,9 @@ namespace emp { namespace signalgp { namespace inst_impl {
   void Inst_Fork(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     const emp::vector<size_t> matches(hw.FindModuleMatch(inst.GetTag(0)));
     if (matches.size()) {
-      const size_t thread_id = hw.SpawnThread(matches[0]);
-      if (thread_id < hw.GetMaxThreads()) {
+      auto spawned = hw.SpawnThreadWithID(matches[0]);
+      if (spawned) {
+        const size_t thread_id = spawned.value();
         // Spawned valid thread.
         // Do whatever it is that the memory model says we should do on a function call.
         auto & forker = hw.GetCurThread().GetExecState().GetTopCallState();
@@ -464,7 +465,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // - Inst_Terminate
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Terminate(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    hw.GetCurThread().SetDead(true);
+    hw.GetCurThread().SetDead();
   }
 
   // - Inst_Nop

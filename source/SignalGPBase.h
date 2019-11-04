@@ -112,7 +112,7 @@ namespace emp { namespace signalgp {
 
       Thread(const exec_state_t & _exec_state=exec_state_t(), double _priority=1.0)
         : exec_state(_exec_state),
-          priority(_priority)
+          priority(_priority),
           run_state(ThreadState::DEAD) { ; }
 
       void Reset() {
@@ -207,7 +207,7 @@ namespace emp { namespace signalgp {
 
       // Find max pending priority, use it to bound which active threads we consider
       // killing.
-      const double max_pending_priority = pending_threads.front().GetPriority();
+      double max_pending_priority = threads[pending_threads.front()].GetPriority();
       for (size_t thread_id : pending_threads) {
         emp_assert(thread_id < threads.size());
         emp_assert(threads[thread_id].IsPending());
@@ -232,7 +232,7 @@ namespace emp { namespace signalgp {
       //           pending threads in order of arrival.
       while(active_priorities.size() && pending_threads.size()) {
         const size_t pending_id = pending_threads.front();
-        const size_t active_id = active_priorities.top().get<1>();
+        const size_t active_id = std::get<1>(active_priorities.top());
         if (threads[pending_id].GetPriority() > threads[active_id].GetPriority()) {
           active_priorities.pop();      // Remove active priority from heap.
           // Kill active thread.
@@ -474,7 +474,6 @@ namespace emp { namespace signalgp {
     ///    - Not be initialized if # active threads == max-threads && priority level
     ///      is less than lowest priority level of active threads.
     emp::vector<size_t> SpawnThreads(const tag_t & tag, size_t n, double priority=1.0) {
-      emp_assert(false);
       emp::vector<size_t> matches(GetHardware().FindModuleMatch(tag, n));
       emp::vector<size_t> thread_ids;
       for (size_t match : matches) {
@@ -619,10 +618,9 @@ namespace emp { namespace signalgp {
 
     /// Print active threads.
     void PrintActiveThreadStates(std::ostream & os=std::cout) const {
-      for (size_t i = 0; i < active_threads.size(); ++i) {
-        size_t thread_id = active_threads[i];
+      for (size_t thread_id : active_threads) {
         const thread_t & thread = threads[thread_id];
-        os << "Thread " << i << " (ID="<< thread_id << "):\n";
+        os << "Thread ID = " << thread_id << "):\n";
         PrintExecutionState(thread.GetExecState(), GetHardware(), os);
         os << "\n";
       }
@@ -636,14 +634,28 @@ namespace emp { namespace signalgp {
 
     /// Print thread usage status (active, unused, and pending thread ids).
     void PrintThreadUsage(std::ostream & os=std::cout) const {
-      // Active threads
-      os << "Active threads (" << active_threads.size() << "): [";
-      for (size_t i = 0; i < active_threads.size(); ++i) {
+      // All threads (and state)
+      os << "All allocated (" << threads.size() << "); [";
+      for (size_t i = 0; i < threads.size(); ++i) {
         if (i) os << ", ";
-        os << active_threads[i];
+        char state;
+        if (threads[i].IsDead()) state = 'D';
+        else if (threads[i].IsRunning()) state = 'A';
+        else if (threads[i].IsPending()) state = 'P';
+        else state = '?';
+        os << i << " (" << state << ":" << threads[i].GetPriority() << ")";
       }
       os << "]\n";
-      // Unused threads
+      // Active threads
+      os << "Active threads (" << active_threads.size() << "): [";
+      bool comma = false;
+      for (size_t id : active_threads) {
+        if (comma) os << ", ";
+        else comma = true;
+        os << id;
+      }
+      os << "]\n";
+      // Unused Threads
       os << "Unused threads (" << unused_threads.size() << "): [";
       for (size_t i = 0; i < unused_threads.size(); ++i) {
         if (i) os << ", ";
@@ -655,6 +667,19 @@ namespace emp { namespace signalgp {
       for (size_t i = 0; i < pending_threads.size(); ++i) {
         if (i) os << ", ";
         os << pending_threads[i];
+      }
+      os << "]\n";
+      // Execution order
+      os << "Execution order (" << thread_exec_order.size() << "): [";
+      for (size_t i = 0; i < thread_exec_order.size(); ++i) {
+        if (i) os << ", ";
+        size_t thread_id = thread_exec_order[i];
+        char state;
+        if (threads[thread_id].IsDead()) state = 'D';
+        else if (threads[thread_id].IsRunning()) state = 'A';
+        else if (threads[thread_id].IsPending()) state = 'P';
+        else state = '?';
+        os << thread_id << " (" << state << ")";
       }
       os << "]";
     }
@@ -674,15 +699,19 @@ namespace emp { namespace signalgp {
     bool ValidateThreadState() {
       emp_assert(!is_executing);
       // (1) Thread storage should not exceed max_thread_capacity
-      if (threads.size() > max_thread_capacity) return false;
+      if (threads.size() > max_thread_space) return false;
+      std::cout << "(1) OKAY" << std::endl;
       // (2) # of active threads should not exceed max_active_threads
       if (active_threads.size() > max_active_threads) return false;
+      std::cout << "(2) OKAY" << std::endl;
       // (3) No thread ID should appear more than once in the execution order.
       std::unordered_set<size_t> exec_order_set(thread_exec_order.begin(), thread_exec_order.end());
       if (exec_order_set.size() != thread_exec_order.size()) return false;
+      std::cout << "(3) OKAY" << std::endl;
       // (4) No thread ID should appear more than once in the unused threads tracker.
       std::unordered_set<size_t> unused_set(unused_threads.begin(), unused_threads.end());
       if (unused_set.size() != unused_threads.size()) return false;
+      std::cout << "(4) OKAY" << std::endl;
       // (5) No thread ID should appear more than once in the pending threads tracker.
       std::unordered_set<size_t> pending_set(pending_threads.begin(), pending_threads.end());
       if (pending_set.size() != pending_threads.size()) return false;

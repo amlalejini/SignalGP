@@ -514,7 +514,7 @@ namespace emp { namespace signalgp {
       }
       // If execution state's call stack is empty, mark thread as dead.
       if (exec_state.call_stack.empty()) {
-        thread.SetDead(true);
+        thread.SetDead();
       }
     }
 
