@@ -181,6 +181,7 @@ namespace emp { namespace signalgp {
       unused_threads.emplace_back(thread_id);
     }
 
+    // @discussion - move to public? But protect from being called if executing?
     void ActivatePendingThreads() {
       // NOTE: Assumes active threads is accurate!
       // NOTE: all pending threads + active threads should have unique ids
@@ -570,8 +571,8 @@ namespace emp { namespace signalgp {
 
         // Is this thread dead?
         if (threads[cur_thread_id].IsDead()) {
-          // If so, move on!
-          KillThread(cur_thread_id);
+          // If this thread is active, kill it.
+          if (emp::Has(active_threads, cur_thread_id)) KillThread(cur_thread_id);
           ++adjust;
           ++exec_order_id;
           continue;

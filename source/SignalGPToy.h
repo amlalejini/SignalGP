@@ -52,9 +52,16 @@ public:
     program.clear();
   }
 
+  void ResetHardware() {
+    this->BaseResetState();
+  }
+
   // No extra hardware state to reset.
   /// REQUIRED
-  void Reset() { ResetProgram(); }
+  void Reset() {
+    this->BaseResetState();
+    ResetProgram();
+  }
 
   /// REQUIRED
   emp::vector<size_t> FindModuleMatch(const tag_t & tag, size_t N) {
