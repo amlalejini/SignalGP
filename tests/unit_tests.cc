@@ -15,6 +15,7 @@
 #include "SignalGPToy.h"
 #include "MemoryModel.h"
 #include "LinearFunctionsProgram.h"
+#include "SignalGPLinearFunctionsProgram.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
@@ -274,6 +275,34 @@ TEST_CASE("Linear Functions Program") {
 
   program_t program1;
 }
+
+TEST_CASE("SignalGP - Linear Functions Version") {
+  using mem_model_t = emp::signalgp::SimpleMemoryModel;
+  using signalgp_t = emp::signalgp::LinearFunctionsProgramSignalGP<mem_model_t,
+                                                                   emp::BitSet<16>,
+                                                                   int,
+                                                                   emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>,
+                                                                   emp::signalgp::DefaultCustomComponent>;
+  using inst_lib_t = typename signalgp_t::inst_lib_t;
+  using inst_t = typename signalgp_t::inst_t;
+  using inst_prop_t = typename signalgp_t::InstProperty;
+
+  using event_lib_t = typename signalgp_t::event_lib_t;
+  using program_t = typename signalgp_t::program_t;
+  using tag_t = typename signalgp_t::tag_t;
+
+  using mem_buffer_t = typename mem_model_t::mem_buffer_t;
+
+  inst_lib_t inst_lib;
+  event_lib_t event_lib;
+
+  // todo - configure instruction set
+
+  emp::Random random(2);
+
+  signalgp_t hardware(random, &inst_lib, &event_lib);
+}
+
 /*
 TEST_CASE("SignalGP - Linear Program Version", "[general]") {
   using mem_model_t = emp::signalgp::SimpleMemoryModel;

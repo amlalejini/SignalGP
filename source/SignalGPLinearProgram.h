@@ -73,62 +73,6 @@ namespace emp { namespace signalgp {
     using fun_end_flow_t = typename flow_handler_t::fun_end_flow_t;
     using fun_open_flow_t = typename flow_handler_t::fun_open_flow_t;
 
-    /// Flow control management. Maintains a mapping from FlowTypes (above) to
-    /// a flow control structure. Additionally, provides an interface to open, break,
-    /// and close flow.
-    /// Every type of execution 'flow' has a 'FlowControl' structure that specifies
-    /// how to open, close, and break the flow.
-    // struct FlowHandler {
-    //   struct FlowControl {
-    //     fun_open_flow_t open_flow_fun;
-    //     fun_end_flow_t close_flow_fun;
-    //     fun_end_flow_t break_flow_fun;
-    //   };
-
-    //   /// Mapping from flow type to flow control structure.
-    //   // todo - could change this to an array because we know things at compile time
-    //   std::map<flow_t, FlowControl> lib = { {flow_t::BASIC, FlowControl()},
-    //                                         {flow_t::WHILE_LOOP, FlowControl()},
-    //                                         {flow_t::ROUTINE, FlowControl()},
-    //                                         {flow_t::CALL, FlowControl()} };
-
-    //   FlowControl & operator[](flow_t type) {
-    //     emp_assert(Has(lib, type), "FlowType not recognized!");
-    //     return lib[type];
-    //   }
-
-    //   const FlowControl & operator[](flow_t type) const {
-    //     emp_assert(Has(lib, type), "FlowType not recognized!");
-    //     return lib[type];
-    //   }
-
-    //   std::string FlowTypeToString(flow_t type) const {
-    //     switch (type) {
-    //       case flow_t::BASIC: return "BASIC";
-    //       case flow_t::WHILE_LOOP: return "WHILE_LOOP";
-    //       case flow_t::ROUTINE: return "ROUTINE";
-    //       case flow_t::CALL: return "CALL";
-    //       default: return "UNKNOWN";
-    //     }
-    //   }
-
-    //   void OpenFlow(this_t & hw, const flow_info_t & new_flow, exec_state_t & state) {
-    //     flow_t type = new_flow.type;
-    //     emp_assert(Has(lib, type), "FlowType not recognized!");
-    //     lib[type].open_flow_fun(hw, state, new_flow);
-    //   }
-
-    //   void CloseFlow(this_t & hw, flow_t type, exec_state_t & state) {
-    //     emp_assert(Has(lib, type), "FlowType not recognized!");
-    //     lib[type].close_flow_fun(hw, state);
-    //   }
-
-    //   void BreakFlow(this_t & hw, flow_t type, exec_state_t & state) {
-    //     emp_assert(Has(lib, type), "FlowType not recognized!");
-    //     lib[type].break_flow_fun(hw, state);
-    //   }
-    // };
-
     /// Module definition.
     struct Module {
       size_t id;      ///< Module ID. Used to call/reference module.
