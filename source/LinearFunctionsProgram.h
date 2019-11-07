@@ -72,7 +72,7 @@ namespace emp { namespace signalgp {
 
     void SetInstSequence(const sequence_t & seq) { inst_sequence = seq; }
 
-    void IsValidPosition(size_t pos) { return inst_sequence.IsValidPosition(pos); }
+    bool IsValidPosition(size_t pos) { return inst_sequence.IsValidPosition(pos); }
 
     // expose program-manipulating instructions
 

@@ -385,6 +385,8 @@ namespace emp { namespace signalgp {
       return threads[cur_thread_id];
     }
 
+    bool IsExecuting() const { return is_executing; }
+
     /// TODO - TEST
     // Warning: If you decrease max threads, you may kill actively running threads.
     // Slow operation.

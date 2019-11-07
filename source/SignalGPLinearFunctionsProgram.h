@@ -144,12 +144,133 @@ namespace emp { namespace signalgp {
     LinearFunctionsProgramSignalGP(LinearFunctionsProgramSignalGP &&) = default;
     LinearFunctionsProgramSignalGP(const LinearFunctionsProgramSignalGP &) = default;
 
-    void Reset() {}
-    void SingleExecutionStep(this_t &, thread_t &) {}
-    vector<size_t> FindModuleMatch(const tag_t &, size_t) {return vector<size_t>();}
-    void InitThread(thread_t &, size_t) {}
+    /// Full hardware reset.
+    void Reset() {
+      ResetProgram(); // this will reset program + hardware
+    }
 
-    void ResetMatchBin() {}
+    /// Reset only hardware state information (memory, threads, etc)
+    void ResetHardwareState() {
+      emp_assert(!this->IsExecuting());
+      this->BaseResetState();
+      memory_model.Reset();
+    }
+
+    /// Reset program. Requires that we reset the hardware state (if we don't,
+    /// the hardware is likely to be in an illegal state).
+    void ResetProgram() {
+      emp_assert(!this->IsExecuting());
+      ResetHardwareState();
+      program.Clear();
+    }
+
+    void ResetMatchBin() {
+      matchbin.Clear();
+      is_matchbin_cache_dirty = false;
+      for (size_t i = 0; i < program.GetSize(); ++i) {
+        matchbin.Set(i, program[i].GetTag(), i);
+      }
+    }
+
+    bool IsValidProgramPosition(size_t mp, size_t ip) const {
+      return program.IsValidPosition(mp, ip);
+    }
+
+    size_t GetNumModules() const {
+      return program.GetSize();
+    }
+
+    /// Get a reference to a random number generator used by this hardware.
+    Random & GetRandom() { return random; }
+
+    /// Get a reference to the hardware's flow handler.
+    flow_handler_t & GetFlowHandler() { return flow_handler; }
+
+    /// Set open flow handler for given flow type.
+    void SetOpenFlowFun(flow_t type, const fun_open_flow_t & fun) {
+      flow_handler[type].open_flow_fun = fun;
+    }
+
+    // Set close flow handler for a given flow type.
+    void SetCloseFlowFun(flow_t type, const fun_end_flow_t & fun) {
+      flow_handler[type].close_flow_fun = fun;
+    }
+
+    // Set break flow handler for a given flow type.
+    void SetBreakFlowFun(flow_t type, const fun_end_flow_t & fun) {
+      flow_handler[type].break_flow_fun = fun;
+    }
+
+    void SingleExecutionStep(this_t & hardware, thread_t & thread) {
+      exec_state_t & exec_state = thread.GetExecState();
+      // If there's a call state on the call stack, execute an instruction.
+      while (exec_state.call_stack.size()) {
+        // There's something on the call stack.
+        call_state_t & call_state = exec_state.call_stack.back();
+        // Is there anything on the flow stack?
+        if (call_state.IsFlow()) {
+          flow_info_t & flow_info = call_state.flow_stack.back();
+          size_t mp = flow_info.mp;
+          size_t ip = flow_info.ip;
+          emp_assert(mp < GetNumModules(), "Invalid module pointer.", mp);
+          if (program.IsValidPosition(mp, ip)) {
+            // NOTE - should we increment the IP before or after executing?
+            // Only BEFORE executing an instruction do we have any guarantees about
+            // the state of our flow info. After processing an instruction, this
+            // flow info reference could be invalid. Our call state reference could
+            // even be invalid. Thus, we must increment the IP before processing
+            // the current instruction.
+            ++flow_info.ip; // Move IP forward (maybe to an invalid location)
+            inst_lib->ProcessInst(hardware, program[mp][ip]);
+          } else { // @discussion if we wanted option to have modules be circular, we could add a condition before this else!
+            // The IP is off the edge of the module.
+            flow_handler.CloseFlow(hardware, flow_info.type, exec_state);
+            continue;
+          }
+        } else {
+          // No flow! Return.
+          ReturnCall(exec_state);
+        }
+        break; // We executed *something*, break from the loop.
+      }
+      // If the execution state's call stack is empty, mark this thread as dead.
+      if (exec_state.call_stack.empty()) {
+        thread.SetDead();
+      }
+    }
+
+    /// Initialize a thread by calling given module (function) ID on it.
+    void InitThread(thread_t & thread, size_t module_id) {
+      emp_assert(module_id < program.GetSize(), "Invalid module_id.", module_id);
+      exec_state_t & state = thread.GetExecState();
+      if (state.call_stack.size()) { state.Clear(); } // reset the thread's call stack.
+      CallModule(module_id, state);
+    }
+    // InstPropertyBLOCK_CLOSEBLOCK_DEF
+    size_t FindEndOfBlock(size_t mp, size_t ip) const {
+      emp_assert(mp < program.GetSize(), "Invalid module id: ", mp);
+      int depth = 1;
+      while (true) {
+        if (!IsValidProgramPosition(mp, ip)) break;
+        const inst_t & inst = program[mp][ip];
+        if (inst_lib->HasProperty(inst.id, InstProperty::BLOCK_DEF)) {
+          ++depth;
+        } else if (inst_lib->HasProperty(inst.id, InstProperty::BLOCK_CLOSE)) {
+          --depth;
+          if (depth == 0) break;
+        }
+        ++ip;
+      }
+      return ip;
+    }
+
+    /// Use matchbin to find the n matching modules to a given
+    emp::vector<size_t> FindModuleMatch(const tag_t & tag, size_t n=1) {
+      return emp::vector<size_t>();
+    }
+
+    void ReturnCall(exec_state_t & exec_state) { }
+    void CallModule(size_t module_id, exec_state_t & exec_state) { }
 
   };
 
