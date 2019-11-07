@@ -1,5 +1,5 @@
-#ifndef EMP_SIGNALGP_V2_LINEAR_PROGRAM_H
-#define EMP_SIGNALGP_V2_LINEAR_PROGRAM_H
+#ifndef EMP_SIGNALGP_LINEAR_PROGRAM_H
+#define EMP_SIGNALGP_LINEAR_PROGRAM_H
 
 #include <iostream>
 #include <utility>

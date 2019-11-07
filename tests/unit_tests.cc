@@ -14,6 +14,7 @@
 #include "linear_program_instructions_impls.h"
 #include "SignalGPToy.h"
 #include "MemoryModel.h"
+#include "LinearFunctionsProgram.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
@@ -266,6 +267,13 @@ TEST_CASE("Thread Management (Linear Program SignalGP)") {
   // todo
 }
 
+TEST_CASE("Linear Functions Program") {
+  using tag_t = emp::BitSet<8>;
+  using arg_t = int;
+  using program_t = emp::signalgp::LinearFunctionsProgram<tag_t, arg_t>;
+
+  program_t program1;
+}
 /*
 TEST_CASE("SignalGP - Linear Program Version", "[general]") {
   using mem_model_t = emp::signalgp::SimpleMemoryModel;
