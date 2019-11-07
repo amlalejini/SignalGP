@@ -203,7 +203,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
     } else {
       // Open flow
       hw.GetFlowHandler().OpenFlow(hw,
-                                   {LinearProgramSignalGP_impl::FlowType::BASIC,
+                                   {lsgp_utils::FlowType::BASIC,
                                     cur_mp,
                                     cur_ip,
                                     bob,
@@ -241,7 +241,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
       }
     } else {
       // Open flow
-      hw.GetFlowHandler().OpenFlow(hw,{LinearProgramSignalGP_impl::FlowType::WHILE_LOOP,
+      hw.GetFlowHandler().OpenFlow(hw,{lsgp_utils::FlowType::WHILE_LOOP,
                                               cur_mp,
                                               cur_ip,
                                               bob,
@@ -279,7 +279,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
     } else {
       --mem_state.AccessWorking(inst.args[0]);
       // Open flow
-      hw.GetFlowHandler().OpenFlow(hw,{LinearProgramSignalGP_impl::FlowType::WHILE_LOOP,
+      hw.GetFlowHandler().OpenFlow(hw,{lsgp_utils::FlowType::WHILE_LOOP,
                                               cur_mp,
                                               cur_ip,
                                               bob,
@@ -291,7 +291,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   //   - break out of nearest loop in flow stack (that isn't preceded by a routine or call)
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Break(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    using flow_type_t = LinearProgramSignalGP_impl::FlowType;
+    using flow_type_t = lsgp_utils::FlowType;
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     // break out of the nearest loop:
     //     loop = false;
@@ -336,7 +336,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   //   - close basic and while_loop flow
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Close(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    using flow_type_t = LinearProgramSignalGP_impl::FlowType;
+    using flow_type_t = lsgp_utils::FlowType;
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     const flow_type_t cur_flow_type = call_state.GetTopFlow().GetType();
     if (cur_flow_type == flow_type_t::BASIC || cur_flow_type == flow_type_t::WHILE_LOOP) {
@@ -353,7 +353,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // - Inst_Routine
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Routine(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    using flow_type_t = LinearProgramSignalGP_impl::FlowType;
+    using flow_type_t = lsgp_utils::FlowType;
     emp::vector<size_t> matches(hw.FindModuleMatch(inst.GetTag(0)));
     if (matches.size()) {
       const auto & target_module = hw.GetModule(matches[0]);
@@ -370,7 +370,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
   // - Inst_Return
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Return(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    using flow_type_t = LinearProgramSignalGP_impl::FlowType;
+    using flow_type_t = lsgp_utils::FlowType;
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     // Return from CALL or ROUTINE
     while (call_state.IsFlow()) {
