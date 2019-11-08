@@ -72,7 +72,7 @@ namespace emp { namespace signalgp {
 
     void SetInstSequence(const sequence_t & seq) { inst_sequence = seq; }
 
-    bool IsValidPosition(size_t pos) { return inst_sequence.IsValidPosition(pos); }
+    bool IsValidPosition(size_t pos) const { return inst_sequence.IsValidPosition(pos); }
 
     // expose program-manipulating instructions
 
@@ -151,7 +151,7 @@ namespace emp { namespace signalgp {
     }
 
     /// Is this a valid position?
-    bool IsValidPosition(size_t func_id, size_t inst_id) {
+    bool IsValidPosition(size_t func_id, size_t inst_id) const {
       if (func_id >= program.size()) return false;
       return program[func_id].IsValidPosition(inst_id);
     }

@@ -76,6 +76,9 @@ namespace emp { namespace signalgp {
       // On open:
       flow_handler[flow_t::BASIC].open_flow_fun =
         [](this_t & hw, exec_state_t & exec_state, const flow_info_t & new_flow) {
+          emp_assert(exec_state.call_stack.size(), "Failed to open BASIC flow. No calls on call stack.");
+          call_state_t & call_state = exec_state.call_stack.back();
+          call_state.flow_stack.emplace_back(new_flow);
         };
 
       // On close
@@ -83,48 +86,121 @@ namespace emp { namespace signalgp {
       // - Set new top of flow stack (if any)'s IP and MP to returning IP and MP.
       flow_handler[flow_t::BASIC].close_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
+          call_state_t & call_state = exec_state.call_stack.back();
+          emp_assert(call_state.IsFlow(), "Failed to close BASIC flow. No flow to close.");
+          const size_t ip = call_state.GetTopFlow().ip;
+          const size_t mp = call_state.GetTopFlow().mp;
+          call_state.flow_stack.pop_back();
+          if (call_state.IsFlow()) {
+            flow_info_t & top = call_state.GetTopFlow();
+            top.ip = ip;
+            top.mp = mp;
+          }
         };
 
       // On break!
       flow_handler[flow_t::BASIC].break_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to break BASIC flow. No calls on call stack.");
+          call_state_t & call_state = exec_state.call_stack.back();
+          emp_assert(call_state.IsFlow(), "Failed to break BASIC flow. No flow to close.");
+          const size_t flow_end = call_state.GetTopFlow().GetEnd();
+          call_state.flow_stack.pop_back();
+          if (call_state.IsFlow()) {
+            call_state.SetIP(flow_end);
+            if (hw.IsValidProgramPosition(call_state.GetMP(), call_state.GetIP())) {
+              ++call_state.IP();
+            }
+          }
         };
 
       flow_handler[flow_t::WHILE_LOOP].open_flow_fun =
         [](this_t & hw, exec_state_t & exec_state, const flow_info_t & new_flow) {
+          emp_assert(exec_state.call_stack.size(), "Failed to open WHILE_LOOP flow. No calls on call stack.");
+          call_state_t & call_state = exec_state.call_stack.back();
+          call_state.flow_stack.emplace_back(new_flow);
         };
 
       flow_handler[flow_t::WHILE_LOOP].close_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to close WHILE_LOOP flow. No calls on call stack.");
+          // Move IP to start of block
+          call_state_t & call_state = exec_state.call_stack.back();
+          const size_t loop_begin = call_state.GetTopFlow().begin;
+          const size_t mp = call_state.GetTopFlow().mp;
+          call_state.flow_stack.pop_back();
+          if (call_state.IsFlow()) {
+            call_state.SetIP(loop_begin);
+            call_state.SetMP(mp);
+          }
         };
 
       flow_handler[flow_t::WHILE_LOOP].break_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to break WHILE_LOOP flow. No calls on call stack.");
+          call_state_t & call_state = exec_state.call_stack.back();
+          emp_assert(call_state.IsFlow(), "Failed to break WHILE_LOOP flow. No flow to close.");
+          const size_t flow_end = call_state.GetTopFlow().GetEnd();
+          call_state.flow_stack.pop_back();
+          if (call_state.IsFlow()) {
+            call_state.SetIP(flow_end);
+            if (hw.IsValidProgramPosition(call_state.GetMP(), call_state.GetIP())) {
+              ++call_state.IP();
+            }
+          }
         };
 
       flow_handler[flow_t::ROUTINE].open_flow_fun =
         [](this_t & hw, exec_state_t & exec_state, const flow_info_t & new_flow) {
+          emp_assert(exec_state.call_stack.size(), "Failed to open ROUTINE flow. No calls on call stack.");
+          call_state_t & call_state = exec_state.GetTopCallState();
+          call_state.flow_stack.emplace_back(new_flow);
         };
 
       flow_handler[flow_t::ROUTINE].close_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to close ROUTINE flow. No calls on call stack.");
+          call_state_t & call_state = exec_state.call_stack.back();
+          emp_assert(call_state.IsFlow(), "Failed to break ROUTINE flow. No flow to close.");
+          // Closing a ROUTINE flow:
+          // - Pop flow from flow stack
+          // - No need to pass IP and MP down (we want to return to previous IP/MP)
+          call_state.flow_stack.pop_back();
         };
 
       // breaking from a routine is the same as closing a routine
       flow_handler[flow_t::ROUTINE].break_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
+          hw.GetFlowHandler().CloseFlow(hw, flow_t::ROUTINE, exec_state);
         };
 
       flow_handler[flow_t::CALL].open_flow_fun =
         [](this_t & hw, exec_state_t & exec_state, const flow_info_t & new_flow) {
+          emp_assert(exec_state.call_stack.size(), "Failed to open CALL flow. No calls on call stack.");
+          call_state_t & call_state = exec_state.call_stack.back();
+          call_state.flow_stack.emplace_back(new_flow);
         };
 
       flow_handler[flow_t::CALL].close_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
+          emp_assert(exec_state.call_stack.size(), "Failed to close CALL flow. No calls on call stack.");
+          call_state_t & call_state = exec_state.call_stack.back();
+          emp_assert(call_state.IsFlow(), "Failed to close CALL flow. No flow to close.");
+          // Closing a CALL flow:
+          // - Pop call flow from flow stack.
+          // - No need to pass IP and MP down (presumably, this was the bottom
+          //   of the flow stack).
+          if (call_state.IsCircular()) {
+            flow_info_t & top = call_state.GetTopFlow();
+            top.ip = top.begin;
+          } else {
+            call_state.GetFlowStack().pop_back();
+          }
         };
 
       flow_handler[flow_t::CALL].break_flow_fun =
         [](this_t & hw, exec_state_t & exec_state) {
+          hw.GetFlowHandler().CloseFlow(hw, flow_t::CALL, exec_state);
         };
     }
 
