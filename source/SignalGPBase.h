@@ -1,40 +1,3 @@
-/*******************************************************************************
- * BaseSignalGP<EXEC_STEPPER_T, CUSTOM_COMPONENT_T>
- * ..
- * EXEC_STEPPER_T - Execution Stepper
- *   - The execution stepper knows how to execute programs. What type of programs?
- *     That's entirely up to the particular implementation of the execution stepper.
- *     So long as the execution stepper provides an appropriate interface, SignalGP
- *     does not care about the particulars.
- *   - Execution stepper interface requirements:
- *     - Required types:
- *       - exec_state_t => execution state information
- *       - program_t    => what type of program does the execution stepper run?
- *       - tag_t        => what type of tag does the execution stepper use to reference modules?
- *       - ?module_t?
- *     - Required function signatures:
- *       - EXEC_STEPPER_T(const EXEC_STEPPER_T&)
- *         - Copy constructor.
- *       - program_t & GetProgram()
- *         - Returns the program currently loaded on the execution stepper.
- *       - void SetProgram(const program_t&)
- *         - Loads a new program on the execution stepper. Handles all appropriate
- *           cleanup and internal state resetting necessary when switching to running
- *           a new program.
- *       - void ResetProgram()
- *         - Clear out the old program (if any). Reset internal state as appropriate.
- *       - void ResetHardwareState()
- *         - Reset internal state of execution stepper without resetting the program.
- *       - vector<size_t> FindModuleMatch(const tag_t&, size_t N)
- *         - Return a vector (max size N) of module IDs that match with specified
- *           tag.
- *       - void InitThread(Thread &, size_t module_id)
- *         - Initialize given thread by calling the module specified by module_id.
- *       - void SingleExecutionStep(SignalGP<EXEC_STEPPER_T, CUSTOM_COMPONENT_T> &, exec_state_t&)
- *         - Advance a single execution stepper on the given execution state using
- *           the given SignalGP hardware state.
- *******************************************************************************/
-
 #ifndef EMP_SIGNALGP_BASE_H
 #define EMP_SIGNALGP_BASE_H
 
@@ -73,10 +36,7 @@ namespace emp { namespace signalgp {
   struct DefaultCustomComponent { };
 
   // todo - move function implementations outside of class
-  // todo - make signalgp hardware not awful (& safe) to make copies of
   // @discussion - template/organization structure
-  // What about program_t?
-  // TODO - rename to SignalGPBase.h
   template<typename DERIVED_T,
            typename EXEC_STATE_T,
            typename TAG_T,
@@ -88,7 +48,6 @@ namespace emp { namespace signalgp {
     // Types that base signalgp functionality needs to know about.
     using hardware_t = DERIVED_T;
     using exec_state_t = EXEC_STATE_T;
-    // using program_t = PROGRAM_T; @discussion - ??
     using tag_t = TAG_T;
     using custom_comp_t = CUSTOM_COMPONENT_T;
 
@@ -98,7 +57,6 @@ namespace emp { namespace signalgp {
     using thread_t = Thread;
 
     using fun_print_hardware_state_t = std::function<void(const hardware_t&, std::ostream &)>;
-    // using fun_print_program_t = std::function<void(const program_t&, const hardware_t&, std::ostream &)>;
     using fun_print_execution_state_t = std::function<void(const exec_state_t &, const hardware_t&, std::ostream &)>;
     using fun_print_event_t = std::function<void(const event_t &, const hardware_t&, std::ostream &)>;
 
@@ -160,7 +118,6 @@ namespace emp { namespace signalgp {
 
     // Configurable print functions. @NOTE: should these emp_assert(false)?
     fun_print_hardware_state_t fun_print_hardware_state = [](const hardware_t& hw, std::ostream & os) { return; };
-    // fun_print_program_t fun_print_program = [](const program_t& p, const hardware_t& hw, std::ostream & os) { return; };
     fun_print_execution_state_t fun_print_execution_state = [](const exec_state_t & e, const hardware_t& hw, std::ostream & os) { return; };
     fun_print_event_t fun_print_event = [](const event_t & e, const hardware_t& hw, std::ostream & os) { e.Print(os); };
 
@@ -260,14 +217,10 @@ namespace emp { namespace signalgp {
     }
 
   public:
-    BaseSignalGP(Ptr<event_lib_t> elib)
+    BaseSignalGP(Ptr<event_lib_t> elib) // @discussion - okay practice to rely on default constructors for other member variables?
       : event_lib(elib),
-        event_queue(),
         threads( (2*max_active_threads < max_thread_space) ? 2*max_active_threads : max_thread_space ),
-        thread_exec_order(),
-        active_threads(),
-        unused_threads( threads.size() ),
-        pending_threads()
+        unused_threads( threads.size() )
     {
       // Set all threads to unused.
       for (size_t i = 0; i < unused_threads.size(); ++i) {
@@ -294,7 +247,7 @@ namespace emp { namespace signalgp {
     /// Required
     virtual void SingleExecutionStep(DERIVED_T &, thread_t &) = 0;
 
-    /// Required
+    /// Required - @discussion is vector<size_t> really the return type we want here?
     virtual vector<size_t> FindModuleMatch(const tag_t &, size_t) = 0;
 
     /// Required
@@ -628,9 +581,6 @@ namespace emp { namespace signalgp {
         os << "\n";
       }
     }
-
-    /// Print loaded program.
-    // void PrintProgram(std::ostream & os=std::cout) const { fun_print_program(os); }
 
     /// Print overall state of hardware.
     void PrintHardwareState(std::ostream & os=std::cout) const { fun_print_hardware_state(GetHardware(), os); }
