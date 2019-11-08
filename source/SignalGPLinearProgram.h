@@ -423,7 +423,7 @@ namespace emp { namespace signalgp {
     /// Use the matchbin to find the n matching modules to a given tag.
     emp::vector<size_t> FindModuleMatch(const tag_t & tag, size_t n=1) {
       // Find n matches.
-      if(is_matchbin_cache_dirty){
+      if (is_matchbin_cache_dirty) {
         ResetMatchBin();
       }
       // no need to transform to values because we're using

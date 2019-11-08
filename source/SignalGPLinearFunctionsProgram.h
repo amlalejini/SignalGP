@@ -162,6 +162,7 @@ namespace emp { namespace signalgp {
       emp_assert(!this->IsExecuting());
       ResetHardwareState();
       program.Clear();
+      ResetMatchBin();
     }
 
     void ResetMatchBin() {
@@ -185,6 +186,18 @@ namespace emp { namespace signalgp {
 
     /// Get a reference to the hardware's flow handler.
     flow_handler_t & GetFlowHandler() { return flow_handler; }
+
+    program_t & GetProgram() { return program; }
+    const program_t & GetProgram() const { return program; }
+
+    /// Get a reference to the hardware's memory model.
+    memory_model_t & GetMemoryModel() { return memory_model; }
+
+    /// Set program for this hardware object.
+    void SetProgram(const program_t & p) {
+      program = p;
+      ResetMatchBin();
+    }
 
     /// Set open flow handler for given flow type.
     void SetOpenFlowFun(flow_t type, const fun_open_flow_t & fun) {
@@ -246,6 +259,7 @@ namespace emp { namespace signalgp {
       if (state.call_stack.size()) { state.Clear(); } // reset the thread's call stack.
       CallModule(module_id, state);
     }
+
     // InstPropertyBLOCK_CLOSEBLOCK_DEF
     size_t FindEndOfBlock(size_t mp, size_t ip) const {
       emp_assert(mp < program.GetSize(), "Invalid module id: ", mp);
@@ -266,11 +280,54 @@ namespace emp { namespace signalgp {
 
     /// Use matchbin to find the n matching modules to a given
     emp::vector<size_t> FindModuleMatch(const tag_t & tag, size_t n=1) {
-      return emp::vector<size_t>();
+      // find n matches
+      if (is_matchbin_cache_dirty) {
+        ResetMatchBin();
+      }
+      return matchbin.Match(tag, n);
     }
 
-    void ReturnCall(exec_state_t & exec_state) { }
-    void CallModule(size_t module_id, exec_state_t & exec_state) { }
+    void CallModule(const tag_t & tag, exec_state_t & exec_state, bool circular=false) {
+      // Are we at max depth already?
+      if (exec_state.call_stack.size() >= max_call_depth) return;
+      // Find the best matching module!
+      emp::vector<size_t> matches(FindModuleMatch(tag));
+      if (matches.size()) {
+        CallModule(matches[0], exec_state, circular);
+      }
+    }
+
+    void CallModule(size_t module_id, exec_state_t & exec_state, bool circular=false) {
+      emp_assert(module_id < program.GetSize());
+      // Are we at max depth already?
+      if (exec_state.call_stack.size() >= max_call_depth) return;
+      if (program[module_id].GetSize() < 1) return;
+      // Push new state to call stack.
+      exec_state.call_stack.emplace_back(memory_model.CreateMemoryState(), circular);
+      // note - flow info is different?
+      // todo - double check that this FlowInfo is fine
+      flow_handler.OpenFlow(*this, {flow_t::CALL, module_id, 0, 0, program[module_id].GetSize()}, exec_state);
+      if (exec_state.call_stack.size() > 1) {
+        call_state_t & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
+        call_state_t & new_state = exec_state.call_stack.back();
+        memory_model.OnModuleCall(caller_state.GetMemory(), new_state.GetMemory());
+      }
+    }
+
+    void ReturnCall(exec_state_t & exec_state) {
+      if (exec_state.call_stack.empty()) return; // Nothing to return from.
+      // Get the current call state.
+      call_state_t & returning_state = exec_state.call_stack.back();
+      // Is there anything to return to?
+      if (exec_state.call_stack.size() > 1) {
+        // Yes! Copy the returning state's output memory into the caller state's local memory.
+        call_state_t & caller_state = exec_state.call_stack[exec_state.call_stack.size() - 2];
+        // @TODO - setup configurable memory return! (lambda)
+        memory_model.OnModuleReturn(returning_state.GetMemory(), caller_state.GetMemory());
+      }
+      // Pop the returning state from call stack.
+      exec_state.call_stack.pop_back();
+    }
 
   };
 

@@ -57,7 +57,7 @@ namespace emp { namespace signalgp {
       return std::tie(inst_sequence, tags) < std::tie(other.inst_sequence, other.tags);
     }
 
-    size_t GetSize() const { return inst_sequence.size(); }
+    size_t GetSize() const { return inst_sequence.GetSize(); }
 
     tag_t & GetTag(size_t id=0) {  emp_assert(tags.size()); return tags[id]; }
     const tag_t & GetTag(size_t id=0) const {  emp_assert(tags.size()); return tags[id]; }
