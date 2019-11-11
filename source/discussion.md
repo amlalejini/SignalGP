@@ -1,6 +1,19 @@
 # Code Review Notes
 
-## Questions/Discussion Points
+## NOtes
+
+- Directory structure
+  - Hardware
+    - SignalGP
+      - SignalGPBase
+      - EventLibrary
+      - utils
+        - IntructionLibrary
+        - LinearProgram
+        - MemoryModel
+      - impls
+        - SignalGPToy
+        ...
 
 ## Discussion Points
 
