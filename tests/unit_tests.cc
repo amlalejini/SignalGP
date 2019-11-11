@@ -6,16 +6,16 @@
 
 #include "tools/BitSet.h"
 
-#include "InstructionLibrary.h"
 #include "EventLibrary.h"
 
 #include "SignalGPBase.h"
-#include "SignalGPLinearProgram.h"
-#include "linear_program_instructions_impls.h"
-#include "SignalGPToy.h"
-#include "MemoryModel.h"
-#include "LinearFunctionsProgram.h"
-#include "SignalGPLinearFunctionsProgram.h"
+#include "impls/SignalGPToy.h"
+#include "impls/SignalGPLinearProgram.h"
+#include "impls/SignalGPLinearFunctionsProgram.h"
+#include "utils/InstructionLibrary.h"
+#include "utils/linear_program_instructions_impls.h"
+#include "utils/MemoryModel.h"
+#include "utils/LinearFunctionsProgram.h"
 
 TEST_CASE( "Hello World", "[general]" ) {
   std::cout << "Hello tests!" << std::endl;
@@ -303,7 +303,7 @@ TEST_CASE("SignalGP - Linear Functions Version") {
   signalgp_t hardware(random, &inst_lib, &event_lib);
 }
 
-/*
+
 TEST_CASE("SignalGP - Linear Program Version", "[general]") {
   using mem_model_t = emp::signalgp::SimpleMemoryModel;
   using signalgp_t = emp::signalgp::LinearProgramSignalGP<mem_model_t,
@@ -2150,4 +2150,3 @@ TEST_CASE("SignalGP - Linear Program Version", "[general]") {
   // }
 
 }
-*/

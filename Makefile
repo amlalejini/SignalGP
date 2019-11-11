@@ -3,7 +3,7 @@ PROJECT := signalgp-reimplementation-playground
 EMP_DIR := ../Empirical/source
 
 # Flags to use regardless of compiler
-CFLAGS_all := -Wall -Wno-unused-function -pedantic -std=c++17 -I$(EMP_DIR)/ -I./source/
+CFLAGS_all := -Wall -Wno-unused-function -pedantic -std=c++17 -I$(EMP_DIR)/ -I./source/hardware/SignalGP/
 
 # Native compiler information
 CXX_nat := g++-9
@@ -53,8 +53,8 @@ test: clean
 test: tests/unit_tests.cc
 	$(CXX_nat) $(CFLAGS_nat_debug) -I./source/ --coverage tests/unit_tests.cc -o test_debug.out
 	./test_debug.out
-	$(CXX_nat) $(CFLAGS_nat) tests/unit_tests.cc -I./source/ -o test_optimized.out
-	./test_optimized.out
+	# $(CXX_nat) $(CFLAGS_nat) tests/unit_tests.cc -I./source/ -o test_optimized.out
+	# ./test_optimized.out
 
 bitmarking-debug: tests/bitmarking.cc
 	$(CXX_nat) $(CFLAGS_nat_debug) tests/bitmarking.cc -I./source/ -o bitmarking-debug.out
