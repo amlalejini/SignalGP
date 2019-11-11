@@ -12,11 +12,11 @@
 #include "tools/matchbin_utils.h"
 
 #include "EventLibrary.h"
-#include "InstructionLibrary.h"
+#include "utils/InstructionLibrary.h"
 
 #include "SignalGPBase.h"
-#include "LinearProgram.h"
-#include "linear_signalgp_utils.h"
+#include "utils/linear_signalgp_utils.h"
+#include "utils/LinearProgram.h"
 
 namespace emp { namespace signalgp {
 

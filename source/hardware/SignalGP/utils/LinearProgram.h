@@ -11,7 +11,7 @@
 #include "tools/matchbin_utils.h"
 
 #include "EventLibrary.h"
-#include "InstructionLibrary.h"
+#include "utils/InstructionLibrary.h"
 
 namespace emp { namespace signalgp {
 

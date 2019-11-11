@@ -13,7 +13,6 @@
 #include "tools/Random.h"
 
 #include "EventLibrary.h"
-#include "InstructionLibrary.h"
 
 // TODO - allow a hardcap on TOTAL THREAD SPACE (pending + active) to be set!
 

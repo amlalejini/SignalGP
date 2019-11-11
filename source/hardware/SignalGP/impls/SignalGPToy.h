@@ -47,7 +47,7 @@ public:
     program = p;
   }
 
-  /// REQUIRED
+  ///
   void ResetProgram() {
     program.clear();
   }
