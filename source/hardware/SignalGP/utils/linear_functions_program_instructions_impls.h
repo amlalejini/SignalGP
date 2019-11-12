@@ -17,28 +17,14 @@
 namespace emp { namespace signalgp { namespace lfp_inst_impl {
 
   // These instructions work with:
-  // - LinearFunctionsProgram
+  // - LinearFunctionsProgram<Tags=BitSet, Args=int>
   // - SimpleMemoryModel
-
-  // NUMERIC ARG INSTRUCTIONS
 
   // Instructions to implement:
   // - Inst_If
   // - Inst_While
   // - Inst_Countdown
-  // - Inst_Break
-  // - Inst_Call
-  // - Inst_Return
-  // - Inst_SetMem
-  // - Inst_CopyMem
-  // - Inst_SwapMem
-  // - Inst_Input
-  // - Inst_Output
-  // - Inst_Commit
-  // - Inst_Pull
-  // - Inst_Fork
-  // - Inst_Terminate
-  // - Inst_Nop
+  // - Inst_Routine
 
   // - Inst_If TODO - TEST EDGE CASES!
   template<typename HARDWARE_T, typename INSTRUCTION_T>
@@ -104,7 +90,6 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
     }
   }
 
-
   // - Inst_Countdown
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Countdown(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
@@ -136,7 +121,6 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
                                        hw.GetCurThread().GetExecState());
     }
   }
-
 
   // - Inst_Routine
   template<typename HARDWARE_T, typename INSTRUCTION_T>

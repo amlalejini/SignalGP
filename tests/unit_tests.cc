@@ -2059,7 +2059,6 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     ////////////////////////////////////////////////////////////////////////////
   }
 
-  /*
   SECTION ("Inst_Call") {
     std::cout << "-- Testing Inst_Call --" << std::endl;
     ////////////////////////////////////////////////////////////////////////////
@@ -2070,12 +2069,13 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     tag_t zeros, ones;
     ones.SetUInt(0, (uint32_t)-1);
     // SetUInt
-    program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {zeros});
+    // program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {zeros});
+    program.PushFunction(zeros);
     program.PushInst(inst_lib,   "SetMem", {2, 2});
     program.PushInst(inst_lib,   "SetMem", {3, 3});
     program.PushInst(inst_lib,   "Call", {0, 0, 0}, {ones});
-
-    program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {ones});
+    // program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {ones});
+    program.PushFunction(ones);
     program.PushInst(inst_lib,   "InputToWorking", {2, 1, 0});
     program.PushInst(inst_lib,   "InputToWorking", {3, 2, 0});
     program.PushInst(inst_lib,   "Inc", {1, 0, 0});
@@ -2100,7 +2100,6 @@ TEST_CASE("SignalGP - Linear Functions Program") {
         == mem_buffer_t({{4, 3.0}, {1, 1.0}, {0, 0.0}, {5, 4.0}, {2, 2.0}, {3, 3.0}}));
     ////////////////////////////////////////////////////////////////////////////
   }
-  */
 
   // SECTION ("Inst_Routine") {
 
