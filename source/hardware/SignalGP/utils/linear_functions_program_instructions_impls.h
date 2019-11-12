@@ -157,66 +157,6 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
     }
   }
 
-  /*
-
-  // - Inst_Input
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_InputToWorking(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
-    mem_state.SetWorking(inst.GetArg(1), mem_state.AccessInput(inst.GetArg(0)));
-  }
-
-  // - Inst_Output
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_WorkingToOutput(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
-    mem_state.SetOutput(inst.GetArg(1), mem_state.AccessWorking(inst.GetArg(0)));
-  }
-
-  // - Inst_Commit (push value from working to global memory)
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_WorkingToGlobal(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
-    auto & mem_model = hw.GetMemoryModel();
-    mem_model.SetGlobal(inst.GetArg(1), mem_state.AccessWorking(inst.GetArg(0)));
-  }
-
-  // - Inst_Pull (pull value from global to working memory)
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_GlobalToWorking(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
-    auto & mem_model = hw.GetMemoryModel();
-    mem_state.SetWorking(inst.GetArg(1), mem_model.AccessGlobal(inst.GetArg(0)));
-  }
-
-  // - Inst_Fork
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_Fork(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    const emp::vector<size_t> matches(hw.FindModuleMatch(inst.GetTag(0)));
-    if (matches.size()) {
-      auto spawned = hw.SpawnThreadWithID(matches[0]);
-      if (spawned) {
-        const size_t thread_id = spawned.value();
-        // Spawned valid thread.
-        // Do whatever it is that the memory model says we should do on a function call.
-        auto & forker = hw.GetCurThread().GetExecState().GetTopCallState();
-        auto & forkee = hw.GetThread(thread_id).GetExecState().GetTopCallState();
-        hw.GetMemoryModel().OnModuleCall(forker.GetMemory(), forkee.GetMemory());
-      }
-    }
-  }
-
-  // - Inst_Terminate
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_Terminate(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    hw.GetCurThread().SetDead();
-  }
-
-  */
 }}}
 
 #endif
