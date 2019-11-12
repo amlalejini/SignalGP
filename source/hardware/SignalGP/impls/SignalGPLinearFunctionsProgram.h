@@ -11,15 +11,15 @@
 #include "tools/MatchBin.h"
 #include "tools/matchbin_utils.h"
 
-#include "EventLibrary.h"
-#include "utils/InstructionLibrary.h"
+#include "../EventLibrary.h"
+#include "../utils/InstructionLibrary.h"
 
-#include "SignalGPBase.h"
-#include "utils/linear_signalgp_utils.h"
-#include "utils/LinearFunctionsProgram.h"
+#include "../SignalGPBase.h"
+#include "../utils/linear_signalgp_utils.h"
+#include "../utils/LinearFunctionsProgram.h"
 
 namespace emp { namespace signalgp {
-
+  // @discussion: std::ratio for thresh is unintuitive w/out some handholding
   template<typename MEMORY_MODEL_T,
            typename TAG_T=emp::BitSet<16>,
            typename INST_ARGUMENT_T=int,

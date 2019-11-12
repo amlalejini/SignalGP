@@ -10,8 +10,8 @@
 #include "tools/MatchBin.h"
 #include "tools/matchbin_utils.h"
 
-#include "EventLibrary.h"
-#include "utils/InstructionLibrary.h"
+#include "../EventLibrary.h"
+#include "InstructionLibrary.h"
 
 namespace emp { namespace signalgp {
 

@@ -5,7 +5,7 @@
 
 #include "base/vector.h"
 
-#include "SignalGPBase.h"
+#include "../SignalGPBase.h"
 
 namespace toy_signalgp_impl {
   struct ExecState {

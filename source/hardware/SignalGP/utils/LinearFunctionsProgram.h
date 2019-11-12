@@ -11,9 +11,9 @@
 #include "tools/MatchBin.h"
 #include "tools/matchbin_utils.h"
 
-#include "EventLibrary.h"
-#include "utils/InstructionLibrary.h"
-#include "utils/LinearProgram.h"
+#include "../EventLibrary.h"
+#include "InstructionLibrary.h"
+#include "LinearProgram.h"
 
 namespace emp { namespace signalgp {
 
