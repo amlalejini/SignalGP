@@ -316,20 +316,20 @@ TEST_CASE("SignalGP - Linear Functions Program") {
   inst_lib.AddInst("SetMem", emp::signalgp::inst_impl::Inst_SetMem<signalgp_t, inst_t>, "");
   inst_lib.AddInst("Close", emp::signalgp::inst_impl::Inst_Close<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_CLOSE});
   inst_lib.AddInst("If", emp::signalgp::lfp_inst_impl::Inst_If<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
-//   inst_lib.AddInst("While", emp::signalgp::inst_impl::Inst_While<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
-//   inst_lib.AddInst("Countdown", emp::signalgp::inst_impl::Inst_Countdown<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
-//   inst_lib.AddInst("Break", emp::signalgp::inst_impl::Inst_Break<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("Call", emp::signalgp::inst_impl::Inst_Call<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("Routine", emp::signalgp::inst_impl::Inst_Routine<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("Return", emp::signalgp::inst_impl::Inst_Return<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("CopyMem", emp::signalgp::inst_impl::Inst_CopyMem<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("SwapMem", emp::signalgp::inst_impl::Inst_SwapMem<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("InputToWorking", emp::signalgp::inst_impl::Inst_InputToWorking<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("WorkingToOutput", emp::signalgp::inst_impl::Inst_WorkingToOutput<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("WorkingToGlobal", emp::signalgp::inst_impl::Inst_WorkingToGlobal<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("GlobalToWorking", emp::signalgp::inst_impl::Inst_GlobalToWorking<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("Fork", emp::signalgp::inst_impl::Inst_Fork<signalgp_t, inst_t>, "");
-//   inst_lib.AddInst("Terminate", emp::signalgp::inst_impl::Inst_Terminate<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("While", emp::signalgp::inst_impl::Inst_While<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
+  // inst_lib.AddInst("Countdown", emp::signalgp::inst_impl::Inst_Countdown<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
+  // inst_lib.AddInst("Break", emp::signalgp::inst_impl::Inst_Break<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("Call", emp::signalgp::inst_impl::Inst_Call<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("Routine", emp::signalgp::inst_impl::Inst_Routine<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("Return", emp::signalgp::inst_impl::Inst_Return<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("CopyMem", emp::signalgp::inst_impl::Inst_CopyMem<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("SwapMem", emp::signalgp::inst_impl::Inst_SwapMem<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("InputToWorking", emp::signalgp::inst_impl::Inst_InputToWorking<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("WorkingToOutput", emp::signalgp::inst_impl::Inst_WorkingToOutput<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("WorkingToGlobal", emp::signalgp::inst_impl::Inst_WorkingToGlobal<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("GlobalToWorking", emp::signalgp::inst_impl::Inst_GlobalToWorking<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("Fork", emp::signalgp::inst_impl::Inst_Fork<signalgp_t, inst_t>, "");
+  // inst_lib.AddInst("Terminate", emp::signalgp::inst_impl::Inst_Terminate<signalgp_t, inst_t>, "");
 
   emp::Random random(2);
   signalgp_t hardware(random, &inst_lib, &event_lib);
@@ -1144,167 +1144,13 @@ TEST_CASE("SignalGP - Linear Functions Program") {
 
     ////////////////////////////////////////////////////////////////////////////
     // ____ , If(true), ____, ____
-    // program.Clear();
-    // hardware.Reset(); // Reset program & hardware.
-    // // Build program to test inc instruction.
-    // program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    // program.PushInst(inst_lib, "If",  {1, 0, 0});
-    // program.PushInst(inst_lib, "Inc", {2, 0, 0});
-    // program.PushInst(inst_lib, "Nop", {0, 0, 0});
-    // // Load program on hardware.
-    // hardware.SetProgram(program);
-    // // Spawn a thread to run the program.
-    // spawned = hardware.SpawnThreadWithID(0);
-    // emp_assert(spawned);
-    // thread_id = spawned.value();
-    // emp_assert(hardware.GetPendingThreadIDs().size() == 1);
-    // hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-    //         .GetMemory().SetWorking(0, 0);
-    // hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-    //         .GetMemory().SetWorking(1, 1);
-
-    // hardware.SingleProcess();
-    // hardware.SingleProcess();
-    // hardware.SingleProcess();
-    // hardware.SingleProcess();
-    // REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
-    //         == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 1.0}, {3, 1.0}}));
-    // hardware.SingleProcess(); // IP off edge of program
-    // REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
-    ////////////////////////////////////////////////////////////////////////////
-
-    ////////////////////////////////////////////////////////////////////////////
-    // ____ , ____ , ____, If(true)
-    // program.Clear();
-    // hardware.Reset(); // Reset program & hardware.
-    // // Build program to test inc instruction.
-    // program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    // program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    // program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    // program.PushInst(inst_lib, "If",  {3, 0, 0});
-    // // Load program on hardware.
-    // hardware.SetProgram(program);
-    // // Spawn a thread to run the program.
-    // spawned = hardware.SpawnThreadWithID(0);
-    // emp_assert(spawned);
-    // thread_id = spawned.value();
-    // emp_assert(hardware.GetPendingThreadIDs().size() == 1);
-    // hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-    //         .GetMemory().SetWorking(0, 0);
-    // hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-    //         .GetMemory().SetWorking(1, 1);
-
-    // hardware.SingleProcess();
-    // hardware.SingleProcess();
-    // hardware.SingleProcess();
-    // hardware.SingleProcess();
-    // REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
-    //         == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 3.0}}));
-    // hardware.SingleProcess(); // IP off edge of program
-    // REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
-    ////////////////////////////////////////////////////////////////////////////
-
-    ////////////////////////////////////////////////////////////////////////////
-    // if(false) , ____ , ____, ____
-    // program.Clear();
-    // hardware.Reset(); // Reset program & hardware.
-    // // Build program to test inc instruction.
-    // program.PushInst(inst_lib, "If",  {0, 0, 0});
-    // program.PushInst(inst_lib, "Inc", {2, 0, 0});
-    // program.PushInst(inst_lib, "Nop", {0, 0, 0});
-    // program.PushInst(inst_lib, "Nop", {0, 0, 0});
-    // // Load program on hardware.
-    // hardware.SetProgram(program);
-    // // Spawn a thread to run the program.
-    // spawned = hardware.SpawnThreadWithID(0);
-    // emp_assert(spawned);
-    // thread_id = spawned.value();
-    // emp_assert(hardware.GetPendingThreadIDs().size() == 1);
-    // hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-    //         .GetMemory().SetWorking(0, 0);
-    // hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-    //         .GetMemory().SetWorking(1, 1);
-
-    // hardware.SingleProcess();
-    // REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
-    //         == mem_buffer_t({{0, 0.0}, {1, 1.0}}));
-    // hardware.SingleProcess(); // IP off edge of program
-    // REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
-    ////////////////////////////////////////////////////////////////////////////
-
-    ////////////////////////////////////////////////////////////////////////////
-    // ____ , if(false) , ____, ____
-    // program.Clear();
-    // hardware.Reset(); // Reset program & hardware.
-    // // Build program to test inc instruction.
-    // program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    // program.PushInst(inst_lib, "If",  {0, 0, 0});
-    // program.PushInst(inst_lib, "Inc", {2, 0, 0});
-    // program.PushInst(inst_lib, "Nop", {0, 0, 0});
-    // // Load program on hardware.
-    // hardware.SetProgram(program);
-    // // Spawn a thread to run the program.
-    // spawned = hardware.SpawnThreadWithID(0);
-    // emp_assert(spawned);
-    // thread_id = spawned.value();
-    // emp_assert(hardware.GetPendingThreadIDs().size() == 1);
-    // hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-    //         .GetMemory().SetWorking(0, 0);
-    // hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-    //         .GetMemory().SetWorking(1, 1);
-
-    // hardware.SingleProcess();
-    // hardware.SingleProcess();
-    // REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
-    //         == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}}));
-    // hardware.SingleProcess(); // IP off edge of program
-    // REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
-    ////////////////////////////////////////////////////////////////////////////
-
-    ////////////////////////////////////////////////////////////////////////////
-    // ____ , ____ , ____, If(false)
-    // program.Clear();
-    // hardware.Reset(); // Reset program & hardware.
-    // // Build program to test inc instruction.
-    // program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    // program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    // program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    // program.PushInst(inst_lib, "If",  {0, 0, 0});
-    // // Load program on hardware.
-    // hardware.SetProgram(program);
-    // // Spawn a thread to run the program.
-    // spawned = hardware.SpawnThreadWithID(0);
-    // emp_assert(spawned);
-    // thread_id = spawned.value();
-    // emp_assert(hardware.GetPendingThreadIDs().size() == 1);
-    // hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-    //         .GetMemory().SetWorking(0, 0);
-    // hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-    //         .GetMemory().SetWorking(1, 1);
-
-    // hardware.SingleProcess();
-    // hardware.SingleProcess();
-    // hardware.SingleProcess();
-    // hardware.SingleProcess();
-    // REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
-    //         == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 3.0}}));
-    // hardware.SingleProcess(); // IP off edge of program
-    // REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
-    ////////////////////////////////////////////////////////////////////////////
-
-    /*
-    ////////////////////////////////////////////////////////////////////////////
-    // ____ , ____ , DEF, _____, if(true) , _____
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     // Build program to test inc instruction.
-    program.PushInst(inst_lib, "Inc", {5, 0, 0});
-    program.PushInst(inst_lib, "Nop", {5, 0, 0});
-    program.PushInst(inst_lib, "Inc", {5, 0, 0});
-    program.PushInst(inst_lib, "ModuleDef", {0, 0, 0}, {tag_t()});
     program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    program.PushInst(inst_lib, "If",  {3, 0, 0});
-    program.PushInst(inst_lib, "Inc", {4, 0, 0});
+    program.PushInst(inst_lib, "If",  {1, 0, 0});
+    program.PushInst(inst_lib, "Inc", {2, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
@@ -1316,7 +1162,157 @@ TEST_CASE("SignalGP - Linear Functions Program") {
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 1.0}, {3, 1.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
 
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , ____ , ____, If(true)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "If",  {3, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 3.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // if(false) , ____ , ____, ____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "If",  {0, 0, 0});
+    program.PushInst(inst_lib, "Inc", {2, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , if(false) , ____, ____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "If",  {0, 0, 0});
+    program.PushInst(inst_lib, "Inc", {2, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , ____ , ____, If(false)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "If",  {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 3.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , ____ , DEF, _____, if(true) , _____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "If",  {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {4, 0, 0});
+    program.PushInst(inst_lib, "Inc", {5, 0, 0});
+    program.PushInst(inst_lib, "Nop", {5, 0, 0});
+    program.PushInst(inst_lib, "Inc", {5, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
     hardware.SingleProcess();
     hardware.SingleProcess();
     hardware.SingleProcess();
@@ -1334,13 +1330,17 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     // Build program to test inc instruction.
-    program.PushInst(inst_lib, "Inc", {5, 0, 0});
-    program.PushInst(inst_lib, "Close", {5, 0, 0});
-    program.PushInst(inst_lib, "Inc", {5, 0, 0});
-    program.PushInst(inst_lib, "ModuleDef", {0, 0, 0}, {tag_t()});
+    program.PushFunction(tag_t());
     program.PushInst(inst_lib, "Inc", {3, 0, 0});
     program.PushInst(inst_lib, "If",  {3, 0, 0});
     program.PushInst(inst_lib, "Inc", {4, 0, 0});
+    program.PushInst(inst_lib, "Inc", {5, 0, 0});
+    program.PushInst(inst_lib, "Close", {5, 0, 0});
+    program.PushInst(inst_lib, "Inc", {5, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
@@ -1352,7 +1352,6 @@ TEST_CASE("SignalGP - Linear Functions Program") {
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(1, 1);
-
     hardware.SingleProcess();
     hardware.SingleProcess();
     hardware.SingleProcess();
@@ -1370,12 +1369,16 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     // Build program to test inc instruction.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "If",  {3, 0, 0});
     program.PushInst(inst_lib, "Inc", {5, 0, 0});
     program.PushInst(inst_lib, "Close", {5, 0, 0});
     program.PushInst(inst_lib, "Inc", {5, 0, 0});
-    program.PushInst(inst_lib, "ModuleDef", {0, 0, 0}, {tag_t()});
-    program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    program.PushInst(inst_lib, "If",  {3, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
@@ -1387,7 +1390,6 @@ TEST_CASE("SignalGP - Linear Functions Program") {
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(1, 1);
-
     hardware.SingleProcess();
     hardware.SingleProcess();
     hardware.SingleProcess();
@@ -1404,13 +1406,17 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     // Build program to test inc instruction.
-    program.PushInst(inst_lib, "Inc", {5, 0, 0});
-    program.PushInst(inst_lib, "Close", {5, 0, 0});
-    program.PushInst(inst_lib, "Inc", {5, 0, 0});
-    program.PushInst(inst_lib, "ModuleDef", {0, 0, 0}, {tag_t()});
+    program.PushFunction(tag_t());
     program.PushInst(inst_lib, "Inc", {3, 0, 0});
     program.PushInst(inst_lib, "If",  {0, 0, 0});
     program.PushInst(inst_lib, "Inc", {4, 0, 0});
+    program.PushInst(inst_lib, "Inc", {5, 0, 0});
+    program.PushInst(inst_lib, "Close", {5, 0, 0});
+    program.PushInst(inst_lib, "Inc", {5, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
@@ -1422,7 +1428,6 @@ TEST_CASE("SignalGP - Linear Functions Program") {
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(1, 1);
-
     hardware.SingleProcess();
     hardware.SingleProcess();
     hardware.SingleProcess();
@@ -1437,12 +1442,16 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     // Build program to test inc instruction.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "If",  {0, 0, 0});
     program.PushInst(inst_lib, "Inc", {5, 0, 0});
     program.PushInst(inst_lib, "Close", {5, 0, 0});
     program.PushInst(inst_lib, "Inc", {5, 0, 0});
-    program.PushInst(inst_lib, "ModuleDef", {0, 0, 0}, {tag_t()});
-    program.PushInst(inst_lib, "Inc", {3, 0, 0});
-    program.PushInst(inst_lib, "If",  {0, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
+    program.PushInst(inst_lib, "Nop", {0, 0, 0});
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
@@ -1454,7 +1463,6 @@ TEST_CASE("SignalGP - Linear Functions Program") {
             .GetMemory().SetWorking(0, 0);
     hardware.GetThread(thread_id).GetExecState().GetTopCallState()
             .GetMemory().SetWorking(1, 1);
-
     hardware.SingleProcess();
     hardware.SingleProcess();
     hardware.SingleProcess();
@@ -1463,9 +1471,7 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     hardware.SingleProcess(); // IP off edge of program
     REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
     ////////////////////////////////////////////////////////////////////////////
-    */
   }
-
 }
 
 
