@@ -104,26 +104,20 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
     }
   }
 
-  /*
+
   // - Inst_Countdown
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Countdown(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
-    const size_t prog_len = hw.GetProgram().GetSize();
     size_t cur_ip = call_state.GetIP();
     const size_t cur_mp = call_state.GetMP();
-    const auto & module = hw.GetModule(cur_mp);
-    const size_t module_begin = module.GetBegin();
-    const size_t module_end = module.GetEnd();
-    // Beginning of block (if instruction).
-    const size_t bob = (cur_ip == 0) ? prog_len - 1 : cur_ip - 1;
-    // Find end of flow. ==> PROBLEM: what if 'If' is last instruction
-    cur_ip = (cur_ip == prog_len
-              && module_begin > module_end
-              && module.InModule(0)) ? 0 : cur_ip;
+    emp_assert(cur_ip > 0);
+    // CurIP is the next instruction (not the one currently executing)
+    // Because IP gets incremented before execution, cur_ip should never be 0.
+    const size_t bob = cur_ip - 1;
     const size_t eob = hw.FindEndOfBlock(cur_mp, cur_ip);
-    const bool skip = mem_state.AccessWorking(inst.GetArg(0)) == 0.0;
+    const bool skip = !((bool)mem_state.AccessWorking(inst.GetArg(0)));
     if (skip) {
       // Skip to EOB
       call_state.SetIP(eob);
@@ -135,58 +129,15 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
       --mem_state.AccessWorking(inst.args[0]);
       // Open flow
       hw.GetFlowHandler().OpenFlow(hw,{lsgp_utils::FlowType::WHILE_LOOP,
-                                              cur_mp,
-                                              cur_ip,
-                                              bob,
-                                              eob},
-                                              hw.GetCurThread().GetExecState());
-    }
-  }
-  // - Inst_Break
-  //   - break out of nearest loop in flow stack (that isn't preceded by a routine or call)
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_Break(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    using flow_type_t = lsgp_utils::FlowType;
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    // break out of the nearest loop:
-    //     loop = false;
-    // (1) While (true) {
-    //       if (basic) continue; ++i
-    //       elif (loop) loop = true; break;
-    //       else break;
-    //     }
-    bool found_loop = false;
-    int flow_pos = call_state.flow_stack.size() - 1;
-    while (flow_pos >= 0) {
-      auto & flow = call_state.flow_stack[flow_pos];
-      if (flow.GetType() == flow_type_t::BASIC) {
-        --flow_pos;
-        continue;
-      } else if (flow.GetType() == flow_type_t::WHILE_LOOP) {
-        found_loop = true;
-        break;
-      } else {
-        break;
-      }
-    }
-    // (2) While (loop) {
-    //       if (basic) pop_back()
-    //       if (loop) {
-    //         BreakFlow(loop, exec_state);
-    //         break;
-    //       }
-    //     }
-    while (found_loop) {
-      if (call_state.GetTopFlow().GetType() == flow_type_t::BASIC) {
-        call_state.flow_stack.pop_back(); // todo - CloseFlow?
-      } else {
-        emp_assert(call_state.GetTopFlow().GetType() == flow_type_t::WHILE_LOOP);
-        hw.GetFlowHandler().BreakFlow(hw, flow_type_t::WHILE_LOOP, hw.GetCurThread().GetExecState());
-        break;
-      }
+                                       cur_mp,
+                                       cur_ip,
+                                       bob,
+                                       eob},
+                                       hw.GetCurThread().GetExecState());
     }
   }
 
+  /*
   // - Inst_Call
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Call(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
