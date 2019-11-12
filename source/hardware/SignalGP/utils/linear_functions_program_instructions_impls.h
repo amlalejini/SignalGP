@@ -72,26 +72,20 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
                                    hw.GetCurThread().GetExecState());
     }
   }
-  /*
+
   // - Inst_While
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_While(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
-    const size_t prog_len = hw.GetProgram().GetSize();
     size_t cur_ip = call_state.GetIP();
     const size_t cur_mp = call_state.GetMP();
-    const auto & module = hw.GetModule(cur_mp);
-    const size_t module_begin = module.GetBegin();
-    const size_t module_end = module.GetEnd();
-    // Beginning of block (if instruction).
-    const size_t bob = (cur_ip == 0) ? prog_len - 1 : cur_ip - 1;
-    // Find end of flow. ==> PROBLEM: what if 'If' is last instruction
-    cur_ip = (cur_ip == prog_len
-              && module_begin > module_end
-              && module.InModule(0)) ? 0 : cur_ip;
+    emp_assert(cur_ip > 0);
+    // CurIP is the next instruction (not the one currently executing)
+    // Because IP gets incremented before execution, cur_ip should never be 0.
+    const size_t bob = cur_ip - 1;
     const size_t eob = hw.FindEndOfBlock(cur_mp, cur_ip);
-    const bool skip = mem_state.AccessWorking(inst.GetArg(0)) == 0.0;
+    const bool skip = !((bool)mem_state.AccessWorking(inst.GetArg(0)));
     if (skip) {
       // Skip to EOB
       call_state.SetIP(eob);
@@ -102,14 +96,15 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
     } else {
       // Open flow
       hw.GetFlowHandler().OpenFlow(hw,{lsgp_utils::FlowType::WHILE_LOOP,
-                                              cur_mp,
-                                              cur_ip,
-                                              bob,
-                                              eob},
-                                              hw.GetCurThread().GetExecState());
+                                       cur_mp,
+                                       cur_ip,
+                                       bob,
+                                       eob},
+                                       hw.GetCurThread().GetExecState());
     }
   }
 
+  /*
   // - Inst_Countdown
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Countdown(HARDWARE_T & hw, const INSTRUCTION_T & inst) {

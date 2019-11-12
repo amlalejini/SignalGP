@@ -315,8 +315,9 @@ TEST_CASE("SignalGP - Linear Functions Program") {
   inst_lib.AddInst("TestGreaterEqu", emp::signalgp::inst_impl::Inst_TestGreaterEqu<signalgp_t, inst_t>, "");
   inst_lib.AddInst("SetMem", emp::signalgp::inst_impl::Inst_SetMem<signalgp_t, inst_t>, "");
   inst_lib.AddInst("Close", emp::signalgp::inst_impl::Inst_Close<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_CLOSE});
+
   inst_lib.AddInst("If", emp::signalgp::lfp_inst_impl::Inst_If<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
-  // inst_lib.AddInst("While", emp::signalgp::inst_impl::Inst_While<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
+  inst_lib.AddInst("While", emp::signalgp::lfp_inst_impl::Inst_While<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
   // inst_lib.AddInst("Countdown", emp::signalgp::inst_impl::Inst_Countdown<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
   // inst_lib.AddInst("Break", emp::signalgp::inst_impl::Inst_Break<signalgp_t, inst_t>, "");
   // inst_lib.AddInst("Call", emp::signalgp::inst_impl::Inst_Call<signalgp_t, inst_t>, "");
@@ -1470,6 +1471,483 @@ TEST_CASE("SignalGP - Linear Functions Program") {
             == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {5, 1.0}}));
     hardware.SingleProcess(); // IP off edge of program
     REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+  }
+
+  SECTION ("Inst_While") {
+    std::cout << "-- Testing Inst_While --" << std::endl;
+    ////////////////////////////////////////////////////////////////////////////
+    // While(true), ____, ____, ____  => Infinite loop.
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "While", {1, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {2, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {3, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {4, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    auto spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    size_t thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 1.0}, {3, 1.0}, {4, 1.0}}));
+    for (size_t i = 0; i < 4; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 2.0}, {3, 2.0}, {4, 2.0}}));
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , While(true), ____, ____   => Infinite loop.
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc",   {2, 0, 0});
+    program.PushInst(inst_lib, "While", {1, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {3, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {4, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 1.0}, {3, 1.0}, {4, 1.0}}));
+    for (size_t i = 0; i < 3; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 1.0}, {3, 2.0}, {4, 2.0}}));
+    for (size_t i = 0; i < 32; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetActiveThreadIDs().size());
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , ____ , ____, While(true)   => Infinite loop.
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc",   {3, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {3, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {3, 0, 0});
+    program.PushInst(inst_lib, "While", {3, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 3.0}}));
+    for (size_t i = 0; i < 32; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetActiveThreadIDs().size());
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 3.0}}));
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // While(false) , ____ , ____, ____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "While", {0, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {2, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {3, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {4, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , While(false) , ____, ____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc",   {2, 0, 0});
+    program.PushInst(inst_lib, "While", {0, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {2, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {2, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 1.0}}));
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , ____ , ____, While(false)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc",   {2, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {2, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {2, 0, 0});
+    program.PushInst(inst_lib, "While", {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{0, 0.0}, {1, 1.0}, {2, 3.0}}));
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ , ____ , DEF, _____, While(true) , _____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc",   {3, 0, 0});
+    program.PushInst(inst_lib, "While", {3, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {4, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {5, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",   {5, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc
+    hardware.SingleProcess(); // While(true)
+    hardware.SingleProcess(); // Inc
+    hardware.SingleProcess(); // Inc
+    hardware.SingleProcess(); // Nop
+    hardware.SingleProcess(); // Inc
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {4, 1.0}, {5, 2.0}}));
+    for (size_t i = 0; i < 5; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {4, 2.0}, {5, 4.0}}));
+    for (size_t i = 0; i < 32; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetActiveThreadIDs().size());
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ ,CLOSE, ____ , DEF, _____, While(true) , _____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc",     {3, 0, 0});
+    program.PushInst(inst_lib, "While",   {3, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {4, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {5, 0, 0});
+    program.PushInst(inst_lib, "Close",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {6, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc
+    hardware.SingleProcess(); // While(true)
+    hardware.SingleProcess(); // Inc(4)
+    hardware.SingleProcess(); // Inc(5)
+    hardware.SingleProcess(); // Close
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {4, 1.0}, {5, 1.0}}));
+    for (size_t i = 0; i < 4; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {4, 2.0}, {5, 2.0}}));
+    for (size_t i = 0; i < 32; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetActiveThreadIDs().size());
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ ,CLOSE, ____ , DEF, _____, While(true)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc",     {3, 0, 0});
+    program.PushInst(inst_lib, "While",   {3, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {5, 0, 0});
+    program.PushInst(inst_lib, "Close",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {6, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc(3)
+    hardware.SingleProcess(); // While(true)
+    hardware.SingleProcess(); // Inc(5)
+    hardware.SingleProcess(); // Close
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {5, 1.0}}));
+    for (size_t i = 0; i < 3; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {5, 2.0}}));
+    for (size_t i = 0; i < 32; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetActiveThreadIDs().size());
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ ,CLOSE, ____ , DEF, _____, While(false) , _____
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc",     {3, 0, 0});
+    program.PushInst(inst_lib, "While",   {0, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {4, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {5, 0, 0});
+    program.PushInst(inst_lib, "Close",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {6, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc(3)
+    hardware.SingleProcess(); // While(true)
+    hardware.SingleProcess(); // Inc(6)
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {6, 1.0}}));
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // ____ ,CLOSE, ____ , DEF, _____, While(false)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc",     {3, 0, 0});
+    program.PushInst(inst_lib, "While",   {0, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {5, 0, 0});
+    program.PushInst(inst_lib, "Close",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {6, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc(3)
+    hardware.SingleProcess(); // While(true)
+    hardware.SingleProcess(); // Inc(6)
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {6, 1.0}}));
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // CLOSE, ____ , DEF, _____, While(false)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc",     {3, 0, 0});
+    program.PushInst(inst_lib, "While",   {0, 0, 0});
+    program.PushInst(inst_lib, "Close",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {6, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc(3)
+    hardware.SingleProcess(); // While(true)
+    hardware.SingleProcess(); // Inc(6)
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {6, 1.0}}));
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // if(false), INC, CLOSE, INC, CLOSE, ____ , DEF, _____, While(True)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc",     {3, 0, 0});
+    program.PushInst(inst_lib, "While",   {1, 0, 0});
+    program.PushInst(inst_lib, "If",      {0, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {7, 0, 0});
+    program.PushInst(inst_lib, "Close",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {6, 0, 0});
+    program.PushInst(inst_lib, "Close",   {0, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc(3)
+    hardware.SingleProcess(); // While(true)
+    hardware.SingleProcess(); // If(false)
+    hardware.SingleProcess(); // Inc(6)
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {6, 1.0}}));
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // if(false), INC, CLOSE, INC, CLOSE, ____ , DEF, _____, While(false)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Inc",     {3, 0, 0});
+    program.PushInst(inst_lib, "While",   {0, 0, 0});
+    program.PushInst(inst_lib, "If",      {0, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {7, 0, 0});
+    program.PushInst(inst_lib, "Close",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {6, 0, 0});
+    program.PushInst(inst_lib, "Close",   {0, 0, 0});
+    program.PushFunction(tag_t());
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    program.PushInst(inst_lib, "Nop",   {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc(3)
+    hardware.SingleProcess(); // While(false)
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}}));
     ////////////////////////////////////////////////////////////////////////////
   }
 }
