@@ -2064,8 +2064,6 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     ////////////////////////////////////////////////////////////////////////////
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
-
-    // Build program to test inc instruction.
     tag_t zeros, ones;
     ones.SetUInt(0, (uint32_t)-1);
     // SetUInt
@@ -2101,9 +2099,49 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     ////////////////////////////////////////////////////////////////////////////
   }
 
-  // SECTION ("Inst_Routine") {
-
-  // }
+  SECTION ("Inst_Routine") {
+    std::cout << "-- Testing Inst_Routine --" << std::endl;
+    ////////////////////////////////////////////////////////////////////////////
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    tag_t zeros, ones;
+    ones.SetUInt(0, (uint32_t)-1);
+    program.PushFunction(zeros);
+    program.PushInst(inst_lib,   "SetMem", {2, 2});
+    program.PushInst(inst_lib,   "SetMem", {3, 3});
+    program.PushInst(inst_lib,   "Routine", {0, 0, 0}, {ones});
+    program.PushInst(inst_lib,   "SetMem", {4, 4});
+    program.PushFunction(ones);
+    program.PushInst(inst_lib,   "Inc", {0, 0, 0});
+    program.PushInst(inst_lib,   "Inc", {1, 0, 0});
+    program.PushInst(inst_lib,   "Inc", {2, 0, 0});
+    program.PushInst(inst_lib,   "Inc", {3, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    auto spawned = hardware.SpawnThreadWithID(0);
+    REQUIRE(spawned);
+    size_t thread_id = spawned.value();
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.SingleProcess(); // SetMem
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetFlowStack().size() == 1);
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetCallStack().size() == 1);
+    hardware.SingleProcess(); // SetMem
+    hardware.SingleProcess(); // Routine
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetFlowStack().size() == 2);
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetCallStack().size() == 1);
+    for (size_t i = 0; i < 4; ++i) hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetFlowStack().size() == 2);
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetCallStack().size() == 1);
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{0, 1.0}, {1, 1.0}, {2, 3.0}, {3, 4.0}}));
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{0, 1.0}, {1, 1.0}, {2, 3.0}, {3, 4.0}, {4, 4.0}}));
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+  }
 
   // SECTION ("Inst_Return") {
 
