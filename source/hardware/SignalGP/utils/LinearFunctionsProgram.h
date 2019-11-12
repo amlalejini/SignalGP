@@ -146,7 +146,8 @@ namespace emp { namespace signalgp {
 
     size_t GetInstCount() const {
       size_t cnt = 0;
-      for (function_t & function : program) cnt += function.GetSize();
+      for (size_t fID = 0; fID < program.size(); ++fID)
+        cnt += program[fID].GetSize();
       return cnt;
     }
 
