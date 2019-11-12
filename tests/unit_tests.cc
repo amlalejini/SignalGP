@@ -320,18 +320,17 @@ TEST_CASE("SignalGP - Linear Functions Program") {
   inst_lib.AddInst("Return", emp::signalgp::inst_impl::Inst_Return<signalgp_t, inst_t>, "");
   inst_lib.AddInst("CopyMem", emp::signalgp::inst_impl::Inst_CopyMem<signalgp_t, inst_t>, "");
   inst_lib.AddInst("SwapMem", emp::signalgp::inst_impl::Inst_SwapMem<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("InputToWorking", emp::signalgp::inst_impl::Inst_InputToWorking<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("WorkingToOutput", emp::signalgp::inst_impl::Inst_WorkingToOutput<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("WorkingToGlobal", emp::signalgp::inst_impl::Inst_WorkingToGlobal<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("GlobalToWorking", emp::signalgp::inst_impl::Inst_GlobalToWorking<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Fork", emp::signalgp::inst_impl::Inst_Fork<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Terminate", emp::signalgp::inst_impl::Inst_Terminate<signalgp_t, inst_t>, "");
 
   inst_lib.AddInst("If", emp::signalgp::lfp_inst_impl::Inst_If<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
   inst_lib.AddInst("While", emp::signalgp::lfp_inst_impl::Inst_While<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
   inst_lib.AddInst("Countdown", emp::signalgp::lfp_inst_impl::Inst_Countdown<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
   inst_lib.AddInst("Routine", emp::signalgp::lfp_inst_impl::Inst_Routine<signalgp_t, inst_t>, "");
-
-  // inst_lib.AddInst("InputToWorking", emp::signalgp::inst_impl::Inst_InputToWorking<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("WorkingToOutput", emp::signalgp::inst_impl::Inst_WorkingToOutput<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("WorkingToGlobal", emp::signalgp::inst_impl::Inst_WorkingToGlobal<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("GlobalToWorking", emp::signalgp::inst_impl::Inst_GlobalToWorking<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("Fork", emp::signalgp::inst_impl::Inst_Fork<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("Terminate", emp::signalgp::inst_impl::Inst_Terminate<signalgp_t, inst_t>, "");
 
   emp::Random random(2);
   signalgp_t hardware(random, &inst_lib, &event_lib);
