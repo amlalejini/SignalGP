@@ -315,16 +315,17 @@ TEST_CASE("SignalGP - Linear Functions Program") {
   inst_lib.AddInst("TestGreaterEqu", emp::signalgp::inst_impl::Inst_TestGreaterEqu<signalgp_t, inst_t>, "");
   inst_lib.AddInst("SetMem", emp::signalgp::inst_impl::Inst_SetMem<signalgp_t, inst_t>, "");
   inst_lib.AddInst("Close", emp::signalgp::inst_impl::Inst_Close<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_CLOSE});
+  inst_lib.AddInst("Break", emp::signalgp::inst_impl::Inst_Break<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Call", emp::signalgp::inst_impl::Inst_Call<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Return", emp::signalgp::inst_impl::Inst_Return<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("CopyMem", emp::signalgp::inst_impl::Inst_CopyMem<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("SwapMem", emp::signalgp::inst_impl::Inst_SwapMem<signalgp_t, inst_t>, "");
 
   inst_lib.AddInst("If", emp::signalgp::lfp_inst_impl::Inst_If<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
   inst_lib.AddInst("While", emp::signalgp::lfp_inst_impl::Inst_While<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
-  // inst_lib.AddInst("Countdown", emp::signalgp::inst_impl::Inst_Countdown<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
-  // inst_lib.AddInst("Break", emp::signalgp::inst_impl::Inst_Break<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("Call", emp::signalgp::inst_impl::Inst_Call<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("Routine", emp::signalgp::inst_impl::Inst_Routine<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("Return", emp::signalgp::inst_impl::Inst_Return<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("CopyMem", emp::signalgp::inst_impl::Inst_CopyMem<signalgp_t, inst_t>, "");
-  // inst_lib.AddInst("SwapMem", emp::signalgp::inst_impl::Inst_SwapMem<signalgp_t, inst_t>, "");
+  inst_lib.AddInst("Countdown", emp::signalgp::lfp_inst_impl::Inst_Countdown<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
+  inst_lib.AddInst("Routine", emp::signalgp::lfp_inst_impl::Inst_Routine<signalgp_t, inst_t>, "");
+
   // inst_lib.AddInst("InputToWorking", emp::signalgp::inst_impl::Inst_InputToWorking<signalgp_t, inst_t>, "");
   // inst_lib.AddInst("WorkingToOutput", emp::signalgp::inst_impl::Inst_WorkingToOutput<signalgp_t, inst_t>, "");
   // inst_lib.AddInst("WorkingToGlobal", emp::signalgp::inst_impl::Inst_WorkingToGlobal<signalgp_t, inst_t>, "");
@@ -1950,8 +1951,190 @@ TEST_CASE("SignalGP - Linear Functions Program") {
             == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}}));
     ////////////////////////////////////////////////////////////////////////////
   }
-}
 
+  SECTION ("Inst_Countdown") {
+    std::cout << "-- Testing Inst_Countdown --" << std::endl;
+    // Countdown instruction is pretty much the same as the While.
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    program.PushInst(inst_lib, "Inc",     {3, 0, 0});
+    program.PushInst(inst_lib, "Countdown",   {3, 0, 0});
+    program.PushInst(inst_lib, "Inc", {3, 0, 0});
+    program.PushInst(inst_lib, "Close",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {6, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    auto spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    size_t thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc(3)
+    hardware.SingleProcess(); // Countdown(true)
+    hardware.SingleProcess(); // Inc(6)
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}}));
+    for (size_t i = 0; i < 10; ++i) { hardware.SingleProcess(); }
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}}));
+    REQUIRE(hardware.GetActiveThreadIDs().size());
+  }
+
+  SECTION ("Inst_Break") {
+    std::cout << "-- Testing Inst_Break --" << std::endl;
+    ////////////////////////////////////////////////////////////////////////////
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    program.PushInst(inst_lib, "Inc",     {3, 0, 0});
+    program.PushInst(inst_lib, "While",   {1, 0, 0});
+    program.PushInst(inst_lib, "If",      {1, 0, 0});
+    program.PushInst(inst_lib, "Break",   {0, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {7, 0, 0});
+    program.PushInst(inst_lib, "Close",   {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {6, 0, 0});
+    program.PushInst(inst_lib, "Close",   {0, 0, 0});
+    program.PushInst(inst_lib, "Inc",     {8, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    auto spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    size_t thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc(3)
+    hardware.SingleProcess(); // While(true)
+    hardware.SingleProcess(); // If(true)
+    hardware.SingleProcess(); // Break
+    hardware.SingleProcess(); // Inc(8)
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {8, 1.0}}));
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    // Build program to test inc instruction.
+    program.PushInst(inst_lib, "Inc",       {3, 0, 0});
+    program.PushInst(inst_lib, "If",        {1, 0, 0});
+    program.PushInst(inst_lib, "If",        {1, 0, 0});
+    program.PushInst(inst_lib, "Break",     {0, 0, 0});
+    program.PushInst(inst_lib, "Inc",       {7, 0, 0});
+    program.PushInst(inst_lib, "Close",     {5, 0, 0});
+    program.PushInst(inst_lib, "Inc",       {6, 0, 0});
+    program.PushInst(inst_lib, "Close",     {0, 0, 0});
+    program.PushInst(inst_lib, "Inc",       {8, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+    hardware.SingleProcess(); // Inc(3)
+    hardware.SingleProcess(); // If(true)
+    hardware.SingleProcess(); // If(true)
+    hardware.SingleProcess(); // Break
+    hardware.SingleProcess(); // Inc(7)
+    hardware.SingleProcess(); // Close
+    hardware.SingleProcess(); // Inc(6)
+    hardware.SingleProcess(); // Close
+    hardware.SingleProcess(); // Inc(8)
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{0, 0.0}, {1, 1.0}, {3, 1.0}, {6, 1.0}, {7, 1.0}, {8, 1.0}}));
+    hardware.SingleProcess();
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    ////////////////////////////////////////////////////////////////////////////
+  }
+
+  /*
+  SECTION ("Inst_Call") {
+    std::cout << "-- Testing Inst_Call --" << std::endl;
+    ////////////////////////////////////////////////////////////////////////////
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+
+    // Build program to test inc instruction.
+    tag_t zeros, ones;
+    ones.SetUInt(0, (uint32_t)-1);
+    // SetUInt
+    program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {zeros});
+    program.PushInst(inst_lib,   "SetMem", {2, 2});
+    program.PushInst(inst_lib,   "SetMem", {3, 3});
+    program.PushInst(inst_lib,   "Call", {0, 0, 0}, {ones});
+
+    program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {ones});
+    program.PushInst(inst_lib,   "InputToWorking", {2, 1, 0});
+    program.PushInst(inst_lib,   "InputToWorking", {3, 2, 0});
+    program.PushInst(inst_lib,   "Inc", {1, 0, 0});
+    program.PushInst(inst_lib,   "Inc", {2, 0, 0});
+    program.PushInst(inst_lib,   "WorkingToOutput", {1, 4, 0});
+    program.PushInst(inst_lib,   "WorkingToOutput", {2, 5, 0});
+
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    auto spawned = hardware.SpawnThreadWithID(0);
+    emp_assert(spawned);
+    size_t thread_id = spawned.value();
+    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(0, 0);
+    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
+            .GetMemory().SetWorking(1, 1);
+
+    for (size_t i = 0; i < 10; ++i) hardware.SingleProcess();
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{4, 3.0}, {1, 1.0}, {0, 0.0}, {5, 4.0}, {2, 2.0}, {3, 3.0}}));
+    ////////////////////////////////////////////////////////////////////////////
+  }
+  */
+
+  // SECTION ("Inst_Routine") {
+
+  // }
+
+  // SECTION ("Inst_Return") {
+
+  // }
+
+  // SECTION ("Inst_CopyMem") {
+
+  // }
+
+  // SECTION ("Inst_SwapMem") {
+
+  // }
+
+  // SECTION ("Inst_WorkingToGlobal") {
+
+  // }
+
+  // SECTION ("Inst_GlobalToWorking") {
+
+  // }
+
+  // SECTION ("Inst_Fork") {
+
+  // }
+
+  // SECTION ("Inst_Terminate") {
+
+  // }
+}
 
 TEST_CASE("SignalGP - Linear Program", "[general]") {
   using mem_model_t = emp::signalgp::SimpleMemoryModel;

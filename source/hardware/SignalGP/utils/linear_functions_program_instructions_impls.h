@@ -137,12 +137,6 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
     }
   }
 
-  /*
-  // - Inst_Call
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_Call(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    hw.CallModule(inst.GetTag(0), hw.GetCurThread().GetExecState());
-  }
 
   // - Inst_Routine
   template<typename HARDWARE_T, typename INSTRUCTION_T>
@@ -150,52 +144,20 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
     using flow_type_t = lsgp_utils::FlowType;
     emp::vector<size_t> matches(hw.FindModuleMatch(inst.GetTag(0)));
     if (matches.size()) {
-      const auto & target_module = hw.GetModule(matches[0]);
+      const size_t module_id = matches[0];
+      emp_assert(module_id < hw.GetProgram().GetSize());
+      const auto & target_module = hw.GetProgram()[module_id];
       // Flow: type mp ip begin end
       hw.GetFlowHandler().OpenFlow(hw, {flow_type_t::ROUTINE,
-                                    target_module.id,
-                                    target_module.begin,
-                                    target_module.begin,
-                                    target_module.end},
+                                    module_id,
+                                    0,
+                                    0,
+                                    target_module.GetSize()},
                                     hw.GetCurThread().GetExecState());
     }
   }
 
-  // - Inst_Return
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_Return(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    using flow_type_t = lsgp_utils::FlowType;
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    // Return from CALL or ROUTINE
-    while (call_state.IsFlow()) {
-      auto & top = call_state.GetTopFlow();
-      if (top.GetType() == flow_type_t::CALL || top.GetType() == flow_type_t::ROUTINE) {
-        hw.GetFlowHandler().CloseFlow(hw, top.GetType(), hw.GetCurThread().GetExecState());
-        break;
-      } else {
-        hw.GetFlowHandler().CloseFlow(hw, top.GetType(), hw.GetCurThread().GetExecState());
-      }
-    }
-  }
-
-  // - Inst_CopyMem
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_CopyMem(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
-    mem_state.SetWorking(inst.GetArg(1), mem_state.AccessWorking(inst.GetArg(0)));
-  }
-
-  // - Inst_SwapMem
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_SwapMem(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
-    const double val_0 = mem_state.AccessWorking(inst.GetArg(0));
-    const double val_1 = mem_state.AccessWorking(inst.GetArg(1));
-    mem_state.SetWorking(inst.GetArg(0), val_1);
-    mem_state.SetWorking(inst.GetArg(1), val_0);
-  }
+  /*
 
   // - Inst_Input
   template<typename HARDWARE_T, typename INSTRUCTION_T>
@@ -254,10 +216,6 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
     hw.GetCurThread().SetDead();
   }
 
-  // - Inst_Nop
-  ///  - do nothing
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
-  void Inst_Nop(HARDWARE_T & hw, const INSTRUCTION_T & inst) { ; }
   */
 }}}
 
