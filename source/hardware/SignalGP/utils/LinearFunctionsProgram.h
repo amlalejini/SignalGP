@@ -166,13 +166,13 @@ namespace emp { namespace signalgp {
 
     /// Push new function into program. Construct function from given tag and from
     /// given LinearProgram object.
-    void PushFunction(const tag_t & tag, const LinearProgram<tag_t, arg_t> & seq) {
+    void PushFunction(const tag_t & tag, const LinearProgram<tag_t, arg_t> & seq=LinearProgram<tag_t, arg_t>()) {
       program.emplace_back(tag, seq);
     }
 
     /// Push new function into program. Construct function from given vector of tags
     /// and from given LinearProgram object.
-    void PushFunction(const emp::vector<tag_t> & tags, const LinearProgram<tag_t, arg_t> & seq) {
+    void PushFunction(const emp::vector<tag_t> & tags, const LinearProgram<tag_t, arg_t> & seq=LinearProgram<tag_t, arg_t>()) {
       program.emplace_back(tags, seq);
     }
 
