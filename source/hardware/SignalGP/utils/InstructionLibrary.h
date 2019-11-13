@@ -68,6 +68,12 @@ namespace emp {
     InstructionLibrary & operator=(const InstructionLibrary &) = default;                   ///< Copy Operator
     InstructionLibrary & operator=(InstructionLibrary &&) = default;
 
+    /// Remove all instructions from the instruction library.
+    void Clear() {
+      inst_lib.clear();
+      name_map.clear();
+    }
+
     /// Return the name associated with the specified instruction ID.
     const std::string & GetName(size_t id) const { return inst_lib[id].name; }
 
