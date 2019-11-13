@@ -2204,7 +2204,6 @@ TEST_CASE("SignalGP - Linear Functions Program") {
         == mem_buffer_t({{2, 4.0}, {5, 10.0}}));
     hardware.SingleProcess(); // Return
     hardware.SingleProcess(); // SetMem
-    hardware.GetMemoryModel().PrintMemoryState(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory());
     REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
             == mem_buffer_t({{2, 2.0}, {3, 3.0}, {4, 4.0}}));
     REQUIRE(hardware.GetThread(thread_id).GetExecState().GetCallStack().size() == 1);
@@ -2468,13 +2467,76 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     ////////////////////////////////////////////////////////////////////////////
   }
 
-  // SECTION ("Inst_CopyMem") {
+  SECTION ("Inst_CopyMem") {
+    std::cout << "-- Testing Inst_CopyMem --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    program.PushInst(inst_lib, "SetMem", {1, 1, 0});
+    program.PushInst(inst_lib, "CopyMem", {1, 2, 0});
+    program.PushInst(inst_lib, "CopyMem", {2, 3, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    auto spawned = hardware.SpawnThreadWithID(0);
+    REQUIRE(spawned);
+    size_t thread_id = spawned.value();
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 1);
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_id).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+    hardware.SingleProcess(); // SetMem(1, 1, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{1, 1.0}}));
+    hardware.SingleProcess(); // CopyMem(1, 2, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{1, 1.0}, {2, 1.0}}));
+    hardware.SingleProcess(); // CopyMem(2, 3, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{1, 1.0}, {2, 1.0}, {3, 1.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
 
-  // }
-
-  // SECTION ("Inst_SwapMem") {
-
-  // }
+  SECTION ("Inst_SwapMem") {
+    std::cout << "-- Testing Inst_SwapMem --" << std::endl;
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    program.PushInst(inst_lib, "SetMem", {1, 1, 0});
+    program.PushInst(inst_lib, "SetMem", {3, 3, 0});
+    program.PushInst(inst_lib, "SwapMem", {1, 2, 0});
+    program.PushInst(inst_lib, "SwapMem", {2, 3, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    auto spawned = hardware.SpawnThreadWithID(0);
+    REQUIRE(spawned);
+    size_t thread_id = spawned.value();
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 1);
+    // Assert call stack has only 1 call.
+    auto & call_stack = hardware.GetThread(thread_id).GetExecState().GetCallStack();
+    REQUIRE(call_stack.size() == 1);
+    auto & call_state = call_stack.back();
+    auto & mem_state = call_state.GetMemory();
+    // Assert that memory is empty.
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer().empty());
+    REQUIRE(mem_state.working_mem.empty());
+    REQUIRE(mem_state.input_mem.empty());
+    REQUIRE(mem_state.output_mem.empty());
+    hardware.SingleProcess(); // SetMem(1, 1, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{1, 1.0}}));
+    hardware.SingleProcess(); // SetMem(3, 3, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{1, 1.0}, {3, 3.0}}));
+    hardware.SingleProcess(); // SwapMem(1, 2, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{1, 0.0}, {2, 1.0}, {3, 3.0}}));
+    hardware.SingleProcess(); // SwapMem(2, 3, 0)
+    REQUIRE(mem_state.working_mem == mem_buffer_t({{1, 0.0}, {3, 1.0}, {2, 3.0}}));
+    hardware.SingleProcess(); // IP off edge of program
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+  }
 
   // SECTION ("Inst_WorkingToGlobal") {
 
