@@ -335,7 +335,7 @@ TEST_CASE("SignalGP - Linear Functions Program") {
   emp::Random random(2);
   signalgp_t hardware(random, &inst_lib, &event_lib);
   hardware.SetActiveThreadLimit(16);
-  emp_assert(hardware.ValidateThreadState(), "Bad thread initial state.");
+  REQUIRE(hardware.ValidateThreadState());
   program_t program;
 
   SECTION ("Inst_Inc") {
@@ -2066,13 +2066,10 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     hardware.Reset(); // Reset program & hardware.
     tag_t zeros, ones;
     ones.SetUInt(0, (uint32_t)-1);
-    // SetUInt
-    // program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {zeros});
     program.PushFunction(zeros);
     program.PushInst(inst_lib,   "SetMem", {2, 2});
     program.PushInst(inst_lib,   "SetMem", {3, 3});
     program.PushInst(inst_lib,   "Call", {0, 0, 0}, {ones});
-    // program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {ones});
     program.PushFunction(ones);
     program.PushInst(inst_lib,   "InputToWorking", {2, 1, 0});
     program.PushInst(inst_lib,   "InputToWorking", {3, 2, 0});
@@ -2080,22 +2077,16 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.PushInst(inst_lib,   "Inc", {2, 0, 0});
     program.PushInst(inst_lib,   "WorkingToOutput", {1, 4, 0});
     program.PushInst(inst_lib,   "WorkingToOutput", {2, 5, 0});
-
     // Load program on hardware.
     hardware.SetProgram(program);
     // Spawn a thread to run the program.
     auto spawned = hardware.SpawnThreadWithID(0);
-    emp_assert(spawned);
+    REQUIRE(spawned);
     size_t thread_id = spawned.value();
-    emp_assert(hardware.GetPendingThreadIDs().size() == 1);
-    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-            .GetMemory().SetWorking(0, 0);
-    hardware.GetThread(thread_id).GetExecState().GetTopCallState()
-            .GetMemory().SetWorking(1, 1);
-
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 1);
     for (size_t i = 0; i < 10; ++i) hardware.SingleProcess();
     REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
-        == mem_buffer_t({{4, 3.0}, {1, 1.0}, {0, 0.0}, {5, 4.0}, {2, 2.0}, {3, 3.0}}));
+        == mem_buffer_t({{4, 3.0}, {5, 4.0}, {2, 2.0}, {3, 3.0}}));
     ////////////////////////////////////////////////////////////////////////////
   }
 
@@ -2143,9 +2134,89 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     ////////////////////////////////////////////////////////////////////////////
   }
 
-  // SECTION ("Inst_Return") {
+  SECTION ("Inst_Return") {
+    std::cout << "-- Testing Inst_Return --" << std::endl;
+    ////////////////////////////////////////////////////////////////////////////
+    // Return from 1 Call (=> thread should die)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    tag_t zeros, ones;
+    ones.SetUInt(0, (uint32_t)-1);
+    program.PushFunction(zeros);
+    program.PushInst(inst_lib,   "SetMem", {2, 2});
+    program.PushInst(inst_lib,   "SetMem", {3, 3});
+    program.PushInst(inst_lib,   "Return", {0, 0, 0});
+    program.PushInst(inst_lib,   "SetMem", {4, 4});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    auto spawned = hardware.SpawnThreadWithID(0);
+    REQUIRE(spawned);
+    size_t thread_id = spawned.value();
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.SingleProcess(); // SetMem
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetFlowStack().size() == 1);
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetCallStack().size() == 1);
+    hardware.SingleProcess(); // SetMem
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{2, 2.0}, {3, 3.0}}));
+    hardware.SingleProcess(); // Return
+    // REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetFlowStack().size() == 0);
+    REQUIRE(hardware.ValidateThreadState());
+    // hardware.SingleProcess(); // Process empty call stack (thread should be marked as dead)
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetCallStack().size() == 0);
+    REQUIRE(hardware.GetThread(thread_id).IsDead());
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    REQUIRE(hardware.ValidateThreadState());
+    ////////////////////////////////////////////////////////////////////////////
 
-  // }
+    ////////////////////////////////////////////////////////////////////////////
+    // Return from 2 Calls (=> should only return from top call)
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    ones.SetUInt(0, (uint32_t)-1);
+    program.PushFunction(zeros);
+    program.PushInst(inst_lib,   "SetMem", {2, 2});
+    program.PushInst(inst_lib,   "SetMem", {3, 3});
+    program.PushInst(inst_lib,   "Call", {0, 0, 0}, {ones});
+    program.PushInst(inst_lib,   "SetMem", {4, 4});
+    program.PushFunction(ones);
+    program.PushInst(inst_lib,   "SetMem", {2, 4});
+    program.PushInst(inst_lib,   "SetMem", {5, 10});
+    program.PushInst(inst_lib,   "Return", {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    spawned = hardware.SpawnThreadWithID(0);
+    REQUIRE(spawned);
+    thread_id = spawned.value();
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.SingleProcess(); // SetMem
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetFlowStack().size() == 1);
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetCallStack().size() == 1);
+    hardware.SingleProcess(); // SetMem
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{2, 2.0}, {3, 3.0}}));
+    hardware.SingleProcess(); // Call
+    REQUIRE(hardware.ValidateThreadState());
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetCallStack().size() == 2);
+    hardware.SingleProcess(); // SetMem
+    hardware.SingleProcess(); // SetMem
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{2, 4.0}, {5, 10.0}}));
+    hardware.SingleProcess(); // Return
+    hardware.SingleProcess(); // SetMem
+    hardware.GetMemoryModel().PrintMemoryState(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory());
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+            == mem_buffer_t({{2, 2.0}, {3, 3.0}, {4, 4.0}}));
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetCallStack().size() == 1);
+    REQUIRE(hardware.ValidateThreadState());
+    hardware.SingleProcess(); // EOP
+    REQUIRE(hardware.GetThread(thread_id).IsDead());
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    REQUIRE(hardware.ValidateThreadState());
+    ////////////////////////////////////////////////////////////////////////////
+  }
 
   // SECTION ("Inst_CopyMem") {
 

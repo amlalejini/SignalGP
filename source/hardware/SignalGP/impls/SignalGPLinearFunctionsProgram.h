@@ -320,6 +320,7 @@ namespace emp { namespace signalgp {
         } else {
           // No flow! Return.
           ReturnCall(exec_state);
+          // should we continue here?
         }
         break; // We executed *something*, break from the loop.
       }

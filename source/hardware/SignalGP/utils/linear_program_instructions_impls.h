@@ -376,7 +376,9 @@ namespace emp { namespace signalgp { namespace inst_impl {
     while (call_state.IsFlow()) {
       auto & top = call_state.GetTopFlow();
       if (top.GetType() == flow_type_t::CALL || top.GetType() == flow_type_t::ROUTINE) {
+        // Close call flow (in case user reconfigures how call flow closes work)
         hw.GetFlowHandler().CloseFlow(hw, top.GetType(), hw.GetCurThread().GetExecState());
+        hw.ReturnCall(hw.GetCurThread().GetExecState());
         break;
       } else {
         hw.GetFlowHandler().CloseFlow(hw, top.GetType(), hw.GetCurThread().GetExecState());
