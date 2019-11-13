@@ -375,14 +375,16 @@ namespace emp { namespace signalgp { namespace inst_impl {
     // Return from CALL or ROUTINE
     while (call_state.IsFlow()) {
       auto & top = call_state.GetTopFlow();
-      if (top.GetType() == flow_type_t::CALL || top.GetType() == flow_type_t::ROUTINE) {
-        // Close call flow (in case user reconfigures how call flow closes work)
+      if (top.GetType() == flow_type_t::CALL) {
         hw.GetFlowHandler().CloseFlow(hw, top.GetType(), hw.GetCurThread().GetExecState());
-        hw.ReturnCall(hw.GetCurThread().GetExecState());
-        break;
+        hw.ReturnCall(hw.GetCurThread().GetExecState()); // Actually return from call!
+      } else if (top.GetType() == flow_type_t::ROUTINE) {
+        hw.GetFlowHandler().CloseFlow(hw, top.GetType(), hw.GetCurThread().GetExecState());
       } else {
         hw.GetFlowHandler().CloseFlow(hw, top.GetType(), hw.GetCurThread().GetExecState());
+        continue;
       }
+      break;
     }
   }
 
