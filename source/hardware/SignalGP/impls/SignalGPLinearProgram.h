@@ -272,7 +272,6 @@ namespace emp { namespace signalgp {
         is_matchbin_cache_dirty(true),
         max_call_depth(256)
     {
-      std::cout << "Derived constructor" << std::endl;
       // Configure default flow control
       SetupDefaultFlowControl();
     }
