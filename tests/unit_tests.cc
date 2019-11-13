@@ -2598,8 +2598,8 @@ TEST_CASE("SignalGP - Linear Functions Program") {
   }
 
   SECTION ("Inst_Fork") {
+    std::cout << "-- Testing Inst_Fork --" << std::endl;
     ////////////////////////////////////////////////////////////////////////////
-    // Return from 2 Routines (=> should just return from top)
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     tag_t zeros, ones, two;
@@ -2664,9 +2664,82 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     ////////////////////////////////////////////////////////////////////////////
   }
 
-  // SECTION ("Inst_Terminate") {
+  SECTION ("Inst_Terminate") {
+    std::cout << "-- Testing Inst_Terminate --" << std::endl;
+    ////////////////////////////////////////////////////////////////////////////
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    tag_t zeros, ones, two;
+    ones.SetUInt(0, (uint32_t)-1);
+    two.SetUInt(0, (uint32_t)2);
+    program.PushFunction(zeros);
+    program.PushInst(inst_lib,   "SetMem", {2, 2});
+    program.PushInst(inst_lib,   "SetMem", {3, 3});
+    program.PushInst(inst_lib,   "Fork", {0, 0, 0}, {ones});
+    program.PushInst(inst_lib,   "SetMem", {4, 4});
+    program.PushInst(inst_lib,   "Nop", {0, 0, 0});
+    program.PushInst(inst_lib,   "Nop", {0, 0, 0});
+    program.PushInst(inst_lib,   "Nop", {0, 0, 0});
+    program.PushInst(inst_lib,   "Nop", {0, 0, 0});
+    program.PushFunction(ones);
+    program.PushInst(inst_lib,   "Nop", {0, 0, 0});
+    program.PushInst(inst_lib,   "Fork", {0, 0, 0}, {two});
+    program.PushInst(inst_lib,   "Terminate", {0, 0, 0});
+    program.PushInst(inst_lib,   "Nop", {0, 0, 0});
+    program.PushFunction(two);
+    program.PushInst(inst_lib,   "Nop", {0, 0, 0});
+    program.PushInst(inst_lib,   "Terminate", {0, 0, 0});
+    program.PushInst(inst_lib,   "Nop", {0, 0, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    auto spawned = hardware.SpawnThreadWithID(0);
+    REQUIRE(spawned);
+    size_t thread_id = spawned.value();
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.SingleProcess(); // SetMem
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetFlowStack().size() == 1);
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetCallStack().size() == 1);
+    hardware.SingleProcess(); // SetMem
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{2, 2.0}, {3, 3.0}}));
+    hardware.SingleProcess(); // Fork
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 1);
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 1);
+    REQUIRE(hardware.ValidateThreadState());
+    hardware.SingleProcess(); // [0]: SetMem(4,4), [1]: Nop
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{2, 2.0}, {3, 3.0}, {4, 4.0}}));
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 0);
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 2);
+    REQUIRE(hardware.ValidateThreadState());
 
-  // }
+    hardware.SingleProcess(); // [0]: Nop, [1]: Fork
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 1);
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 2);
+    REQUIRE(hardware.ValidateThreadState());
+
+    hardware.SingleProcess(); // [0]: Nop, [1]: Terminate - DEAD, [2]: Nop
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 0);
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 2);
+    REQUIRE(hardware.ValidateThreadState());
+
+    hardware.SingleProcess(); // [0]: Nop, [1]: DEAD, [2]: Terminate - DEAD
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 0);
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 1);
+    REQUIRE(hardware.ValidateThreadState());
+
+    hardware.SingleProcess(); // [0]: Nop, [1]: DEAD, [2]: Terminate - DEAD
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 0);
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 1);
+    REQUIRE(hardware.ValidateThreadState());
+
+    hardware.SingleProcess(); // [0]: EOM, [1]: DEAD, [2]: Terminate - DEAD
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 0);
+    REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
+    REQUIRE(hardware.ValidateThreadState());
+    ////////////////////////////////////////////////////////////////////////////
+  }
 }
 
 TEST_CASE("SignalGP - Linear Program", "[general]") {
