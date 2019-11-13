@@ -2538,13 +2538,36 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
   }
 
-  // SECTION ("Inst_WorkingToGlobal") {
+  SECTION ("Inst_WorkingToGlobal") {
+    std::cout << "-- Testing Inst_Call --" << std::endl;
+    ////////////////////////////////////////////////////////////////////////////
+    program.Clear();
+    hardware.Reset(); // Reset program & hardware.
+    tag_t zeros, ones;
+    ones.SetUInt(0, (uint32_t)-1);
+    program.PushFunction(zeros);
+    program.PushInst(inst_lib, "SetMem", {2, 2});
+    program.PushInst(inst_lib, "WorkingToGlobal", {2, 1, 0});
+    // Load program on hardware.
+    hardware.SetProgram(program);
+    // Spawn a thread to run the program.
+    auto spawned = hardware.SpawnThreadWithID(0);
+    REQUIRE(spawned);
+    size_t thread_id = spawned.value();
+    REQUIRE(hardware.GetPendingThreadIDs().size() == 1);
+    hardware.SingleProcess(); // SetMem
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{2, 2.0}}));
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer() == mem_buffer_t());
+    hardware.SingleProcess(); // WorkingToGlobal
+    REQUIRE(hardware.GetThread(thread_id).GetExecState().GetTopCallState().GetMemory().working_mem
+        == mem_buffer_t({{2, 2.0}}));
+    REQUIRE(hardware.GetMemoryModel().GetGlobalBuffer() == mem_buffer_t({{1, 2.0}}));
+  }
 
-  // }
+  SECTION ("Inst_GlobalToWorking") {
 
-  // SECTION ("Inst_GlobalToWorking") {
-
-  // }
+  }
 
   // SECTION ("Inst_Fork") {
 
