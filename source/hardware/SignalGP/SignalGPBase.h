@@ -237,7 +237,7 @@ namespace emp { namespace signalgp {
 
     /// Destructor.
     // todo - test!
-    ~BaseSignalGP() { }
+    virtual ~BaseSignalGP() { }
 
     /// Full virtual hardware reset:
     /// Required
