@@ -24,7 +24,12 @@ namespace emp { namespace signalgp {
   struct BaseEvent {
     size_t id;
     BaseEvent(size_t _id=0) : id(_id) { }
+
     size_t GetID() const { return id; }
+
+    // template<typename DERIVED_T>
+    // DERIVED_T &
+
     virtual void Print(std::ostream & os) const {
       os << "{id:" << GetID() << "}";
     }
@@ -416,6 +421,17 @@ namespace emp { namespace signalgp {
       }
 
       max_thread_space = n;
+    }
+
+    /// @discussion - needs better name
+    // - Mark all pending threads as dead
+    void RemoveAllPendingThreads() {
+      while (pending_threads.size()) {
+        const size_t thread_id = pending_threads.back();
+        pending_threads.pop_back();
+        threads[thread_id].SetDead();
+        unused_threads.emplace_back(thread_id);
+      }
     }
 
     /// Spawn a number of threads (<= n). Use tag to select which modules to call.
