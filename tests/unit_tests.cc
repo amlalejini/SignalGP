@@ -126,6 +126,75 @@ TEST_CASE("RandomBitSets<W>") {
   }
 }
 
+TEST_CASE("LinearProgram<emp::BitSet<W>,int> - GenRandInst") {
+  constexpr size_t TAG_WIDTH = 16;
+  using mem_model_t = emp::signalgp::SimpleMemoryModel;
+  using tag_t = emp::BitSet<TAG_WIDTH>;
+  using arg_t = int;
+  using matchbin_t = emp::MatchBin< size_t, emp::HammingMetric<TAG_WIDTH>, emp::RankedSelector<> >;
+  using hardware_t = emp::signalgp::LinearFunctionsProgramSignalGP<mem_model_t,
+                                                                   tag_t,
+                                                                   arg_t,
+                                                                   matchbin_t>;
+  using inst_lib_t = typename hardware_t::inst_lib_t;
+  using inst_t = typename hardware_t::inst_t;
+  using inst_prop_t = typename hardware_t::InstProperty;
+
+  constexpr int RANDOM_SEED = 1;
+  constexpr size_t NUM_TAGS = 10;
+  constexpr size_t NUM_ARGS = 3;
+  constexpr size_t MIN_ARG_VAL = 0;
+  constexpr size_t MAX_ARG_VAL = 15;
+  emp::Random random(RANDOM_SEED);
+
+  // Build a limited instruction library.
+  inst_lib_t inst_lib;
+  inst_lib.AddInst("Nop", [](hardware_t & hw, const inst_t & inst) { ; }, "No operation!");
+  inst_lib.AddInst("Inc", emp::signalgp::inst_impl::Inst_Inc<hardware_t, inst_t>, "Increment!");
+  inst_lib.AddInst("Dec", emp::signalgp::inst_impl::Inst_Dec<hardware_t, inst_t>, "Decrement!");
+  inst_lib.AddInst("Not", emp::signalgp::inst_impl::Inst_Not<hardware_t, inst_t>, "Logical not of ARG[0]");
+  inst_lib.AddInst("Add", emp::signalgp::inst_impl::Inst_Add<hardware_t, inst_t>, "");
+  inst_lib.AddInst("Sub", emp::signalgp::inst_impl::Inst_Sub<hardware_t, inst_t>, "");
+  inst_lib.AddInst("Mult", emp::signalgp::inst_impl::Inst_Mult<hardware_t, inst_t>, "");
+  inst_lib.AddInst("Div", emp::signalgp::inst_impl::Inst_Div<hardware_t, inst_t>, "");
+  inst_lib.AddInst("Mod", emp::signalgp::inst_impl::Inst_Mod<hardware_t, inst_t>, "");
+  inst_lib.AddInst("TestEqu", emp::signalgp::inst_impl::Inst_TestEqu<hardware_t, inst_t>, "");
+  inst_lib.AddInst("TestNEqu", emp::signalgp::inst_impl::Inst_TestNEqu<hardware_t, inst_t>, "");
+  inst_lib.AddInst("TestLess", emp::signalgp::inst_impl::Inst_TestLess<hardware_t, inst_t>, "");
+  inst_lib.AddInst("TestLessEqu", emp::signalgp::inst_impl::Inst_TestLessEqu<hardware_t, inst_t>, "");
+  inst_lib.AddInst("TestGreater", emp::signalgp::inst_impl::Inst_TestGreater<hardware_t, inst_t>, "");
+  inst_lib.AddInst("TestGreaterEqu", emp::signalgp::inst_impl::Inst_TestGreaterEqu<hardware_t, inst_t>, "");
+  inst_lib.AddInst("SetMem", emp::signalgp::inst_impl::Inst_SetMem<hardware_t, inst_t>, "");
+  inst_lib.AddInst("Close", emp::signalgp::inst_impl::Inst_Close<hardware_t, inst_t>, "", {inst_prop_t::BLOCK_CLOSE});
+  inst_lib.AddInst("Break", emp::signalgp::inst_impl::Inst_Break<hardware_t, inst_t>, "");
+  inst_lib.AddInst("Call", emp::signalgp::inst_impl::Inst_Call<hardware_t, inst_t>, "");
+  inst_lib.AddInst("Return", emp::signalgp::inst_impl::Inst_Return<hardware_t, inst_t>, "");
+  inst_lib.AddInst("CopyMem", emp::signalgp::inst_impl::Inst_CopyMem<hardware_t, inst_t>, "");
+  inst_lib.AddInst("SwapMem", emp::signalgp::inst_impl::Inst_SwapMem<hardware_t, inst_t>, "");
+  inst_lib.AddInst("InputToWorking", emp::signalgp::inst_impl::Inst_InputToWorking<hardware_t, inst_t>, "");
+  inst_lib.AddInst("WorkingToOutput", emp::signalgp::inst_impl::Inst_WorkingToOutput<hardware_t, inst_t>, "");
+  inst_lib.AddInst("WorkingToGlobal", emp::signalgp::inst_impl::Inst_WorkingToGlobal<hardware_t, inst_t>, "");
+  inst_lib.AddInst("GlobalToWorking", emp::signalgp::inst_impl::Inst_GlobalToWorking<hardware_t, inst_t>, "");
+  inst_lib.AddInst("Fork", emp::signalgp::inst_impl::Inst_Fork<hardware_t, inst_t>, "");
+  inst_lib.AddInst("Terminate", emp::signalgp::inst_impl::Inst_Terminate<hardware_t, inst_t>, "");
+  inst_lib.AddInst("If", emp::signalgp::lfp_inst_impl::Inst_If<hardware_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
+  inst_lib.AddInst("While", emp::signalgp::lfp_inst_impl::Inst_While<hardware_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
+  inst_lib.AddInst("Countdown", emp::signalgp::lfp_inst_impl::Inst_Countdown<hardware_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
+  inst_lib.AddInst("Routine", emp::signalgp::lfp_inst_impl::Inst_Routine<hardware_t, inst_t>, "");
+
+  // Generate a bunch of random instructions, check that they conform with requested bounds.
+  for (size_t i = 0; i < 10000; ++i) {
+    inst_t inst(emp::signalgp::GenRandInst<hardware_t, TAG_WIDTH>(random, inst_lib, NUM_TAGS, NUM_ARGS, MIN_ARG_VAL, MAX_ARG_VAL));
+    REQUIRE(inst.id < inst_lib.GetSize());
+    REQUIRE(inst.GetTags().size() == NUM_TAGS);
+    REQUIRE(inst.GetArgs().size() == NUM_ARGS);
+    for (auto & arg : inst.GetArgs()) {
+      REQUIRE(arg >= MIN_ARG_VAL);
+      REQUIRE(arg <= MAX_ARG_VAL);
+    }
+  }
+}
+
 TEST_CASE("Toy SignalGP", "[general]") {
   using signalgp_t = ToySignalGP<size_t>;
   using event_lib_t = typename signalgp_t::event_lib_t;
@@ -429,7 +498,6 @@ TEST_CASE("SignalGP - Linear Functions Program") {
   inst_lib.AddInst("GlobalToWorking", emp::signalgp::inst_impl::Inst_GlobalToWorking<signalgp_t, inst_t>, "");
   inst_lib.AddInst("Fork", emp::signalgp::inst_impl::Inst_Fork<signalgp_t, inst_t>, "");
   inst_lib.AddInst("Terminate", emp::signalgp::inst_impl::Inst_Terminate<signalgp_t, inst_t>, "");
-
   inst_lib.AddInst("If", emp::signalgp::lfp_inst_impl::Inst_If<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
   inst_lib.AddInst("While", emp::signalgp::lfp_inst_impl::Inst_While<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});
   inst_lib.AddInst("Countdown", emp::signalgp::lfp_inst_impl::Inst_Countdown<signalgp_t, inst_t>, "", {inst_prop_t::BLOCK_DEF});

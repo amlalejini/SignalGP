@@ -13,6 +13,8 @@
 #include "../EventLibrary.h"
 #include "InstructionLibrary.h"
 
+#include "../../../random_utils.h"
+
 namespace emp { namespace signalgp {
 
   // Simple program:
@@ -121,11 +123,32 @@ namespace emp { namespace signalgp {
 
     /// Is the given instruction valid?
     template<typename HARDWARE_T, typename INST_PROPERTY_T>
-    bool IsValidInst(const InstructionLibrary<HARDWARE_T, Instruction, INST_PROPERTY_T> & ilib,
-                     const Instruction & inst) {
+    static bool IsValidInst(const InstructionLibrary<HARDWARE_T, Instruction, INST_PROPERTY_T> & ilib,
+                            const Instruction & inst) {
       return inst.id < ilib.GetSize();
     }
   };
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Random utilities
+
+  template<typename HARDWARE_T, size_t TAG_WIDTH>
+  typename LinearProgram<BitSet<TAG_WIDTH>, int>::Instruction
+    GenRandInst(emp::Random & rnd,
+                const InstructionLibrary<HARDWARE_T,
+                                         typename LinearProgram< BitSet<TAG_WIDTH>, int>::Instruction,
+                                         typename HARDWARE_T::inst_prop_t> & inst_lib,
+                size_t num_tags=1,
+                size_t num_args=3,
+                int min_arg_val=0,
+                int max_arg_val=15)
+    {
+      emp_assert(inst_lib.GetSize() > 0, "Instruction library must have at least one instruction definition before being used to generate a random instruction.");
+      emp_assert(min_arg_val < max_arg_val, "Minimum argument value must be less than maximum argument value to generate a number between the two.");
+      emp::vector<int> args(num_args);
+      for (size_t i = 0; i < args.size(); ++i) args[i] = rnd.GetInt(min_arg_val, max_arg_val+1);
+      return {rnd.GetUInt(inst_lib.GetSize()), args, RandomBitSets<TAG_WIDTH>(rnd, num_tags)};
+  }
 }}
 
 #endif

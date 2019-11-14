@@ -66,6 +66,7 @@ namespace emp { namespace signalgp {
     enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
     using inst_t = typename program_t::inst_t;
     using inst_lib_t = InstructionLibrary<this_t, inst_t, InstProperty>;
+    using inst_prop_t = InstProperty;
 
     // using fun_end_flow_t = std::function<void(this_t&, exec_state_t &)>;                   // note - pass hardware down?
     // using fun_open_flow_t = std::function<void(this_t&, exec_state_t &, const flow_info_t &)>;

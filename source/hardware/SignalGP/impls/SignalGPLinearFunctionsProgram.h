@@ -53,6 +53,7 @@ namespace emp { namespace signalgp {
     enum class InstProperty { BLOCK_CLOSE, BLOCK_DEF }; /// Instruction-definition properties.
     using inst_t = typename program_t::inst_t;
     using inst_lib_t = InstructionLibrary<this_t, inst_t, InstProperty>;
+    using inst_prop_t = InstProperty;
 
     using fun_end_flow_t = typename flow_handler_t::fun_end_flow_t;
     using fun_open_flow_t = typename flow_handler_t::fun_open_flow_t;
