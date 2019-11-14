@@ -149,6 +149,27 @@ namespace emp { namespace signalgp {
       for (size_t i = 0; i < args.size(); ++i) args[i] = rnd.GetInt(min_arg_val, max_arg_val+1);
       return {rnd.GetUInt(inst_lib.GetSize()), args, RandomBitSets<TAG_WIDTH>(rnd, num_tags)};
   }
+
+  // TODO turn min/maxes in proper ranges!
+  template<typename HARDWARE_T, size_t TAG_WIDTH>
+  LinearProgram<BitSet<TAG_WIDTH>, int> GenRandLinearProgram(
+    emp::Random & rnd,
+    const InstructionLibrary<HARDWARE_T,
+                             typename LinearProgram< BitSet<TAG_WIDTH>, int>::Instruction,
+                             typename HARDWARE_T::inst_prop_t> & inst_lib,
+    size_t min_inst_cnt=1, size_t max_inst_cnt=32,
+    size_t num_inst_tags=1, size_t num_inst_args=3,
+    size_t min_arg_val=0, size_t max_arg_val=15)
+  {
+    emp_assert(inst_lib.GetSize() > 0, "Instruction library must have at least one instruction definition before being used to generate a random instruction.");
+    LinearProgram<BitSet<TAG_WIDTH>, int> new_program;
+    size_t inst_cnt = rnd.GetUInt(min_inst_cnt, max_inst_cnt+1);
+    for (size_t i = 0; i < inst_cnt; ++i) {
+      new_program.PushInst(GenRandInst<HARDWARE_T, TAG_WIDTH>(rnd, inst_lib,num_inst_tags, num_inst_args, min_arg_val, max_arg_val));
+    }
+    return new_program;
+  }
+
 }}
 
 #endif
