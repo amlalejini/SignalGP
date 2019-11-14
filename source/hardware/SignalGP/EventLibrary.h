@@ -56,6 +56,12 @@ template<typename HARDWARE_T>
     EventLibrary & operator=(const EventLibrary &) = default;
     EventLibrary & operator=(EventLibrary &&) = default;
 
+    /// Remove all known events from event library.
+    void Clear() {
+      event_lib.clear();
+      name_map.clear();
+    }
+
     /// Get the string name of the specified event definition.
     const std::string & GetName(size_t id) const { return event_lib[id].name; }
 
