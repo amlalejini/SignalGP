@@ -23,10 +23,9 @@ namespace emp { namespace signalgp {
 
   struct BaseEvent {
     size_t id;
-
+    BaseEvent(size_t _id=0) : id(_id) { }
     size_t GetID() const { return id; }
-
-    void Print(std::ostream & os) const {
+    virtual void Print(std::ostream & os) const {
       os << "{id:" << GetID() << "}";
     }
   };
