@@ -84,13 +84,14 @@ template<typename HARDWARE_T>
     size_t GetSize() const { return event_lib.size(); }
 
     /// Add a new event to the event library.
-    void AddEvent(const std::string & name,
+    size_t AddEvent(const std::string & name,
                   const event_handler_fun_t & handler_fun,
                   const event_dispatcher_set_t & dispatchers=event_dispatcher_set_t(),
                   const std::string & desc="") {
       const size_t id = event_lib.size();
       event_lib.emplace_back(name, handler_fun, dispatchers, desc);
       name_map[name] = id;
+      return id;
     }
 
     /// Register a new dispatch function for an event.
