@@ -7,6 +7,7 @@
 #include <optional>
 #include <queue>
 #include <tuple>
+#include <memory>
 
 #include "base/Ptr.h"
 #include "base/vector.h"
@@ -101,7 +102,7 @@ namespace emp { namespace signalgp {
 
   protected:
     Ptr<event_lib_t> event_lib;         ///< These are the events this hardware knows about.
-    std::deque<event_t> event_queue;    ///< Queue of events to be processed every time step.
+    std::deque<std::unique_ptr<event_t>> event_queue;    ///< Queue of events to be processed every time step.
 
     // Thread management
     size_t max_active_threads=64;               ///< Maximum number of concurrently running threads.
@@ -506,13 +507,16 @@ namespace emp { namespace signalgp {
 
     /// Queue an event (to be handled by this hardware) next time this hardware
     /// unit is executed.
-    void QueueEvent(const event_t & event) { event_queue.emplace_back(event); }
+    template<typename EVENT_T>
+    void QueueEvent(const EVENT_T & event) {
+      event_queue.emplace_back(std::make_unique<EVENT_T>(event));
+    }
 
     /// Advance the hardware by a single step.
     void SingleProcess() {
       // Handle events (which may spawn threads)
       while (!event_queue.empty()) {
-        HandleEvent(event_queue.front());
+        HandleEvent(*(event_queue.front()));
         event_queue.pop_front();
       }
 
