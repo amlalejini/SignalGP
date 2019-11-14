@@ -237,6 +237,51 @@ namespace emp { namespace signalgp {
     // todo - prints
   };
 
+  // GenRandLinearFunction => {RandomBitSet, GenRandLinearProgram}
+  // todo - clean up arguments
+  template<typename HARDWARE_T, size_t TAG_WIDTH>
+  LinearFunction<BitSet<TAG_WIDTH>, int> GenRandLinearFunction(
+    emp::Random & rnd,
+    const InstructionLibrary<HARDWARE_T,
+                             typename LinearProgram< BitSet<TAG_WIDTH>, int>::Instruction,
+                             typename HARDWARE_T::inst_prop_t> & inst_lib,
+    size_t num_func_tags=1,
+    size_t min_inst_cnt=1, size_t max_inst_cnt=32,
+    size_t num_inst_tags=1, size_t num_inst_args=3,
+    size_t min_arg_val=0, size_t max_arg_val=15
+  ) {
+    return {RandomBitSets<TAG_WIDTH>(rnd, num_func_tags),
+            GenRandLinearProgram<HARDWARE_T,TAG_WIDTH>(rnd, inst_lib,
+                                                       min_inst_cnt, max_inst_cnt,
+                                                       num_inst_tags, num_inst_args,
+                                                       min_arg_val, max_arg_val)};
+  }
+
+  // Todo - DEAR GOD THESE ARGUMENTS ARE TERRIBLE
+  template<typename HARDWARE_T, size_t TAG_WIDTH>
+  LinearFunctionsProgram<BitSet<TAG_WIDTH>, int> GenRandLinearFunctionsProgram(
+    emp::Random & rnd,
+    const InstructionLibrary<HARDWARE_T,
+                             typename LinearProgram< BitSet<TAG_WIDTH>, int>::Instruction,
+                             typename HARDWARE_T::inst_prop_t> & inst_lib,
+    size_t min_num_func=1, size_t max_num_func=1,
+    size_t num_func_tags=1,
+    size_t min_func_inst_cnt=1, size_t max_func_inst_cnt=32,
+    size_t num_inst_tags=1, size_t num_inst_args=3,
+    size_t min_arg_val=0, size_t max_arg_val=15
+  ) {
+    emp_assert(min_num_func <= max_num_func);
+    const size_t func_cnt = rnd.GetUInt(min_num_func, max_num_func+1);
+    LinearFunctionsProgram<BitSet<TAG_WIDTH>, int> new_program;
+    for (size_t fID = 0; fID < func_cnt; ++fID) {
+      new_program.PushFunction(GenRandLinearFunction<HARDWARE_T, TAG_WIDTH>(rnd, inst_lib,
+                                                                            num_func_tags,
+                                                                            min_func_inst_cnt, max_func_inst_cnt,
+                                                                            num_inst_tags, num_inst_args,
+                                                                            min_arg_val, max_arg_val));
+    }
+    return new_program;
+  }
 }}
 
 #endif
