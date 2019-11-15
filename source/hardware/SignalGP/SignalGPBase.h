@@ -491,6 +491,7 @@ namespace emp { namespace signalgp {
 
       // Let derived hardware initialize thread w/appropriate module.
       GetHardware().InitThread(thread, module_id);
+      // emp_assert()
 
       // Mark thread as pending.
       thread.SetPending();

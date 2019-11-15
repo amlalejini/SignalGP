@@ -457,11 +457,16 @@ namespace emp { namespace signalgp { namespace inst_impl {
       auto spawned = hw.SpawnThreadWithID(matches[0]);
       if (spawned) {
         const size_t thread_id = spawned.value();
-        // Spawned valid thread.
-        // Do whatever it is that the memory model says we should do on a function call.
-        auto & forker = hw.GetCurThread().GetExecState().GetTopCallState();
-        auto & forkee = hw.GetThread(thread_id).GetExecState().GetTopCallState();
-        hw.GetMemoryModel().OnModuleCall(forker.GetMemory(), forkee.GetMemory());
+        // Hold up there cowboy! If the module was empty, the hardware will ignore the CallModule request.
+        if (hw.GetThread(thread_id).GetExecState().GetCallStack().size()) {
+          // Spawned valid thread.
+          // Do whatever it is that the memory model says we should do on a function call.
+          emp_assert(hw.GetCurThread().GetExecState().GetCallStack().size());
+          auto & forker = hw.GetCurThread().GetExecState().GetTopCallState();
+          emp_assert(hw.GetThread(thread_id).GetExecState().GetCallStack().size());
+          auto & forkee = hw.GetThread(thread_id).GetExecState().GetTopCallState();
+          hw.GetMemoryModel().OnModuleCall(forker.GetMemory(), forkee.GetMemory());
+        }
       }
     }
   }

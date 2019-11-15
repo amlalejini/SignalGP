@@ -337,6 +337,7 @@ namespace emp { namespace signalgp {
       emp_assert(module_id < program.GetSize(), "Invalid module_id.", module_id);
       exec_state_t & state = thread.GetExecState();
       if (state.call_stack.size()) { state.Clear(); } // reset the thread's call stack.
+      emp_assert(state.call_stack.size() == 0);
       CallModule(module_id, state);
     }
 
