@@ -5,6 +5,7 @@
 #include <limits>
 
 #include "tools/BitSet.h"
+#include "tools/Range.h"
 
 #include "EventLibrary.h"
 
@@ -184,7 +185,7 @@ TEST_CASE("LinearProgram<emp::BitSet<W>,int> - GenRandInst") {
 
   // Generate a bunch of random instructions, check that they conform with requested bounds.
   for (size_t i = 0; i < 10000; ++i) {
-    inst_t inst(emp::signalgp::GenRandInst<hardware_t, TAG_WIDTH>(random, inst_lib, NUM_TAGS, NUM_ARGS, MIN_ARG_VAL, MAX_ARG_VAL));
+    inst_t inst(emp::signalgp::GenRandInst<hardware_t, TAG_WIDTH>(random, inst_lib, NUM_TAGS, NUM_ARGS, {MIN_ARG_VAL, MAX_ARG_VAL}));
     REQUIRE(inst.id < inst_lib.GetSize());
     REQUIRE(inst.GetTags().size() == NUM_TAGS);
     REQUIRE(inst.GetArgs().size() == NUM_ARGS);
@@ -257,7 +258,7 @@ TEST_CASE("LinearProgram<emp::BitSet<W>,int> - GenRandLinearProgram") {
 
   // Generate a bunch of random instructions, check that they conform with requested bounds.
   for (size_t i = 0; i < 10000; ++i) {
-    program_t program(emp::signalgp::GenRandLinearProgram<hardware_t, TAG_WIDTH>(random, inst_lib, MIN_INST_CNT, MAX_INST_CNT, NUM_TAGS, NUM_ARGS, MIN_ARG_VAL, MAX_ARG_VAL));
+    program_t program(emp::signalgp::GenRandLinearProgram<hardware_t, TAG_WIDTH>(random, inst_lib, {MIN_INST_CNT, MAX_INST_CNT}, NUM_TAGS, NUM_ARGS, {MIN_ARG_VAL, MAX_ARG_VAL}));
     REQUIRE(program.GetSize() >= MIN_INST_CNT);
     REQUIRE(program.GetSize() <= MAX_INST_CNT);
     for (size_t pID = 0; pID < program.GetSize(); ++pID) {
@@ -338,7 +339,7 @@ TEST_CASE("LinearFunction<emp::BitSet<W>, int> - GenRandLinearFunction") {
 
   // Generate a bunch of random instructions, check that they conform with requested bounds.
   for (size_t i = 0; i < 1000; ++i) {
-    function_t function(emp::signalgp::GenRandLinearFunction<hardware_t, TAG_WIDTH>(random, inst_lib, NUM_FUNC_TAGS, MIN_INST_CNT, MAX_INST_CNT, NUM_INST_TAGS, NUM_INST_ARGS, MIN_ARG_VAL, MAX_ARG_VAL));
+    function_t function(emp::signalgp::GenRandLinearFunction<hardware_t, TAG_WIDTH>(random, inst_lib, NUM_FUNC_TAGS, {MIN_INST_CNT, MAX_INST_CNT}, NUM_INST_TAGS, NUM_INST_ARGS, {MIN_ARG_VAL, MAX_ARG_VAL}));
     REQUIRE(function.GetSize() >= MIN_INST_CNT);
     REQUIRE(function.GetSize() <= MAX_INST_CNT);
     REQUIRE(function.GetTags().size() == NUM_FUNC_TAGS);
@@ -420,8 +421,8 @@ TEST_CASE("LinearFunctionsProgram<emp::BitSet<W>, int> - GenRandLinearFunctionsP
 
   // Generate a bunch of random instructions, check that they conform with requested bounds.
   for (size_t i = 0; i < 1000; ++i) {
-    std::cout << "i="<<i<<std::endl;
-    program_t program(emp::signalgp::GenRandLinearFunctionsProgram<hardware_t, TAG_WIDTH>(random, inst_lib, MIN_NUM_FUNC, MAX_NUM_FUNC, NUM_FUNC_TAGS, MIN_INST_CNT, MAX_INST_CNT, NUM_INST_TAGS, NUM_INST_ARGS, MIN_ARG_VAL, MAX_ARG_VAL));
+    // std::cout << "i="<<i<<std::endl;
+    program_t program(emp::signalgp::GenRandLinearFunctionsProgram<hardware_t, TAG_WIDTH>(random, inst_lib, {MIN_NUM_FUNC, MAX_NUM_FUNC}, NUM_FUNC_TAGS, {MIN_INST_CNT, MAX_INST_CNT}, NUM_INST_TAGS, NUM_INST_ARGS, {MIN_ARG_VAL, MAX_ARG_VAL}));
     REQUIRE(program.GetSize() >= MIN_NUM_FUNC);
     REQUIRE(program.GetSize() <= MAX_NUM_FUNC);
     for (size_t fID = 0; fID < program.GetSize(); ++fID) {

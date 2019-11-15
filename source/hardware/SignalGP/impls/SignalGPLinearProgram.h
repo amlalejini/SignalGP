@@ -474,6 +474,7 @@ namespace emp { namespace signalgp {
     /// After updating hardware's program, 'compile' the program to extract module
     /// information (i.e., run UpdateModules).
     void SetProgram(const program_t & _program) {
+      Reset();
       program = _program;
       UpdateModules();
     }

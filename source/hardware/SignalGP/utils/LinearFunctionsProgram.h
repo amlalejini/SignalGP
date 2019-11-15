@@ -10,6 +10,7 @@
 #include "tools/Random.h"
 #include "tools/MatchBin.h"
 #include "tools/matchbin_utils.h"
+#include "tools/Range.h"
 
 #include "../EventLibrary.h"
 #include "InstructionLibrary.h"
@@ -161,6 +162,13 @@ namespace emp { namespace signalgp {
 
     void SetProgram(const emp::vector<function_t> & p) { program = p; }
 
+    /// Pop last function off program.
+    void PopFunction() {
+      if (program.size()) {
+        program.pop_back();
+      }
+    }
+
     /// Push new function into program. New function will be a copy given function.
     void PushFunction(const function_t & func) { program.emplace_back(func); }
 
@@ -246,15 +254,16 @@ namespace emp { namespace signalgp {
                              typename LinearProgram< BitSet<TAG_WIDTH>, int>::Instruction,
                              typename HARDWARE_T::inst_prop_t> & inst_lib,
     size_t num_func_tags=1,
-    size_t min_inst_cnt=1, size_t max_inst_cnt=32,
-    size_t num_inst_tags=1, size_t num_inst_args=3,
-    size_t min_arg_val=0, size_t max_arg_val=15
+    const emp::Range<size_t> & inst_cnt_range={1, 32},
+    size_t num_inst_tags=1,
+    size_t num_inst_args=3,
+    const emp::Range<int> & arg_val_range={0, 15}
   ) {
     return {RandomBitSets<TAG_WIDTH>(rnd, num_func_tags),
             GenRandLinearProgram<HARDWARE_T,TAG_WIDTH>(rnd, inst_lib,
-                                                       min_inst_cnt, max_inst_cnt,
+                                                       inst_cnt_range,
                                                        num_inst_tags, num_inst_args,
-                                                       min_arg_val, max_arg_val)};
+                                                       arg_val_range)};
   }
 
   // Todo - DEAR GOD THESE ARGUMENTS ARE TERRIBLE
@@ -264,21 +273,22 @@ namespace emp { namespace signalgp {
     const InstructionLibrary<HARDWARE_T,
                              typename LinearProgram< BitSet<TAG_WIDTH>, int>::Instruction,
                              typename HARDWARE_T::inst_prop_t> & inst_lib,
-    size_t min_num_func=1, size_t max_num_func=1,
+    const emp::Range<size_t> & num_func_range={1, 4},
     size_t num_func_tags=1,
-    size_t min_func_inst_cnt=1, size_t max_func_inst_cnt=32,
-    size_t num_inst_tags=1, size_t num_inst_args=3,
-    size_t min_arg_val=0, size_t max_arg_val=15
+    const emp::Range<size_t> & func_inst_cnt_range={1, 32},
+    size_t num_inst_tags=1,
+    size_t num_inst_args=3,
+    const emp::Range<int> & arg_val_range={0, 15}
   ) {
-    emp_assert(min_num_func <= max_num_func);
-    const size_t func_cnt = rnd.GetUInt(min_num_func, max_num_func+1);
+    const size_t func_cnt = rnd.GetUInt(num_func_range.GetLower(), num_func_range.GetUpper()+1);
     LinearFunctionsProgram<BitSet<TAG_WIDTH>, int> new_program;
     for (size_t fID = 0; fID < func_cnt; ++fID) {
       new_program.PushFunction(GenRandLinearFunction<HARDWARE_T, TAG_WIDTH>(rnd, inst_lib,
                                                                             num_func_tags,
-                                                                            min_func_inst_cnt, max_func_inst_cnt,
-                                                                            num_inst_tags, num_inst_args,
-                                                                            min_arg_val, max_arg_val));
+                                                                            func_inst_cnt_range,
+                                                                            num_inst_tags,
+                                                                            num_inst_args,
+                                                                            arg_val_range));
     }
     return new_program;
   }
