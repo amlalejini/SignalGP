@@ -273,6 +273,7 @@ namespace emp { namespace signalgp {
 
     /// Set program for this hardware object.
     void SetProgram(const program_t & p) {
+      Reset();
       program = p;
       ResetMatchBin();
     }
@@ -303,7 +304,7 @@ namespace emp { namespace signalgp {
           flow_info_t & flow_info = call_state.flow_stack.back();
           size_t mp = flow_info.mp;
           size_t ip = flow_info.ip;
-          emp_assert(mp < GetNumModules(), "Invalid module pointer.", mp);
+          emp_assert(mp < GetNumModules(), "Invalid module pointer.", mp, GetNumModules());
           if (program.IsValidPosition(mp, ip)) {
             // NOTE - should we increment the IP before or after executing?
             // Only BEFORE executing an instruction do we have any guarantees about

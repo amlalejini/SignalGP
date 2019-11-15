@@ -48,6 +48,7 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
       }
     } else {
       // Open flow
+      emp_assert(cur_mp < hw.GetProgram().GetSize());
       hw.GetFlowHandler().OpenFlow(hw,
                                    {lsgp_utils::FlowType::BASIC,
                                     cur_mp,
@@ -81,6 +82,7 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
       }
     } else {
       // Open flow
+      emp_assert(cur_mp < hw.GetProgram().GetSize());
       hw.GetFlowHandler().OpenFlow(hw,{lsgp_utils::FlowType::WHILE_LOOP,
                                        cur_mp,
                                        cur_ip,
@@ -113,6 +115,7 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
     } else {
       --mem_state.AccessWorking(inst.args[0]);
       // Open flow
+      emp_assert(cur_mp < hw.GetProgram().GetSize());
       hw.GetFlowHandler().OpenFlow(hw,{lsgp_utils::FlowType::WHILE_LOOP,
                                        cur_mp,
                                        cur_ip,
