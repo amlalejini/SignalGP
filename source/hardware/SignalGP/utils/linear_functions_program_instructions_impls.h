@@ -144,6 +144,177 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
     }
   }
 
+
+  /// Non-default instruction: SetRegulator
+  /// Number of arguments: 2
+  /// Description: Sets the regulator of a tag in the matchbin.
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_SetRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    emp::vector<size_t> best_fun(hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1));
+    if (best_fun.size() == 0) { return; }
+
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+
+    double regulator = mem_state.AccessWorking(inst.GetArg(0));
+    if (regulator < 0) {
+      regulator = std::max(regulator, std::numeric_limits<double>::min());
+      regulator /= std::numeric_limits<double>::min();
+    } else {
+      regulator += 1.0;
+    }
+
+    hw.GetMatchBin().SetRegulator(best_fun[0], regulator);
+    // @discussion - ??
+    const size_t dur = 2 + mem_state.AccessWorking(inst.GetArg(1));
+    hw.GetMatchBin().GetVal(best_fun[0]) = dur;
+  }
+
+
+  /// Non-default instruction: SetOwnRegulator
+  /// Number of arguments: 2
+  /// Description: Sets the regulator of the currently executing function.
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  static void Inst_SetOwnRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    auto & flow = call_state.GetTopFlow();
+    double regulator = mem_state.AccessWorking(inst.GetArg(0));
+
+    if (regulator < 0) {
+      regulator = std::max(regulator, std::numeric_limits<double>::min());
+      regulator /= std::numeric_limits<double>::min();
+    } else {
+      regulator += 1.0;
+    }
+
+    hw.GetMatchBin().SetRegulator(flow.GetMP(), regulator);
+    const size_t dur = 2 + mem_state.AccessWorking(inst.GetArg(1));
+    hw.GetMatchBin().GetVal(flow.GetMP()) = dur;
+  }
+
+  /// Non-default instruction: AdjRegulator
+  /// Number of arguments: 3
+  /// Description: adjusts the regulator of a tag in the matchbin
+  /// towards a target.
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  static void Inst_AdjRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    // const State & state = hw.GetCurState();
+    emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
+    if (!best_fun.size()) return;
+
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    auto & flow = call_state.GetTopFlow();
+
+    double target = mem_state.AccessWorking(inst.GetArg(0));
+    if (target < 0) {
+      target = std::max(target, std::numeric_limits<double>::min());
+      target /= std::numeric_limits<double>::min();
+    } else {
+      target += 1.0;
+    }
+
+    const double budge = emp::Mod(mem_state.AccessWorking(inst.GetArg(1)) + 0.2, 1.0);
+    const double cur = hw.GetMatchBin().ViewRegulator(best_fun[0]);
+
+    hw.GetMatchBin().SetRegulator(best_fun[0], target * budge + cur * (1 - budge));
+
+    const size_t dur = 2 + mem_state.AccessWorking(inst.GetArg(2));
+    hw.GetMatchBin().GetVal(best_fun[0]) = dur;
+  }
+
+  /// Non-default instruction: AdjOwnRegulator
+  /// Number of arguments: 3
+  /// Description: adjusts the regulator of a tag in the matchbin
+  /// towards a target.
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  static void Inst_AdjOwnRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    auto & flow = call_state.GetTopFlow();
+
+    double target = mem_state.AccessWorking(inst.GetArg(0));
+    if (target < 0) {
+      target = std::max(target, std::numeric_limits<double>::min());
+      target /= std::numeric_limits<double>::min();
+    } else {
+      target += 1.0;
+    }
+
+    const double budge = emp::Mod(mem_state.AccessWorking(inst.GetArg(1)) + 0.2, 1.0);
+    const double cur = hw.GetMatchBin().ViewRegulator(flow.GetMP());
+
+    hw.GetMatchBin().SetRegulator(flow.GetMP(), target * budge + cur * (1 - budge));
+
+    const size_t dur = 2 + mem_state.AccessWorking(inst.GetArg(2));
+    hw.GetMatchBin().GetVal(flow.GetMP()) = dur;
+
+  }
+
+  /// Non-default instruction: ExtRegulator
+  /// Number of arguments: 1
+  /// Description: extends the decay counter of a
+  /// regulator of a tag in the matchbin.
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  static void Inst_ExtRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    // const State & state = hw.GetCurState();
+    emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
+    if (!best_fun.size()) return;
+
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+
+    const size_t dur = 1 + mem_state.AccessWorking(inst.GetArg(0));
+    hw.GetMatchBin().GetVal(best_fun[0]) += dur;
+  }
+
+
+  /// Non-default instruction: SenseRegulator
+  /// Number of arguments: 1
+  /// Description: senses the value of the regulator of another function.
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  static void Inst_SenseRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
+    if (best_fun.size()) {
+      auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+      auto & mem_state = call_state.GetMemory();
+      mem_state.SetWorking(inst.GetArg(0), hw.GetMatchBin().ViewRegulator(best_fun[0]));
+    }
+  }
+
+
+  /// Non-default instruction: SenseOwnRegulator
+  /// Number of arguments: 1
+  /// Description: senses the value of the regulator the current function.
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  static void Inst_SenseOwnRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst){
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    auto & flow = call_state.GetTopFlow();
+    mem_state.SetWorking(inst.GetArg(0), hw.GetMatchBin().ViewRegulator(flow.GetMP()));
+  }
+
+  /// Non-default instruction: Terminal
+  /// Number of arguments: 1
+  /// Description: writes a genetically-encoded value into a register.
+  // template<typename MaxRatio=std::ratio<1>, typename MinRatio=std::ratio<0>>
+  // static void Inst_Terminal(EventDrivenGP_t & hw, const inst_t & inst) {
+
+  //   constexpr double max = static_cast<double>(MaxRatio::num) / MaxRatio::den;
+  //   constexpr double min = static_cast<double>(MaxRatio::num) / MaxRatio::den;
+
+  //   State & state = hw.GetCurState();
+  //   const auto & tag = inst.affinity;
+
+  //   const double val = (
+  //     tag.GetDouble() / tag.MaxDouble()
+  //   ) * (max - min) - min;
+
+  //   state.SetLocal(inst.args[0], val);
+
+  // }
+
 }}}
 
 #endif

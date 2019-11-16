@@ -271,6 +271,9 @@ namespace emp { namespace signalgp {
     /// Get a reference to the hardware's memory model.
     memory_model_t & GetMemoryModel() { return memory_model; }
 
+    /// Get a reference to the hardware's matchbin
+    matchbin_t & GetMatchBin() { return matchbin; }
+
     /// Set program for this hardware object.
     void SetProgram(const program_t & p) {
       Reset();
