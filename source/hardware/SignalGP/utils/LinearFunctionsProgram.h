@@ -64,6 +64,7 @@ namespace emp { namespace signalgp {
     const tag_t & GetTag(size_t id=0) const {  emp_assert(tags.size()); return tags[id]; }
 
     emp::vector<tag_t> & GetTags() { return tags; } // WARNING: no safety features here!
+    const emp::vector<tag_t> & GetTags() const { return tags; } // WARNING: no safety features here!
 
     void SetTag(const tag_t & tag) { SetTag(0, tag); }
     void SetTag(size_t id, const tag_t & tag) { emp_assert(id < tags.size()); tags[id] = tag; }

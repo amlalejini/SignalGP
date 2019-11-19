@@ -58,7 +58,9 @@ namespace emp { namespace signalgp {
       size_t GetID() const { return id; }
 
       emp::vector<arg_t> & GetArgs() { return args; }
+      const emp::vector<arg_t> & GetArgs() const { return args; }
       emp::vector<tag_t> & GetTags() { return tags; }
+      const emp::vector<tag_t> & GetTags() const { return tags; }
 
       const arg_t & GetArg(size_t i) const { return args[i]; }
       const tag_t & GetTag(size_t i) const { return tags[i]; }
