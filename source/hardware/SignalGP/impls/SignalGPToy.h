@@ -10,7 +10,7 @@
 namespace toy_signalgp_impl {
   struct ExecState {
     size_t value=0;
-    void Clear() { value = 0; }
+    void Reset() { value = 0; }
   };
 }
 

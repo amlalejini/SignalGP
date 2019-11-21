@@ -1,6 +1,39 @@
 # Code Review Notes
 
-## NOtes
+## 11/19 - Notes
+
+- Decay value in matchbin
+  - When to update/decrement?
+    - Current: user controlled
+    - Do we want to shove into SingleProcess?
+    - DecayRegulators function to canonical function
+- MatchBin
+  - Regulator struct
+- Best way to handle regulation?
+- Biased instruction representations
+  - e.g., don't want certain types of instructions to overwhelm basic GP functionality
+  - Achieves virtual copy count
+  - Maybe goes into instruction library
+  - In mutator? In random generation?
+- Should event library be a reference?
+  - Yes, but with documentation that event libraries are shared
+  - Or, use emp::Ptr<const event_lib>
+- Should cur_thread_id be std::optional<size_t> or a custom struct?
+  - Probably
+- API
+  - KillCurThread
+  - Kill a thread
+  - Clear all threads
+- ActivatePending
+  - Max heap for Pending, min heap for running; bail when you get a tie
+- BaseSignalGP::Reset { ResetImpl(); [inline BaseReset()]; }
+  - virtual ResetImpl = 0;
+- BaseSignalGP
+  - using module_id_t = size_t
+- BaseSignalGP
+  - priority override in SpawnThreadID
+
+## Notes
 
 - Directory structure
   - Hardware

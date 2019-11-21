@@ -153,6 +153,7 @@ namespace emp { namespace signalgp { namespace lsgp_utils {
 
     /// Empty out the call stack.
     void Clear() { call_stack.clear(); }
+    void Reset() { call_stack.clear(); }
 
     /// Get a reference to the current (top) call state on the call stack.
     /// Requires the call stack to be not empty.

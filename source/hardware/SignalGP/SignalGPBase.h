@@ -22,6 +22,7 @@
 
 namespace emp { namespace signalgp {
 
+  /// todo - comment this
   struct BaseEvent {
     size_t id;
     BaseEvent(size_t _id=0) : id(_id) { }
@@ -65,8 +66,8 @@ namespace emp { namespace signalgp {
     using fun_print_event_t = std::function<void(const event_t &, const hardware_t&, std::ostream &)>;
 
     // QUESTION - Pros/cons of nesting Thread type in SignalGP class?
-    enum class ThreadState { RUNNING, DEAD, PENDING };
     struct Thread {
+      enum class ThreadState { RUNNING, DEAD, PENDING };
       // comment => labels can exist inside execution state.
       exec_state_t exec_state;
       double priority;
@@ -79,7 +80,7 @@ namespace emp { namespace signalgp {
 
       void Reset() {
         // @discussion - How do we want to handle this?
-        exec_state.Clear(); // TODO - make this functionality more flexible! Currently assumes exec_state_t has a Clear function!
+        exec_state.Reset(); // TODO - make this functionality more flexible! Currently assumes exec_state_t has a Clear function!
         run_state = ThreadState::DEAD;
         priority = 1.0;
       }
@@ -100,6 +101,11 @@ namespace emp { namespace signalgp {
       void SetPriority(double p) { priority = p; }
     };
 
+  private:
+    // Use accessors!
+    size_t cur_thread_id=(size_t)-1;    ///< Currently executing thread.
+    bool is_executing=false;            ///< Is this hardware unit currently executing (within a SingleProcess)? Instructions are executed in SingleProcess
+
   protected:
     Ptr<event_lib_t> event_lib;         ///< These are the events this hardware knows about.
     std::deque<std::unique_ptr<event_t>> event_queue;    ///< Queue of events to be processed every time step.
@@ -107,6 +113,7 @@ namespace emp { namespace signalgp {
     // Thread management
     size_t max_active_threads=64;               ///< Maximum number of concurrently running threads.
     size_t max_thread_space=512;         ///
+    // todo - document how this data structure can grow over time (not necessarily .size() == max_thread_space)
     emp::vector<thread_t> threads;       ///< All threads (each could be active/inactive/pending).
     // TODO - add a 'use_thread_priority' setting => default = true
     // @discussion - can't really track thread priorities separate from threads, as they can get updated on the fly
@@ -114,9 +121,6 @@ namespace emp { namespace signalgp {
     std::unordered_set<size_t> active_threads;        ///< Active thread ids.
     emp::vector<size_t> unused_threads;     ///< Unused thread ids. DISCUSSION: Should this be a set?
     std::deque<size_t> pending_threads;     ///< Pending thread ids.
-
-    size_t cur_thread_id=(size_t)-1;    ///< Currently executing thread.
-    bool is_executing=false;            ///< Is this hardware unit currently executing (within a SingleProcess)?
 
     custom_comp_t custom_component;
 
@@ -137,6 +141,7 @@ namespace emp { namespace signalgp {
     /// todo - Make public?
     void KillThread(size_t thread_id) {
       emp_assert(thread_id < threads.size());
+      // assert thread_id is in active_threads, not in pending
       active_threads.erase(thread_id);
       threads[thread_id].SetDead();
       unused_threads.emplace_back(thread_id);
@@ -221,6 +226,7 @@ namespace emp { namespace signalgp {
     }
 
   public:
+    // todo - why are we initializing thread this way?
     BaseSignalGP(Ptr<event_lib_t> elib) // @discussion - okay practice to rely on default constructors for other member variables?
       : event_lib(elib),
         threads( (2*max_active_threads < max_thread_space) ? 2*max_active_threads : max_thread_space ),
@@ -242,10 +248,11 @@ namespace emp { namespace signalgp {
 
     /// Destructor.
     // todo - test!
-    virtual ~BaseSignalGP() { }
+    virtual ~BaseSignalGP() {};
 
     /// Full virtual hardware reset:
     /// Required
+    /// - NOTE: derived class should call BaseResetState
     virtual void Reset() = 0;
 
     /// Required
@@ -311,6 +318,7 @@ namespace emp { namespace signalgp {
 
     /// Get a reference to active threads.
     /// NOTE: use responsibly! No safety gloves here!
+    /// TODO - emp_assert, emp_warn?
     emp::vector<thread_t> & GetThreads() { return threads; }
 
     /// Get a reference to a particular thread.
@@ -332,16 +340,23 @@ namespace emp { namespace signalgp {
 
     /// Get the ID of the currently executing thread. If hardware is not in midst
     /// of an execution cycle, this will return (size_t)-1.
-    size_t GetCurThreadID() { return cur_thread_id; }
+    /// Instructions are executed in SingleProcess
+    size_t GetCurThreadID() {
+      emp_assert(is_executing);
+      emp_assert(cur_thread_id < threads.size());
+      return cur_thread_id;
+    }
 
     /// Get the currently executing thread. Only valid to call this while virtual
     /// hardware is executing. Otherwise, will error out.
+    /// Instructions are executed in SingleProcess
     thread_t & GetCurThread() {
       emp_assert(is_executing, "Hardware is not executing! No current thread.");
       emp_assert(cur_thread_id < threads.size());
       return threads[cur_thread_id];
     }
 
+    /// Are we inside of a 'SingleProcess'. Note, instructoins are executed in SingleProcess.
     bool IsExecuting() const { return is_executing; }
 
     /// TODO - TEST
@@ -354,7 +369,12 @@ namespace emp { namespace signalgp {
       // NOTE - this cannot DECREASE the capacity of the 'threads' member variable.
       //        It can, however, INCREASE the capacity of the 'threads' member variable.
       // Adjust max_thread_space if necessary.
-      max_thread_space = (n > max_thread_space) ? n : max_thread_space;
+
+      // TODO
+      // temp = vector(active.begin(), active.end())
+      // partial sort(temp, [](){get priority})
+
+      max_thread_space = std::max(n, max_thread_space); //(n > max_thread_space) ? n : max_thread_space;
       if (n > max_active_threads) {
         // Increasing total threads able to run simultaneously. This might increase
         // thread storage (threads).
@@ -430,7 +450,8 @@ namespace emp { namespace signalgp {
       while (pending_threads.size()) {
         const size_t thread_id = pending_threads.back();
         pending_threads.pop_back();
-        threads[thread_id].SetDead();
+        // threads[thread_id].SetDead();
+        threads[thread_id].Reset(); // this should be safe - todo - think on it
         unused_threads.emplace_back(thread_id);
       }
     }
@@ -465,7 +486,7 @@ namespace emp { namespace signalgp {
     /// If no unused threads & already maxed out thread space, will not spawn new
     /// thread.
     /// Otherwise, mark thread as pending.
-    std::optional<size_t> SpawnThreadWithID(size_t module_id, double priority=1.0) {
+    std::optional<size_t> SpawnThreadWithID(size_t module_id, double priority=1.0, bool priority_override=true) {
       size_t thread_id;
       // Is there an unused thread to commandeer?
       if (unused_threads.size()) {

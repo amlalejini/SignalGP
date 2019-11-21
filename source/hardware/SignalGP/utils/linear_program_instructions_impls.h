@@ -511,6 +511,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
 
     double regulator = mem_state.AccessWorking(inst.GetArg(0));
     if (regulator < 0) {
+      // make sure it's not negative infinity!
       regulator = std::max(regulator, std::numeric_limits<double>::min());
       regulator /= std::numeric_limits<double>::min();
     } else {
