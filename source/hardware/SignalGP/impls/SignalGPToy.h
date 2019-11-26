@@ -14,7 +14,6 @@ namespace toy_signalgp_impl {
   };
 }
 
-
 template<typename CUSTOM_COMPONET_T=emp::signalgp::DefaultCustomComponent>
 class ToySignalGP : public emp::signalgp::BaseSignalGP< ToySignalGP<CUSTOM_COMPONET_T>,
                                                         toy_signalgp_impl::ExecState,
@@ -37,7 +36,7 @@ protected:
   program_t program;
 
 public:
-  ToySignalGP(emp::Ptr<event_lib_t> elib)
+  ToySignalGP(event_lib_t & elib)
     : base_hw_t(elib)
   { }
 

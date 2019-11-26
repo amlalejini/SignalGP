@@ -107,7 +107,8 @@ namespace emp { namespace signalgp {
     bool is_executing=false;            ///< Is this hardware unit currently executing (within a SingleProcess)? Instructions are executed in SingleProcess
 
   protected:
-    Ptr<event_lib_t> event_lib;         ///< These are the events this hardware knows about.
+    // Ptr<event_lib_t> event_lib;         ///< These are the events this hardware knows about.
+    event_lib_t & event_lib;
     std::deque<std::unique_ptr<event_t>> event_queue;    ///< Queue of events to be processed every time step.
 
     // Thread management
@@ -227,7 +228,8 @@ namespace emp { namespace signalgp {
 
   public:
     // todo - why are we initializing thread this way?
-    BaseSignalGP(Ptr<event_lib_t> elib) // @discussion - okay practice to rely on default constructors for other member variables?
+    // BaseSignalGP(Ptr<event_lib_t> elib) // @discussion - okay practice to rely on default constructors for other member variables?
+    BaseSignalGP(event_lib_t & elib) // @discussion - okay practice to rely on default constructors for other member variables?
       : event_lib(elib),
         threads( (2*max_active_threads < max_thread_space) ? 2*max_active_threads : max_thread_space ),
         unused_threads( threads.size() )
@@ -288,7 +290,8 @@ namespace emp { namespace signalgp {
     }
 
     /// Get event library associated with hardware.
-    Ptr<const event_lib_t> GetEventLib() const { return event_lib; }
+    event_lib_t & GetEventLib() { return event_lib; }
+    const event_lib_t & GetEventLib() const { return event_lib; }
 
     /// Get reference to this hardware's execution stepper object.
     DERIVED_T & GetHardware() { return static_cast<DERIVED_T&>(*this); }
@@ -522,10 +525,10 @@ namespace emp { namespace signalgp {
     }
 
     /// Handle an event (on this hardware) now!.
-    void HandleEvent(const event_t & event) { event_lib->HandleEvent(GetHardware(), event); }
+    void HandleEvent(const event_t & event) { event_lib.HandleEvent(GetHardware(), event); }
 
     /// Trigger an event (from this hardware).
-    void TriggerEvent(const event_t & event) { event_lib->TriggerEvent(GetHardware(), event); }
+    void TriggerEvent(const event_t & event) { event_lib.TriggerEvent(GetHardware(), event); }
 
     /// Queue an event (to be handled by this hardware) next time this hardware
     /// unit is executed.

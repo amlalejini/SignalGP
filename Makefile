@@ -1,9 +1,10 @@
 # Project-specific settings
 PROJECT := signalgp-reimplementation-playground
 EMP_DIR := ../Empirical/source
+CEREAL_DIR := ../Empirical/third-party/cereal/include
 
 # Flags to use regardless of compiler
-CFLAGS_all := -Wall -Wno-unused-function -pedantic -std=c++17 -I$(EMP_DIR)/ -I./source/hardware/SignalGP/
+CFLAGS_all := -Wall -Wno-unused-function -pedantic -std=c++17 -I$(EMP_DIR)/ -I./source/hardware/SignalGP/ -I$(CEREAL_DIR)/
 
 # Native compiler information
 CXX_nat := g++-9

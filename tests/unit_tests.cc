@@ -450,7 +450,7 @@ TEST_CASE("Toy SignalGP", "[general]") {
 
   event_lib_t event_lib;
   emp::Random random(2);
-  signalgp_t hardware(&event_lib);
+  signalgp_t hardware(event_lib);
 
   // Configure hardware
   hardware.SetActiveThreadLimit(16);
@@ -497,7 +497,7 @@ TEST_CASE("Thread Management (Toy SignalGP)") {
 
   event_lib_t event_lib;
   emp::Random random(2);
-  signalgp_t hardware(&event_lib);
+  signalgp_t hardware(event_lib);
 
   // Configure hardware
   hardware.SetActiveThreadLimit(8);
@@ -753,7 +753,7 @@ TEST_CASE("SignalGP - Linear Functions Program") {
   inst_lib.AddInst("Routine", emp::signalgp::lfp_inst_impl::Inst_Routine<signalgp_t, inst_t>, "");
 
   emp::Random random(2);
-  signalgp_t hardware(random, &inst_lib, &event_lib);
+  signalgp_t hardware(random, inst_lib, event_lib);
   hardware.SetActiveThreadLimit(16);
   REQUIRE(hardware.ValidateThreadState());
   program_t program;
@@ -3219,7 +3219,7 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
 
   emp::Random random(2);
 
-  signalgp_t hardware(random, &inst_lib, &event_lib);
+  signalgp_t hardware(random, inst_lib, event_lib);
   hardware.SetActiveThreadLimit(16);
   emp_assert(hardware.ValidateThreadState(), "Bad thread initial state.");
 

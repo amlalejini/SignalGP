@@ -59,7 +59,7 @@ namespace emp { namespace signalgp {
     using fun_open_flow_t = typename flow_handler_t::fun_open_flow_t;
 
   protected:
-    emp::Ptr<inst_lib_t> inst_lib; ///< Library of program instructions.
+    inst_lib_t & inst_lib;
     flow_handler_t flow_handler;
     memory_model_t memory_model;
     program_t program;
@@ -207,7 +207,7 @@ namespace emp { namespace signalgp {
     }
 
   public:
-    LinearFunctionsProgramSignalGP(emp::Random & rnd, emp::Ptr<inst_lib_t> ilib, emp::Ptr<event_lib_t> elib)
+    LinearFunctionsProgramSignalGP(emp::Random & rnd, inst_lib_t & ilib, event_lib_t & elib)
       : base_hw_t(elib),
         inst_lib(ilib),
         random(rnd),
@@ -316,7 +316,7 @@ namespace emp { namespace signalgp {
             // even be invalid. Thus, we must increment the IP before processing
             // the current instruction.
             ++flow_info.ip; // Move IP forward (maybe to an invalid location)
-            inst_lib->ProcessInst(hardware, program[mp][ip]);
+            inst_lib.ProcessInst(hardware, program[mp][ip]);
           } else { // @discussion if we wanted option to have modules be circular, we could add a condition before this else!
             // The IP is off the edge of the module.
             flow_handler.CloseFlow(hardware, flow_info.type, exec_state);
@@ -351,9 +351,9 @@ namespace emp { namespace signalgp {
       while (true) {
         if (!IsValidProgramPosition(mp, ip)) break;
         const inst_t & inst = program[mp][ip];
-        if (inst_lib->HasProperty(inst.id, InstProperty::BLOCK_DEF)) {
+        if (inst_lib.HasProperty(inst.id, InstProperty::BLOCK_DEF)) {
           ++depth;
-        } else if (inst_lib->HasProperty(inst.id, InstProperty::BLOCK_CLOSE)) {
+        } else if (inst_lib.HasProperty(inst.id, InstProperty::BLOCK_CLOSE)) {
           --depth;
           if (depth == 0) break;
         }

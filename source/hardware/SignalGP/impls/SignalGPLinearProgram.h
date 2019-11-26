@@ -108,7 +108,7 @@ namespace emp { namespace signalgp {
     };
 
   protected:
-    emp::Ptr<inst_lib_t> inst_lib;  ///< Library of program instructions.
+    inst_lib_t & inst_lib;  ///< Library of program instructions.
     flow_handler_t flow_handler;       ///< The flow handler manages the behavior of different types of execution flow.
     memory_model_t memory_model;    ///< The memory model manages any global memory state and specifies call state memory.
     program_t program;              ///< Program loaded on this execution stepper.
@@ -260,7 +260,7 @@ namespace emp { namespace signalgp {
     }
 
   public:
-    LinearProgramSignalGP(emp::Random & rnd, emp::Ptr<inst_lib_t> ilib, emp::Ptr<event_lib_t> elib)
+    LinearProgramSignalGP(emp::Random & rnd, inst_lib_t & ilib, event_lib_t & elib)
       : base_hw_t(elib),
         inst_lib(ilib),
         flow_handler(),
@@ -343,7 +343,7 @@ namespace emp { namespace signalgp {
             // even be invalid. Thus, we must increment the IP before processing
             // the current instruction.
             ++flow_info.ip; // Move instruction pointer forward (might be invalid location).
-            inst_lib->ProcessInst(hardware, program[ip]);
+            inst_lib.ProcessInst(hardware, program[ip]);
           } else if (ip >= program.GetSize()
                     && modules[mp].InModule(0)
                     && modules[mp].end < modules[mp].begin) {
@@ -352,7 +352,7 @@ namespace emp { namespace signalgp {
             // in which case, we need to move the IP.
             ip = 0;
             flow_info.ip = 1; // See comment above for why we do this before ProcessInst.
-            inst_lib->ProcessInst(hardware, program[ip]);
+            inst_lib.ProcessInst(hardware, program[ip]);
           } else {
             // IP not valid for this module. Close flow.
             flow_handler.CloseFlow(hardware, flow_info.type, exec_state);
@@ -407,9 +407,9 @@ namespace emp { namespace signalgp {
       while (true) {
         if (!IsValidProgramPosition(mp, ip)) break;
         const inst_t & inst = program[ip];
-        if (inst_lib->HasProperty(inst.GetID(), InstProperty::BLOCK_DEF)) {
+        if (inst_lib.HasProperty(inst.GetID(), InstProperty::BLOCK_DEF)) {
           ++depth;
-        } else if (inst_lib->HasProperty(inst.GetID(), InstProperty::BLOCK_CLOSE)) {
+        } else if (inst_lib.HasProperty(inst.GetID(), InstProperty::BLOCK_CLOSE)) {
           --depth;
           if (depth == 0) break;
         }
@@ -497,7 +497,7 @@ namespace emp { namespace signalgp {
       for (size_t pos = 0; pos < program.GetSize(); ++pos) {
         inst_t & inst = program[pos];
         // Is this a module definition?
-        if (inst_lib->HasProperty(inst.GetID(), InstProperty::MODULE)) {
+        if (inst_lib.HasProperty(inst.GetID(), InstProperty::MODULE)) {
           // If this isn't the first module we've found, mark this position as the
           // last position of the previous module.
           if (modules.size()) { modules.back().end = pos; }
@@ -592,7 +592,7 @@ namespace emp { namespace signalgp {
           if (IsValidProgramPosition(flow.mp, flow.ip)) {
             // Name[tags](args)
             const inst_t & inst = program[flow.ip];
-            os << inst_lib->GetName(inst.id);
+            os << inst_lib.GetName(inst.id);
             os << "[";
             for (size_t ti = 0; ti < inst.tags.size(); ++ti) {
               if (ti) os << ",";
