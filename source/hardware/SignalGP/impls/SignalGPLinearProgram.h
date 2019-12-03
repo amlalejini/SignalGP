@@ -259,6 +259,12 @@ namespace emp { namespace signalgp {
         };
     }
 
+    /// Full reset.
+    void ResetImpl() {
+      ResetHardwareState();
+      ResetProgram();
+    }
+
   public:
     LinearProgramSignalGP(emp::Random & rnd, inst_lib_t & ilib, event_lib_t & elib)
       : base_hw_t(elib),
@@ -280,15 +286,9 @@ namespace emp { namespace signalgp {
     LinearProgramSignalGP(LinearProgramSignalGP &&) = default;
     LinearProgramSignalGP(const LinearProgramSignalGP &) = default;
 
-    /// Full reset.
-    void Reset() {
-      ResetHardwareState();
-      ResetProgram();
-    }
-
     /// Reset hardware state: memory model state.
     void ResetHardwareState() {
-      this->BaseResetState();
+      this->ResetBaseHardwareState();
       memory_model.Reset(); // Reset global memory
     }
 
@@ -474,7 +474,7 @@ namespace emp { namespace signalgp {
     /// After updating hardware's program, 'compile' the program to extract module
     /// information (i.e., run UpdateModules).
     void SetProgram(const program_t & _program) {
-      Reset();
+      this->Reset();
       program = _program;
       UpdateModules();
     }

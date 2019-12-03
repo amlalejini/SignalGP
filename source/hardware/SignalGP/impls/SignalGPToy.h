@@ -52,13 +52,12 @@ public:
   }
 
   void ResetHardware() {
-    this->BaseResetState();
+    this->ResetBaseHardwareState();
   }
 
   // No extra hardware state to reset.
   /// REQUIRED
-  void Reset() {
-    this->BaseResetState();
+  void ResetImpl() {
     ResetProgram();
   }
 

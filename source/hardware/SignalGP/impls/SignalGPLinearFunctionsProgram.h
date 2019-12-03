@@ -206,6 +206,11 @@ namespace emp { namespace signalgp {
         };
     }
 
+    /// Full hardware reset.
+    void ResetImpl() {
+      ResetProgram(); // this will reset program + hardware
+    }
+
   public:
     LinearFunctionsProgramSignalGP(emp::Random & rnd, inst_lib_t & ilib, event_lib_t & elib)
       : base_hw_t(elib),
@@ -222,15 +227,10 @@ namespace emp { namespace signalgp {
     LinearFunctionsProgramSignalGP(LinearFunctionsProgramSignalGP &&) = default;
     LinearFunctionsProgramSignalGP(const LinearFunctionsProgramSignalGP &) = default;
 
-    /// Full hardware reset.
-    void Reset() {
-      ResetProgram(); // this will reset program + hardware
-    }
-
     /// Reset only hardware state information (memory, threads, etc)
     void ResetHardwareState() {
       emp_assert(!this->IsExecuting());
-      this->BaseResetState();
+      this->ResetBaseHardwareState();
       memory_model.Reset();
     }
 
@@ -276,9 +276,9 @@ namespace emp { namespace signalgp {
 
     /// Set program for this hardware object.
     void SetProgram(const program_t & p) {
-      Reset();
-      program = p;
-      ResetMatchBin();
+      this->Reset();   // Full hardware reset
+      program = p;     // Update current program.
+      ResetMatchBin(); // Update matchbin with current program information.
     }
 
     /// Set open flow handler for given flow type.

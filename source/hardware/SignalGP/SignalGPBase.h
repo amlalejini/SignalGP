@@ -354,13 +354,16 @@ namespace emp { namespace signalgp {
       // emp_assert(ValidateThreadState()); this is real slow
     }
 
+    /// REQUIRED - Must be implemented by DERIVED_T
+    /// ResetImpl should fully reset any hardware state information tracked by DERIVED_T.
+    /// ResetImpl is called by THIS_T::Reset before doing a ResetBaseHardwareState.
+    virtual void ResetImpl() = 0;
+
   public:
-    // todo - why are we initializing thread this way?
-    // BaseSignalGP(Ptr<event_lib_t> elib) // @discussion - okay practice to rely on default constructors for other member variables?
-    BaseSignalGP(event_lib_t & elib) // @discussion - okay practice to rely on default constructors for other member variables?
+    BaseSignalGP(event_lib_t & elib)
       : event_lib(elib),
-        threads( (2*max_active_threads < max_thread_space) ? 2*max_active_threads : max_thread_space ),
-        unused_threads( threads.size() )
+        threads(std::min(2*max_active_threads, max_thread_space)),
+        unused_threads(threads.size())
     {
       // Set all threads to unused.
       for (size_t i = 0; i < unused_threads.size(); ++i) {
@@ -368,37 +371,30 @@ namespace emp { namespace signalgp {
       }
     }
 
-    // Todo - test!
     /// Move constructor.
     BaseSignalGP(BaseSignalGP && in) = default;
 
-    /// todo - test!
     /// Copy constructor.
     BaseSignalGP(const BaseSignalGP & in) = default;
 
     /// Destructor.
-    // todo - test!
     virtual ~BaseSignalGP() {};
 
-    /// Full virtual hardware reset:
-    /// Required
-    /// - NOTE: derived class should call BaseResetState
-    virtual void Reset() = 0;
-
-    /// Required
+    /// REQUIRED - Must be implemented by DERIVED_T
     virtual void SingleExecutionStep(DERIVED_T &, thread_t &) = 0;
 
-    /// Required - @discussion is vector<size_t> really the return type we want here?
+    /// REQUIRED - Must be implemented by DERIVED_T
     virtual vector<size_t> FindModuleMatch(const tag_t &, size_t) = 0;
 
-    /// Required
+    /// REQUIRED - Must be implemented by DERIVED_T
+    /// This function should take a thread_t & thread and size_t module_id as input and initialize
+    /// the given thread using the specified module_id.
     virtual void InitThread(thread_t &, size_t) = 0;
 
     /// HardwareState reset:
-    /// - Reset execution stepper hardware state.
     /// - Clear event queue.
     /// - Reset all threads, move all to unused; clear pending.
-    void BaseResetState() {
+    void ResetBaseHardwareState() {
       emp_assert(!is_executing, "Cannot reset hardware while executing.");
       event_queue.clear();
       for (auto & thread : threads) {
@@ -417,6 +413,12 @@ namespace emp { namespace signalgp {
       cur_thread.id = max_thread_space;
       // cur_thread_id = (size_t)-1;
       is_executing = false;
+    }
+
+    /// Full hardware reset.
+    void Reset() {
+      ResetImpl();
+      ResetBaseHardwareState();
     }
 
     /// Get event library associated with hardware.
