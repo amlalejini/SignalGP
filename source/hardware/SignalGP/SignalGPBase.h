@@ -135,8 +135,19 @@ namespace emp { namespace signalgp {
 
   private:
     // Use accessors!
-    size_t cur_thread_id=(size_t)-1;    ///< Currently executing thread.
-    bool is_executing=false;            ///< Is this hardware unit currently executing (within a SingleProcess)? Instructions are executed in SingleProcess
+    // size_t cur_thread_id=(size_t)-1;
+    struct {
+      bool valid=false;
+      size_t id=(size_t)-1;
+      bool IsValid() const { return valid; }
+      void Invalidate() { valid = false; }
+      void Validate() { valid = true; }
+      size_t & ID() { return id; }
+      // const size_t ID() const { return id; }
+    } cur_thread;                       ///< Should always point to currently executing thread.
+
+    bool is_executing=false;            ///< Is this hardware unit currently executing (within a SingleProcess)?
+                                        ///< Note that threads are executed inside SingleProcess.
 
   protected:
     event_lib_t & event_lib;                             ///< These are the events this hardware knows about.
@@ -316,7 +327,9 @@ namespace emp { namespace signalgp {
       for (size_t i = 0; i < unused_threads.size(); ++i) {
         unused_threads[i] = (unused_threads.size() - 1) - i;
       }
-      cur_thread_id = (size_t)-1;
+      cur_thread.Invalidate();
+      cur_thread.id = max_thread_space;
+      // cur_thread_id = (size_t)-1;
       is_executing = false;
     }
 
@@ -377,8 +390,10 @@ namespace emp { namespace signalgp {
     /// Instructions are executed in SingleProcess
     size_t GetCurThreadID() {
       emp_assert(is_executing);
-      emp_assert(cur_thread_id < threads.size());
-      return cur_thread_id;
+      emp_assert(cur_thread.IsValid(), "There is no currently executing thread.");
+      emp_assert(cur_thread.ID() < threads.size(), "Current thread ID is invalid.");
+      // emp_assert(cur_thread_id < threads.size());
+      return cur_thread.ID();
     }
 
     /// Get the currently executing thread. Only valid to call this while virtual
@@ -386,8 +401,10 @@ namespace emp { namespace signalgp {
     /// Instructions are executed in SingleProcess
     thread_t & GetCurThread() {
       emp_assert(is_executing, "Hardware is not executing! No current thread.");
-      emp_assert(cur_thread_id < threads.size());
-      return threads[cur_thread_id];
+      emp_assert(cur_thread.IsValid(), "There is no currently executing thread.");
+      emp_assert(cur_thread.ID() < threads.size(), "Current thread ID is invalid.");
+      // emp_assert(cur_thread_id < threads.size());
+      return threads[cur_thread.ID()];
     }
 
     /// Are we inside of a 'SingleProcess'. Note, instructoins are executed in SingleProcess.
@@ -582,12 +599,14 @@ namespace emp { namespace signalgp {
 
       // Begin execution!
       is_executing = true;
+      cur_thread.Validate();    // cur_thread is valid during execution.
       size_t exec_order_id = 0;
       size_t thread_exec_cnt = thread_exec_order.size();
       size_t adjust = 0;
       while (exec_order_id < thread_exec_cnt) {
         emp_assert(exec_order_id < threads.size()); // Exec order ID should always be valid thread.
-        cur_thread_id = thread_exec_order[exec_order_id];
+        // cur_thread_id = thread_exec_order[exec_order_id];
+        cur_thread.id = thread_exec_order[exec_order_id];
 
         // Do we need to move the current thread id over in the execution ordering
         // to make our execution order contiguous?
@@ -595,33 +614,37 @@ namespace emp { namespace signalgp {
           // If we need to adjust, invalidate current position and move current
           // thread id up by 'adjust'.
           thread_exec_order[exec_order_id] = max_thread_space; // Invalid position!
-          thread_exec_order[exec_order_id - adjust] = cur_thread_id;
+          thread_exec_order[exec_order_id - adjust] = cur_thread.ID();
         }
 
         // Is this thread dead?
-        if (threads[cur_thread_id].IsDead()) {
+        if (threads[cur_thread.ID()].IsDead()) {
           // If this thread is active, kill it.
-          if (emp::Has(active_threads, cur_thread_id)) KillThread(cur_thread_id);
+          if (emp::Has(active_threads, cur_thread.ID())) KillThread(cur_thread.ID());
           ++adjust;
           ++exec_order_id;
           continue;
         }
 
         // Execute the thread (defined by derived class)
-        GetHardware().SingleExecutionStep(GetHardware(), threads[cur_thread_id]);
+        GetHardware().SingleExecutionStep(GetHardware(), threads[cur_thread.ID()]);
 
         // Did the thread die?
-        if (threads[cur_thread_id].IsDead()) {
-          KillThread(cur_thread_id);
+        if (threads[cur_thread.ID()].IsDead()) {
+          KillThread(cur_thread.ID());
           ++adjust;
         }
         ++exec_order_id;
       }
       is_executing = false;
+
       // Update the thread execution ordering to be accurate.
       thread_exec_order.resize(thread_exec_cnt - adjust);
       emp_assert(thread_exec_order.size() == active_threads.size()); // discussion - right?
-      cur_thread_id = max_thread_space; // Invalidate the current thread id.
+
+      // Invalidate the current thread id.
+      cur_thread.id = max_thread_space;
+      cur_thread.Invalidate();
     }
 
     /// Advance hardware by some arbitrary number of steps.
