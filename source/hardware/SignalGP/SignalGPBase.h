@@ -26,19 +26,19 @@ namespace emp { namespace signalgp {
   /// @brief Base SignalGP class from which all SignalGP implementations should be derived.
   ///
   /// This version of SignalGP makes use of the curiously recursive template pattern (see: https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern).
-  /// BaseSignalGP manages virtual thread execution, manages event queuing and handling, and provides
+  /// SignalGPBase manages virtual thread execution, manages event queuing and handling, and provides
   /// provides an interface to a custom hardware component (CUSTOM_COMPONENT_T).
   ///
-  /// BaseSignalGP has the following template parameters:
+  /// SignalGPBase has the following template parameters:
   ///   * DERIVED_T - Specifies the type of the SignalGP implementation, which must be derived from
-  ///     BaseSignalGP.
+  ///     SignalGPBase.
   ///   * EXEC_STATE_T - Specifies the type of the state information required to execute a thread.
   ///   * TAG_T - Specifies the type that is used to search for modules when spawning a new thread.
   ///   * CUSTOM_COMPONENT_T - Optional template parameter. Specifies type of custom hardware component
   ///     to be added on to the SignalGP virtual hardware.
   ///
-  /// SignalGP implementations that inherit from BaseSignalGP add functionality to BaseSignalGP's.
-  /// At a high level, while BaseSignalGP manages events and threads, derived implementations of SignalGP
+  /// SignalGP implementations that inherit from SignalGPBase add functionality to SignalGPBase's.
+  /// At a high level, while SignalGPBase manages events and threads, derived implementations of SignalGP
   /// flesh out how the virtual hardware should execute (e.g., what does it mean to execute? what state
   /// information is required to specify the state of a thread? et cetera).
   ///
@@ -65,7 +65,7 @@ namespace emp { namespace signalgp {
            typename EXEC_STATE_T,
            typename TAG_T,
            typename CUSTOM_COMPONENT_T=DefaultCustomComponent>
-  class BaseSignalGP {
+  class BaseSignalGP {  // TODO - BaseSignalGP => SignalGPBase
   public:
     // Forward declarations
     struct Thread;
@@ -134,8 +134,6 @@ namespace emp { namespace signalgp {
     };
 
   private:
-    // Use accessors!
-    // size_t cur_thread_id=(size_t)-1;
     struct {
       bool valid=false;
       size_t id=(size_t)-1;
@@ -143,38 +141,61 @@ namespace emp { namespace signalgp {
       void Invalidate() { valid = false; }
       void Validate() { valid = true; }
       size_t & ID() { return id; }
-      // const size_t ID() const { return id; }
     } cur_thread;                       ///< Should always point to currently executing thread.
 
     bool is_executing=false;            ///< Is this hardware unit currently executing (within a SingleProcess)?
                                         ///< Note that threads are executed inside SingleProcess.
 
   protected:
-    event_lib_t & event_lib;                             ///< These are the events this hardware knows about.
-    std::deque<std::unique_ptr<event_t>> event_queue;    ///< Queue of events to be processed every time step.
+    // -- Event management --
+    event_lib_t & event_lib;                           ///< Library of events that hardware can handle.
+    std::deque<std::unique_ptr<event_t>> event_queue;  ///< Queue of events to be processed every time step.
 
-    // Thread management
-    size_t max_active_threads=64;               ///< Maximum number of concurrently running threads.
-    size_t max_thread_space=512;         ///
-    // todo - document how this data structure can grow over time (not necessarily .size() == max_thread_space)
-    emp::vector<thread_t> threads;       ///< All threads (each could be active/inactive/pending).
-    // TODO - add a 'use_thread_priority' setting => default = true
-    // @discussion - can't really track thread priorities separate from threads, as they can get updated on the fly
-    emp::vector<size_t> thread_exec_order;  ///< Thread execution order.
-    std::unordered_set<size_t> active_threads;        ///< Active thread ids.
-    emp::vector<size_t> unused_threads;     ///< Unused thread ids. DISCUSSION: Should this be a set?
-    std::deque<size_t> pending_threads;     ///< Pending thread ids.
+    // -- Thread management --
+    // WARNING: Derived classes can modify these member variables AT THEIR OWN RISK!
+    // Modifying thread management members in derived class may have unintended side effects. Use caution.
+    size_t max_active_threads=64;         ///< Maximum number of concurrently running (active) threads.
+    size_t max_thread_space=512;          ///< Maximum total active + pending threads.
+    bool use_thread_priority=true;        ///< Should SignalGP use thread priority when spawning/killing threads?
+    emp::vector<thread_t> threads;        /**< All threads (each could be active/inactive/pending).
+                                           *   Initially threads.size = MIN(2*max_active_threads, max_thread_space),
+                                           *   but vector will grow as necessary up to max_thread_space.
+                                           *   NOTE that we can't track threads by priority because
+                                           *   thread priorities can be altered on the fly.
+                                           **/
+    emp::vector<size_t> thread_exec_order;      ///< Thread execution order (not all guaranteed to be
+                                                ///<   in RUNNING state).
+    std::unordered_set<size_t> active_threads;  ///< Active thread ids, all currently running.
+    emp::vector<size_t> unused_threads;         ///< Pool of unused thread ids.
+    std::deque<size_t> pending_threads;         ///< Pending (for consideration to be shifted to ACTIVE)
+                                                ///<   thread ids.
+    // -- Custom component --
+    custom_comp_t custom_component;  /**< Custom hardware component. This is convenient for problem-,
+                                          environment-, or experiment-specific hardware components that
+                                          shouldn't require an entirely new derived implementation of
+                                          SignalGP. SignalGPBase provides a basic interface to custom_component.
+                                          Tip: to bundle multiple custom components, just set CUSTOM_COMPONENT_T
+                                          equal to a struct { with your bundle of components inside }.
+                                      */
 
-    custom_comp_t custom_component;
+    // -- Configurable print functions --
+    /// Function to print given hardware state of DERIVED_T to given ostream.
+    fun_print_hardware_state_t fun_print_hardware_state = [](const hardware_t& hw, std::ostream & os) { os << "Print hardware state not configured."; };
 
-    // Configurable print functions. @NOTE: should these emp_assert(false)?
-    fun_print_hardware_state_t fun_print_hardware_state = [](const hardware_t& hw, std::ostream & os) { return; };
-    fun_print_execution_state_t fun_print_execution_state = [](const exec_state_t & e, const hardware_t& hw, std::ostream & os) { return; };
+    /// Function to print given execution state of EXEC_STATE_T to given ostream.
+    fun_print_execution_state_t fun_print_execution_state = [](const exec_state_t & e, const hardware_t& hw, std::ostream & os) { os << "Print execution state not configured."; };
+
+    /// Function to print given event to given ostream.
     fun_print_event_t fun_print_event = [](const event_t & e, const hardware_t& hw, std::ostream & os) { e.Print(os); };
 
+    // -- Internally-used thread management functions --
+    /// Activate thread:
+    /// - (1) Move given thread id to active threads,
+    /// - (2) add to thread id to execution order,
+    /// - (3) mark thread as RUNNING.
     void ActivateThread(size_t thread_id) {
-      emp_assert(thread_id < threads.size());
-      // todo - guarantee that thread_id not already in thread_exec order
+      emp_assert(thread_id < threads.size(), "Cannot activate invalid thread_id", thread_id);
+      emp_assert(!emp::Has(thread_exec_order, thread_id), "Duplicate thread ids in thread_exec_order", thread_id);
       active_threads.emplace(thread_id);
       thread_exec_order.emplace_back(thread_id);
       threads[thread_id].SetRunning();
@@ -214,6 +235,11 @@ namespace emp { namespace signalgp {
 
       // If we're here, we hit max thread capacity. We'll need to kill active
       // threads to make room for pending threads.
+      if (use_thread_priority) { // TODO - implement this!
+
+      } else {
+
+      }
 
       // Find max pending priority, use it to bound which active threads we consider
       // killing.
