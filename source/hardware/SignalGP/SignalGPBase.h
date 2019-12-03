@@ -85,19 +85,19 @@ namespace emp { namespace signalgp {
     using fun_print_execution_state_t = std::function<void(const exec_state_t &, const hardware_t&, std::ostream &)>;
     using fun_print_event_t = std::function<void(const event_t &, const hardware_t&, std::ostream &)>;
 
-    // QUESTION - Pros/cons of nesting Thread type in SignalGP class?
+    /// Thread state information.
     struct Thread {
       enum class ThreadState { RUNNING, DEAD, PENDING };
-      // comment => labels can exist inside execution state.
-      exec_state_t exec_state;
-      double priority;
-      ThreadState run_state;
+      exec_state_t exec_state;  ///< Internal state information required by DERIVED_T to execute the thread.
+      double priority;          ///< Thread priority. Low priority threads are killed if higher priority threads are pending.
+      ThreadState run_state;    ///< Is this thread RUNNING, DEAD, or PENDING?
 
       Thread(const exec_state_t & _exec_state=exec_state_t(), double _priority=1.0)
         : exec_state(_exec_state),
           priority(_priority),
           run_state(ThreadState::DEAD) { ; }
 
+      /// Reset thread to default state (priority = 1, DEAD). Calls EXEC_STATE_T::Reset().
       void Reset() {
         // @discussion - How do we want to handle this?
         exec_state.Reset(); // TODO - make this functionality more flexible! Currently assumes exec_state_t has a Clear function!
@@ -108,16 +108,28 @@ namespace emp { namespace signalgp {
       exec_state_t & GetExecState() { return exec_state; }
       const exec_state_t & GetExecState() const { return exec_state; }
 
+      /// Set thread state to DEAD.
       void SetDead() { run_state = ThreadState::DEAD; }
+
+      /// Is this thread dead?
       bool IsDead() const { return run_state == ThreadState::DEAD; }
 
+      /// Set thread state to PENDING.
       void SetPending() { run_state = ThreadState::PENDING; }
+
+      /// Is this thread PENDING?
       bool IsPending() const { return run_state == ThreadState::PENDING; }
 
+      /// Set thread state to RUNNING.
       void SetRunning() { run_state = ThreadState::RUNNING; }
+
+      /// Is this thread RUNNING?
       bool IsRunning() const { return run_state == ThreadState::RUNNING; }
 
+      /// Retrieve this thread's priority level.
       double GetPriority() const { return priority; }
+
+      /// Set thread priority.
       void SetPriority(double p) { priority = p; }
     };
 
