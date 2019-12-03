@@ -381,9 +381,14 @@ namespace emp { namespace signalgp {
     virtual ~BaseSignalGP() {};
 
     /// REQUIRED - Must be implemented by DERIVED_T
+    /// This function should advance the given thread by a single step on the given DERIVED_T implementation
+    /// of SignalGP.
     virtual void SingleExecutionStep(DERIVED_T &, thread_t &) = 0;
 
     /// REQUIRED - Must be implemented by DERIVED_T
+    /// Given a TAG_T (tag) and a maximum number of modules to search for (n), return a vector of valid
+    /// module matches (valid as specified by DERIVED_T).
+    /// It is valid for the return value to have a size from [0:n].
     virtual vector<size_t> FindModuleMatch(const tag_t &, size_t) = 0;
 
     /// REQUIRED - Must be implemented by DERIVED_T
@@ -391,7 +396,7 @@ namespace emp { namespace signalgp {
     /// the given thread using the specified module_id.
     virtual void InitThread(thread_t &, size_t) = 0;
 
-    /// HardwareState reset:
+    /// Reset the base hardware state:
     /// - Clear event queue.
     /// - Reset all threads, move all to unused; clear pending.
     void ResetBaseHardwareState() {
@@ -421,25 +426,31 @@ namespace emp { namespace signalgp {
       ResetBaseHardwareState();
     }
 
-    /// Get event library associated with hardware.
+    /// Get a reference to the event library associated with this hardware.
     event_lib_t & GetEventLib() { return event_lib; }
+
+    /// Get a const reference to the event library associated with this hardware.
     const event_lib_t & GetEventLib() const { return event_lib; }
 
-    /// Get reference to this hardware's execution stepper object.
+    /// Get a DERIVED_T reference to this hardware.
     DERIVED_T & GetHardware() { return static_cast<DERIVED_T&>(*this); }
+
+    /// Get a const DERIVED_T reference to this hardware.
     const DERIVED_T & GetHardware() const { return static_cast<const DERIVED_T&>(*this); }
 
-    /// Access hardware custom component.
+    /// Get a CUSTOM_COMPONENT_T reference to this hardware's custom component.
     custom_comp_t & GetCustomComponent() { return custom_component; }
+
+    /// Get a const CUSTOM_COMPONENT_T reference to this hardware's custom component.
     const custom_comp_t & GetCustomComponent() const { return custom_component; }
+
+    /// Set the custom component.
     void SetCustomComponent(const custom_comp_t & val) { custom_component = val; }
 
-    /// Get the maximum number of threads allowed to run simultaneously on this hardware
-    /// object.
+    /// Get the maximum number of threads allowed to run simultaneously on this hardware object.
     size_t GetMaxActiveThreads() const { return max_active_threads; }
 
-    /// Get maximum number of active + pending threads allowed to exist simultaneously
-    /// on this hardware object.
+    /// Get maximum number of active + pending threads allowed to exist simultaneously on this hardware.
     size_t GetMaxThreadSpace() const { return max_thread_space; }
 
     /// Get the number of currently running threads.
@@ -451,9 +462,18 @@ namespace emp { namespace signalgp {
     /// Get number of unused threads. May be larger than max number of active threads.
     size_t GetNumUnusedThreads() const { return unused_threads.size(); }
 
-    /// Get a reference to active threads.
-    /// NOTE: use responsibly! No safety gloves here!
-    /// TODO - emp_assert, emp_warn?
+    /// Get a reference to all threads (each thread may be RUNNING, PENDING, or DEAD).
+    /// NOTE: use responsibly, there are no safety gloves here!
+    /// It is safe to:
+    /// - manipulate thread exec_state information
+    /// - manipulate thread priority
+    /// - mark a running thread as dead
+    /// It is NOT safe to:
+    /// - mark a pending thread as dead or running
+    /// - mark a running thread as pending
+    /// - mark a dead thread as running or pending
+    /// TIP: you can use emp_assert(ValidateThreadState()) after doing whatever it is you want to do
+    /// to assert that the thread management system is in a safe state.
     emp::vector<thread_t> & GetThreads() { return threads; }
 
     /// Get a reference to a particular thread.
@@ -473,29 +493,28 @@ namespace emp { namespace signalgp {
     /// order list guaranteed to be active.
     const emp::vector<size_t> & GetThreadExecOrder() const { return thread_exec_order; }
 
-    /// Get the ID of the currently executing thread. If hardware is not in midst
-    /// of an execution cycle, this will return (size_t)-1.
-    /// Instructions are executed in SingleProcess
+    /// Get the ID of the currently executing thread.
+    /// This function will only provide a valid thread WHILE the hardware is executing.
+    /// If the hardware is not executing, this function will throw an error if compiled in debug mode
+    /// and will return an invalid id when not compiled in debug mode.
     size_t GetCurThreadID() {
       emp_assert(is_executing);
       emp_assert(cur_thread.IsValid(), "There is no currently executing thread.");
       emp_assert(cur_thread.ID() < threads.size(), "Current thread ID is invalid.");
-      // emp_assert(cur_thread_id < threads.size());
       return cur_thread.ID();
     }
 
-    /// Get the currently executing thread. Only valid to call this while virtual
-    /// hardware is executing. Otherwise, will error out.
-    /// Instructions are executed in SingleProcess
+    /// Get the currently executing thread.
+    /// This function will only provide a valid thread WHILE the hardware is executing.
     thread_t & GetCurThread() {
       emp_assert(is_executing, "Hardware is not executing! No current thread.");
       emp_assert(cur_thread.IsValid(), "There is no currently executing thread.");
       emp_assert(cur_thread.ID() < threads.size(), "Current thread ID is invalid.");
-      // emp_assert(cur_thread_id < threads.size());
       return threads[cur_thread.ID()];
     }
 
-    /// Are we inside of a 'SingleProcess'. Note, instructoins are executed in SingleProcess.
+    /// Are we inside of a 'SingleProcess'. Note, for traditional GP versions of SignalGP, GP instructions
+    /// are processed while the hardware is executing.
     bool IsExecuting() const { return is_executing; }
 
     /// TODO - TEST
