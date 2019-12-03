@@ -602,13 +602,12 @@ namespace emp { namespace signalgp {
       max_thread_space = n;
     }
 
-    /// @discussion - needs better name
-    // - Mark all pending threads as dead
+    /// @discussion - Better name?
+    /// Remove all currently pending threads.
     void RemoveAllPendingThreads() {
       while (pending_threads.size()) {
         const size_t thread_id = pending_threads.back();
         pending_threads.pop_back();
-        // threads[thread_id].SetDead();
         threads[thread_id].Reset(); // this should be safe - todo - think on it
         unused_threads.emplace_back(thread_id);
       }
@@ -646,6 +645,7 @@ namespace emp { namespace signalgp {
     /// Otherwise, mark thread as pending.
     std::optional<size_t> SpawnThreadWithID(size_t module_id, double priority=1.0, bool priority_override=true) {
       size_t thread_id;
+      bool already_pending = false; // Flag if claimed thread id is already pending.
       // Is there an unused thread to commandeer?
       if (unused_threads.size()) {
         // Unused thread is available, use it.
@@ -655,8 +655,23 @@ namespace emp { namespace signalgp {
         // No unused threads available, but we have space to make a new one.
         thread_id = threads.size();
         threads.emplace_back();
+      } else if (priority_override && pending_threads.size()) {
+        // Is there a pending thread w/lower priority?
+        size_t min_priority_pending_id = pending_threads.front();
+        for (size_t pending_id : pending_threads) {
+          if (threads[pending_id].GetPriority() < threads[min_priority_pending_id].GetPriority()) {
+            min_priority_pending_id = pending_id;
+          }
+        }
+        // If so, use it. Otherwise, return nullopt.
+        if (priority > threads[min_priority_pending_id].GetPriority()) {
+          thread_id = min_priority_pending_id;
+          already_pending = true;
+        } else {
+          return std::nullopt;
+        }
       } else {
-        // No unused threads available, and no more space to make a new one.
+        // No unused threads available && !use_thread_priority && no more thread space
         return std::nullopt;
       }
       // If we make it here, we have a valid thread_id to use.
@@ -670,16 +685,15 @@ namespace emp { namespace signalgp {
 
       // Let derived hardware initialize thread w/appropriate module.
       GetHardware().InitThread(thread, module_id);
-      // emp_assert()
 
       // Mark thread as pending.
       thread.SetPending();
-      pending_threads.emplace_back(thread_id);
+      if (!already_pending) pending_threads.emplace_back(thread_id);
 
       return std::optional<size_t>{thread_id}; // this could mess with thread priority level!
     }
 
-    /// Handle an event (on this hardware) now!.
+    /// Handle an event (on this hardware) now!
     void HandleEvent(const event_t & event) { event_lib.HandleEvent(GetHardware(), event); }
 
     /// Trigger an event (from this hardware).
