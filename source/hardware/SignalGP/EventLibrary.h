@@ -23,11 +23,25 @@
 
 namespace emp {
 
-template<typename HARDWARE_T>
+
+  /// Base event struct. All SignalGP events should be derived from this.
+  struct BaseEvent {
+    size_t id;  ///< Specifies associated event type in the EventLibrary.
+
+    BaseEvent(size_t _id=0) : id(_id) { }
+
+    size_t GetID() const { return id; }
+
+    virtual void Print(std::ostream & os) const {
+      os << "{id:" << GetID() << "}";
+    }
+  };
+
+  template<typename HARDWARE_T>
   class EventLibrary {
   public:
     using hardware_t = HARDWARE_T;
-    using event_t = typename hardware_t::event_t;
+    using event_t = BaseEvent;
     using event_handler_fun_t = std::function<void(hardware_t &, const event_t &)>;     ///< Type alias for event-handler functions.
     using event_dispatcher_fun_t = std::function<void(hardware_t &, const event_t &)>;  ///< Type alias for event-dispatcher functions.
     using event_dispatcher_set_t = FunctionSet<void(hardware_t &, const event_t &)>;    ///< Type alias for dispatcher function set type.

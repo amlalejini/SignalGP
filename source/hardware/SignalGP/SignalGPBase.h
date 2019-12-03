@@ -15,39 +15,59 @@
 
 #include "EventLibrary.h"
 
-// TODO - allow a hardcap on TOTAL THREAD SPACE (pending + active) to be set!
-
-// @discussion - how could I use concepts to clean this up?
 // @discussion - where should I put configurable lambdas?
+// todo - move function implementations outside of class
 
 namespace emp { namespace signalgp {
-
-  /// todo - comment this
-  struct BaseEvent {
-    size_t id;
-    BaseEvent(size_t _id=0) : id(_id) { }
-
-    size_t GetID() const { return id; }
-
-    // template<typename DERIVED_T>
-    // DERIVED_T &
-
-    virtual void Print(std::ostream & os) const {
-      os << "{id:" << GetID() << "}";
-    }
-  };
 
   /// Placeholder additional component type.
   struct DefaultCustomComponent { };
 
-  // todo - move function implementations outside of class
-  // @discussion - template/organization structure
+  /// @brief Base SignalGP class from which all SignalGP implementations should be derived.
+  ///
+  /// This version of SignalGP makes use of the curiously recursive template pattern (see: https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern).
+  /// BaseSignalGP manages virtual thread execution, manages event queuing and handling, and provides
+  /// provides an interface to a custom hardware component (CUSTOM_COMPONENT_T).
+  ///
+  /// BaseSignalGP has the following template parameters:
+  ///   * DERIVED_T - Specifies the type of the SignalGP implementation, which must be derived from
+  ///     BaseSignalGP.
+  ///   * EXEC_STATE_T - Specifies the type of the state information required to execute a thread.
+  ///   * TAG_T - Specifies the type that is used to search for modules when spawning a new thread.
+  ///   * CUSTOM_COMPONENT_T - Optional template parameter. Specifies type of custom hardware component
+  ///     to be added on to the SignalGP virtual hardware.
+  ///
+  /// SignalGP implementations that inherit from BaseSignalGP add functionality to BaseSignalGP's.
+  /// At a high level, while BaseSignalGP manages events and threads, derived implementations of SignalGP
+  /// flesh out how the virtual hardware should execute (e.g., what does it mean to execute? what state
+  /// information is required to specify the state of a thread? et cetera).
+  ///
+  /// REQUIREMENTS
+  ///   * Derived implementations MUST minimally specify the following methods:
+  ///     * ResetImpl()
+  ///       - Return type: void
+  ///       - Reset state information in DERIVED_T virtual hardware.
+  ///     * SingleExecutionStep(DERIVED_T & hw, thread_t & thread)
+  ///       - Return type: void
+  ///       - Execute the thread (with EXEC_STATE_T state information) on the given DERIVED_T hardware
+  ///         object.
+  ///     * FindModuleMatch(const tag_t & tag, size_t n)
+  ///       - Return type: vector<size_t>
+  ///       - Find and return up to n module IDs that match with the given TAG_T tag.
+  ///     * InitThread(thread_t & thread, size_t module_id)
+  ///       - Return type: void
+  ///       - Initialize thread_t thread with given module_id.
+  ///   * EXEC_STATE_T
+  ///     * EXEC_STATE_T::Reset()
+  ///       - Return type: void
+  ///       - Reset the EXEC_STATE_T execution state.
   template<typename DERIVED_T,
            typename EXEC_STATE_T,
            typename TAG_T,
-           typename CUSTOM_COMPONENT_T=DefaultCustomComponent>  // @DISCUSSION - additional component here versus in derived? arg for: signaling to derived devs?
+           typename CUSTOM_COMPONENT_T=DefaultCustomComponent>
   class BaseSignalGP {
   public:
+    // Forward declarations
     struct Thread;
 
     // Types that base signalgp functionality needs to know about.
@@ -107,8 +127,7 @@ namespace emp { namespace signalgp {
     bool is_executing=false;            ///< Is this hardware unit currently executing (within a SingleProcess)? Instructions are executed in SingleProcess
 
   protected:
-    // Ptr<event_lib_t> event_lib;         ///< These are the events this hardware knows about.
-    event_lib_t & event_lib;
+    event_lib_t & event_lib;                             ///< These are the events this hardware knows about.
     std::deque<std::unique_ptr<event_t>> event_queue;    ///< Queue of events to be processed every time step.
 
     // Thread management
