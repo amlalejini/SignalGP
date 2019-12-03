@@ -491,6 +491,7 @@ TEST_CASE("Toy SignalGP", "[general]") {
 }
 
 // Test SignalGP thread management (using Toy virtual hardware)
+// todo - test priority
 TEST_CASE("Thread Management (Toy SignalGP)") {
   using signalgp_t = ToySignalGP<size_t>;
   using event_lib_t = typename signalgp_t::event_lib_t;
@@ -532,6 +533,7 @@ TEST_CASE("Thread Management (Toy SignalGP)") {
 
   //////////////////////////////////////////////////////////////////////////////
   // Test - spawn thread while active & pending < limit
+  std::cout << "Test - Spawn thread while active & pending < limit" << std::endl;
   hardware.SpawnThreadWithID(0); // Thread should be pending.
   REQUIRE(hardware.ValidateThreadState());
   REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
@@ -550,6 +552,7 @@ TEST_CASE("Thread Management (Toy SignalGP)") {
 
   //////////////////////////////////////////////////////////////////////////////
   // Test - spawn thread while active == limit
+  std::cout << "Test - Spawn thread while active == limit" << std::endl;
   hardware.ResetHardware();
   REQUIRE(hardware.ValidateThreadState());
   REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
@@ -580,6 +583,7 @@ TEST_CASE("Thread Management (Toy SignalGP)") {
 
   //////////////////////////////////////////////////////////////////////////////
   // Test - spawn thread while active & pending == limit
+  std::cout << "Test - Spawn thread while active & pending == limit" << std::endl;
   hardware.ResetHardware();
   REQUIRE(hardware.ValidateThreadState());
   REQUIRE(hardware.GetActiveThreadIDs().size() == 0);
@@ -634,6 +638,8 @@ TEST_CASE("Thread Management (Toy SignalGP)") {
   REQUIRE(hardware.GetActiveThreadIDs().size() == 8);
   REQUIRE(hardware.GetPendingThreadIDs().size() == 0);
   REQUIRE(hardware.GetThreadExecOrder().size() == 8);
+
+  std::cout << "Test - Spawn different priority threads while active == limit" << std::endl;
   hardware.SpawnThreadWithID(2, 100);
   hardware.SpawnThreadWithID(2, -1);
   REQUIRE(hardware.ValidateThreadState());
@@ -686,17 +692,13 @@ TEST_CASE("Thread Management (Toy SignalGP)") {
   REQUIRE(hardware.GetThreadExecOrder().size() == 0);
 }
 
-// Test SignalGP management (using LinearProgram virtual hardware)
-TEST_CASE("Thread Management (Linear Program SignalGP)") {
-  // todo
-}
-
 TEST_CASE("Linear Functions Program") {
   using tag_t = emp::BitSet<8>;
   using arg_t = int;
   using program_t = emp::signalgp::LinearFunctionsProgram<tag_t, arg_t>;
   program_t program1;
 }
+
 
 TEST_CASE("SignalGP - Linear Functions Program") {
   using mem_model_t = emp::signalgp::SimpleMemoryModel;

@@ -1,5 +1,5 @@
 # Project-specific settings
-PROJECT := signalgp-reimplementation-playground
+PROJECT := SignalGP
 EMP_DIR := ../Empirical/source
 CEREAL_DIR := ../Empirical/third-party/cereal/include
 
@@ -47,7 +47,7 @@ serve:
 	python3 -m http.server
 
 clean:
-	rm -f $(PROJECT) web/$(PROJECT).js web/*.js.map web/*.js.map *~ source/*.o web/*.wasm web/*.wast test_debug.out test_optimized.out unit_tests.gcda unit_tests.gcno bitmarking.out bitmarking-debug.out
+	rm -f $(PROJECT) web/$(PROJECT).js web/*.js.map web/*.js.map *~ source/*.o web/*.wasm web/*.wast test_debug.out test_optimized.out unit_tests.gcda unit_tests.gcno
 	rm -rf test_debug.out.dSYM
 
 test: clean
@@ -56,13 +56,6 @@ test: tests/unit_tests.cc
 	./test_debug.out
 	# $(CXX_nat) $(CFLAGS_nat) tests/unit_tests.cc -I./source/ -o test_optimized.out
 	# ./test_optimized.out
-
-bitmarking-debug: tests/bitmarking.cc
-	$(CXX_nat) $(CFLAGS_nat_debug) tests/bitmarking.cc -I./source/ -o bitmarking-debug.out
-
-bitmarking-native: tests/bitmarking.cc
-	$(CXX_nat) $(CFLAGS_nat) tests/bitmarking.cc -I./source/ -o bitmarking.out
-
 
 # Debugging information
 print-%: ; @echo '$(subst ','\'',$*=$($*))'
