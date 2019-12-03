@@ -15,14 +15,14 @@ namespace toy_signalgp_impl {
 }
 
 template<typename CUSTOM_COMPONET_T=emp::signalgp::DefaultCustomComponent>
-class ToySignalGP : public emp::signalgp::BaseSignalGP< ToySignalGP<CUSTOM_COMPONET_T>,
+class ToySignalGP : public emp::signalgp::SignalGPBase< ToySignalGP<CUSTOM_COMPONET_T>,
                                                         toy_signalgp_impl::ExecState,
                                                         size_t,
                                                         CUSTOM_COMPONET_T> {
 public:
   using this_t = ToySignalGP<CUSTOM_COMPONET_T>;
   using exec_state_t = toy_signalgp_impl::ExecState;            ///< REQUIRED. Thread state information.
-  using base_hw_t = emp::signalgp::BaseSignalGP<this_t,
+  using base_hw_t = emp::signalgp::SignalGPBase<this_t,
                                                 exec_state_t,
                                                 size_t,
                                                 CUSTOM_COMPONET_T>;

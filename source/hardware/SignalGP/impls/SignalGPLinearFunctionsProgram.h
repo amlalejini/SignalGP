@@ -25,7 +25,7 @@ namespace emp { namespace signalgp {
            typename INST_ARGUMENT_T=int,
            typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<> >,
            typename CUSTOM_COMPONENT_T=emp::signalgp::DefaultCustomComponent>
-  class LinearFunctionsProgramSignalGP : public BaseSignalGP<LinearFunctionsProgramSignalGP<MEMORY_MODEL_T,TAG_T,INST_ARGUMENT_T,MATCHBIN_T,CUSTOM_COMPONENT_T>,
+  class LinearFunctionsProgramSignalGP : public SignalGPBase<LinearFunctionsProgramSignalGP<MEMORY_MODEL_T,TAG_T,INST_ARGUMENT_T,MATCHBIN_T,CUSTOM_COMPONENT_T>,
                                                              lsgp_utils::ExecState<MEMORY_MODEL_T>,
                                                              TAG_T,
                                                              CUSTOM_COMPONENT_T>
@@ -45,7 +45,7 @@ namespace emp { namespace signalgp {
     using memory_model_t = MEMORY_MODEL_T;
     using memory_state_t = typename memory_model_t::memory_state_t;
     using program_t = emp::signalgp::LinearFunctionsProgram<tag_t, arg_t>;
-    using base_hw_t = BaseSignalGP<this_t, exec_state_t, tag_t, CUSTOM_COMPONENT_T>;
+    using base_hw_t = SignalGPBase<this_t, exec_state_t, tag_t, CUSTOM_COMPONENT_T>;
     using thread_t = typename base_hw_t::Thread;
     using event_lib_t = typename base_hw_t::event_lib_t; // EventLibrary<this_t>
     using event_t = typename base_hw_t::event_t;

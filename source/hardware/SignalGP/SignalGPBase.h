@@ -67,7 +67,7 @@ namespace emp { namespace signalgp {
            typename EXEC_STATE_T,
            typename TAG_T,
            typename CUSTOM_COMPONENT_T=DefaultCustomComponent>
-  class BaseSignalGP {  // TODO - BaseSignalGP => SignalGPBase
+  class SignalGPBase {
   public:
     // Forward declarations
     struct Thread;
@@ -234,125 +234,7 @@ namespace emp { namespace signalgp {
     }
 
     /// Attempt to activate all pending threads.
-    void ActivatePendingThreads() {
-      emp_assert(!is_executing, "Cannot ActivatePendingThreads while hardware is executing.");
-      // emp_assert(ValidateThreadState()); => Slow!
-      // NOTE: Assumes active threads is accurate!
-      // NOTE: all pending threads + active threads should have unique ids
-
-      // Are there pending threads to activate? If not, return immediately.
-      if (pending_threads.empty()) return;
-
-      // If configuration says no thread priority or if num pending + num active < max active, just
-      // activate all pending; otherwise, take priorities into consideration.
-      if (!use_thread_priority || ((pending_threads.size() + active_threads.size()) < max_active_threads)) {
-        // Don't use thread priority for deciding which pending threads to activate.
-        // In effect, all actively running threads will have higher priority than all pending threads.
-        // I.e., no actively running threads will be killed to make space for pending threads.
-
-        // Spawn pending threads (in order of arrival) until no more room.
-        while (pending_threads.size() && (active_threads.size() < max_active_threads)) {
-          const size_t thread_id = pending_threads.front();
-          emp_assert(thread_id < threads.size(), "Invalid pending thread id", thread_id);
-          emp_assert(threads[thread_id].IsPending(), "Non-pending thread masquarading as a pending thread!");
-          ActivateThread(thread_id);  // todo - should this be Activate next pending?
-          pending_threads.pop_front();
-        }
-
-      } else {
-        // std::cout << "Making use of thread priority for activating pending." << std::endl;
-        // Use Thread priority for deciding which threads to activate:
-        // - (1) Order pending threads by max priority.
-        // - (2) Order active threads by min priority (only those < max pending).
-        // - (3) For each pending thread (while pending.max > active.min), activate pending.
-
-        // (1) Order pending threads by max priority (MAX heap).
-        //     + find max pending priority, use to bound which active threads we consider killing.
-        std::priority_queue<std::tuple<double, size_t>,
-                            std::vector<std::tuple<double, size_t>>> pending_priorities_MAX; // MAX HEAP
-        double max_pending_priority = threads[pending_threads.front()].GetPriority();
-        for (size_t pending_id : pending_threads) {
-          emp_assert(pending_id < threads.size());
-          emp_assert(threads[pending_id].IsPending());
-          const double priority = threads[pending_id].GetPriority();
-          pending_priorities_MAX.emplace(std::make_tuple(priority, pending_id));
-          if (priority > max_pending_priority) max_pending_priority = priority;
-        }
-
-        // (2) Order active threads (priority < max pending) by min priority (MIN heap).
-        //     Only include threads with priority < max_pending_priority
-        std::priority_queue<std::tuple<double, size_t>,
-                            std::vector<std::tuple<double, size_t>>,
-                            std::greater<std::tuple<double, size_t>>> active_priorities_MIN; // MIN heap.
-        for (size_t active_id : active_threads) {
-          emp_assert(active_id < threads.size());
-          thread_t & thread = threads[active_id];
-          if (thread.GetPriority() < max_pending_priority) {
-            active_priorities_MIN.emplace(std::make_tuple(thread.GetPriority(), active_id));
-          }
-        }
-
-        // (3) For each pending thread (while pending.max > active.min), activate pending.
-        // - Because we can't efficiently remove elements from the pending queue, track which pending
-        //   ids we want to spawn and which we don't.
-
-        // Map from each pending thread we want to activate to the active thread it will replace.
-        std::unordered_map<size_t, std::pair<bool, size_t>> pending_to_active;
-
-        // First, mark as many pending threads (in max priority order) to be set to active as there is
-        // space.
-        while (((pending_to_active.size() + active_threads.size()) < max_active_threads) && pending_priorities_MAX.size()) {
-          const size_t pending_id_MAX = std::get<1>(pending_priorities_MAX.top());
-          pending_to_active.emplace(pending_id_MAX, std::make_pair(false, max_thread_space));
-          pending_priorities_MAX.pop();
-        }
-
-        // Are there any active thread_ids (+priorities) to consider killing?
-        // To activate any more pending threads, we will need to kill a currently active thread.
-        while (active_priorities_MIN.size() && pending_priorities_MAX.size()) {
-          const double pending_priority_MAX = std::get<0>(pending_priorities_MAX.top());
-          const double active_priority_MIN = std::get<0>(active_priorities_MIN.top());
-          if (pending_priority_MAX > active_priority_MIN) {
-            const size_t pending_id_MAX = std::get<1>(pending_priorities_MAX.top());
-            const size_t active_id_MIN = std::get<1>(active_priorities_MIN.top());
-            pending_to_active.emplace(pending_id_MAX, std::make_pair(true, active_id_MIN)); // Map current pending id to current active id.
-            pending_priorities_MAX.pop();
-            active_priorities_MIN.pop();
-          } else {
-            break; // If we ever hit a pending priority that is <= the min active priority, break.
-          }
-        }
-
-        // For each pending thread, if we marked it to transition to active,
-        // activate it and kill associated active; otherwise, deny it (mark it as dead, move to unused).
-        // std::cout << "  Processing pending threads" << std::endl;
-        while (pending_threads.size()) {
-          const size_t pending_id = pending_threads.front();
-          // std::cout << "  > pending id=" << pending_id << std::endl;
-          if (emp::Has(pending_to_active, pending_id)) {
-            // std::cout << "    Should activate this pthread (" << threads[pending_id].GetPriority() << ")" << std::endl;
-            if (pending_to_active[pending_id].first) {
-              // Need to kill associated active.
-              const size_t active_id = pending_to_active[pending_id].second;
-              // std::cout << "    Need to first kill an active thread (" << active_id << std::endl;
-              KillActiveThread(active_id);
-              // std::cout << "    Killed active." << std::endl;
-            }
-            // std::cout << "    Activate this thread now." << std::endl;
-            ActivateThread(pending_id);
-            pending_threads.pop_front();
-          } else {
-            // Kill this pending thread.
-            KillNextPendingThread();
-          }
-        }
-      }
-      // Are there remaining threads we need to clean up?
-      while (pending_threads.size()) {
-        KillNextPendingThread();
-      }
-      // emp_assert(ValidateThreadState()); this is real slow
-    }
+    void ActivatePendingThreads();
 
     /// REQUIRED - Must be implemented by DERIVED_T
     /// ResetImpl should fully reset any hardware state information tracked by DERIVED_T.
@@ -360,7 +242,7 @@ namespace emp { namespace signalgp {
     virtual void ResetImpl() = 0;
 
   public:
-    BaseSignalGP(event_lib_t & elib)
+    SignalGPBase(event_lib_t & elib)
       : event_lib(elib),
         threads(std::min(2*max_active_threads, max_thread_space)),
         unused_threads(threads.size())
@@ -372,13 +254,13 @@ namespace emp { namespace signalgp {
     }
 
     /// Move constructor.
-    BaseSignalGP(BaseSignalGP && in) = default;
+    SignalGPBase(SignalGPBase && in) = default;
 
     /// Copy constructor.
-    BaseSignalGP(const BaseSignalGP & in) = default;
+    SignalGPBase(const SignalGPBase & in) = default;
 
     /// Destructor.
-    virtual ~BaseSignalGP() {};
+    virtual ~SignalGPBase() {};
 
     /// REQUIRED - Must be implemented by DERIVED_T
     /// This function should advance the given thread by a single step on the given DERIVED_T implementation
@@ -399,26 +281,7 @@ namespace emp { namespace signalgp {
     /// Reset the base hardware state:
     /// - Clear event queue.
     /// - Reset all threads, move all to unused; clear pending.
-    void ResetBaseHardwareState() {
-      emp_assert(!is_executing, "Cannot reset hardware while executing.");
-      event_queue.clear();
-      for (auto & thread : threads) {
-        thread.Reset();
-      }
-      thread_exec_order.clear(); // No threads to execute.
-      active_threads.clear();    // No active threads.
-      pending_threads.clear();   // No pending threads.
-      unused_threads.resize(threads.size());
-      // unused_threads.resize(max); TODO - fix
-      // Add all available threads to unused.
-      for (size_t i = 0; i < unused_threads.size(); ++i) {
-        unused_threads[i] = (unused_threads.size() - 1) - i;
-      }
-      cur_thread.Invalidate();
-      cur_thread.id = max_thread_space;
-      // cur_thread_id = (size_t)-1;
-      is_executing = false;
-    }
+    void ResetBaseHardwareState();
 
     /// Full hardware reset.
     void Reset() {
@@ -522,7 +385,7 @@ namespace emp { namespace signalgp {
     // Slow operation.
     // TODO - fix set thread limit function
     void SetActiveThreadLimit(size_t n) {
-      emp_assert(n, "Max thread count must be greater than 0.");
+      emp_assert(n, "Max active thread limit must be > 0.", n);
       emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
       // NOTE - this cannot DECREASE the capacity of the 'threads' member variable.
       //        It can, however, INCREASE the capacity of the 'threads' member variable.
@@ -532,7 +395,7 @@ namespace emp { namespace signalgp {
       // temp = vector(active.begin(), active.end())
       // partial sort(temp, [](){get priority})
 
-      max_thread_space = std::max(n, max_thread_space); //(n > max_thread_space) ? n : max_thread_space;
+      max_thread_space = std::max(n, max_thread_space);
       if (n > max_active_threads) {
         // Increasing total threads able to run simultaneously. This might increase
         // thread storage (threads).
@@ -604,14 +467,7 @@ namespace emp { namespace signalgp {
 
     /// @discussion - Better name?
     /// Remove all currently pending threads.
-    void RemoveAllPendingThreads() {
-      while (pending_threads.size()) {
-        const size_t thread_id = pending_threads.back();
-        pending_threads.pop_back();
-        threads[thread_id].Reset(); // this should be safe - todo - think on it
-        unused_threads.emplace_back(thread_id);
-      }
-    }
+    void RemoveAllPendingThreads();
 
     /// Spawn a number of threads (<= n). Use tag to select which modules to call.
     /// Return a vector of spawned thread IDs.
@@ -643,7 +499,7 @@ namespace emp { namespace signalgp {
     /// If no unused threads & already maxed out thread space, will not spawn new
     /// thread.
     /// Otherwise, mark thread as pending.
-    std::optional<size_t> SpawnThreadWithID(size_t module_id, double priority=1.0, bool priority_override=true) {
+    std::optional<size_t> SpawnThreadWithID(size_t module_id, double priority=1.0) {
       size_t thread_id;
       bool already_pending = false; // Flag if claimed thread id is already pending.
       // Is there an unused thread to commandeer?
@@ -655,7 +511,7 @@ namespace emp { namespace signalgp {
         // No unused threads available, but we have space to make a new one.
         thread_id = threads.size();
         threads.emplace_back();
-      } else if (priority_override && pending_threads.size()) {
+      } else if (use_thread_priority && pending_threads.size()) {
         // Is there a pending thread w/lower priority?
         size_t min_priority_pending_id = pending_threads.front();
         for (size_t pending_id : pending_threads) {
@@ -917,6 +773,167 @@ namespace emp { namespace signalgp {
     }
 
   };
+
+  /// Attempt to activate all pending threads.
+  template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
+  void SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::ActivatePendingThreads()
+  {
+    emp_assert(!is_executing, "Cannot ActivatePendingThreads while hardware is executing.");
+    // emp_assert(ValidateThreadState()); => Slow!
+    // NOTE: Assumes active threads is accurate!
+    // NOTE: all pending threads + active threads should have unique ids
+
+    // Are there pending threads to activate? If not, return immediately.
+    if (pending_threads.empty()) return;
+
+    // If configuration says no thread priority or if num pending + num active < max active, just
+    // activate all pending; otherwise, take priorities into consideration.
+    if (!use_thread_priority || ((pending_threads.size() + active_threads.size()) < max_active_threads)) {
+      // Don't use thread priority for deciding which pending threads to activate.
+      // In effect, all actively running threads will have higher priority than all pending threads.
+      // I.e., no actively running threads will be killed to make space for pending threads.
+
+      // Spawn pending threads (in order of arrival) until no more room.
+      while (pending_threads.size() && (active_threads.size() < max_active_threads)) {
+        const size_t thread_id = pending_threads.front();
+        emp_assert(thread_id < threads.size(), "Invalid pending thread id", thread_id);
+        emp_assert(threads[thread_id].IsPending(), "Non-pending thread masquarading as a pending thread!");
+        ActivateThread(thread_id);  // todo - should this be Activate next pending?
+        pending_threads.pop_front();
+      }
+
+    } else {
+      // std::cout << "Making use of thread priority for activating pending." << std::endl;
+      // Use Thread priority for deciding which threads to activate:
+      // - (1) Order pending threads by max priority.
+      // - (2) Order active threads by min priority (only those < max pending).
+      // - (3) For each pending thread (while pending.max > active.min), activate pending.
+
+      // (1) Order pending threads by max priority (MAX heap).
+      //     + find max pending priority, use to bound which active threads we consider killing.
+      std::priority_queue<std::tuple<double, size_t>,
+                          std::vector<std::tuple<double, size_t>>> pending_priorities_MAX; // MAX HEAP
+      double max_pending_priority = threads[pending_threads.front()].GetPriority();
+      for (size_t pending_id : pending_threads) {
+        emp_assert(pending_id < threads.size());
+        emp_assert(threads[pending_id].IsPending());
+        const double priority = threads[pending_id].GetPriority();
+        pending_priorities_MAX.emplace(std::make_tuple(priority, pending_id));
+        if (priority > max_pending_priority) max_pending_priority = priority;
+      }
+
+      // (2) Order active threads (priority < max pending) by min priority (MIN heap).
+      //     Only include threads with priority < max_pending_priority
+      std::priority_queue<std::tuple<double, size_t>,
+                          std::vector<std::tuple<double, size_t>>,
+                          std::greater<std::tuple<double, size_t>>> active_priorities_MIN; // MIN heap.
+      for (size_t active_id : active_threads) {
+        emp_assert(active_id < threads.size());
+        thread_t & thread = threads[active_id];
+        if (thread.GetPriority() < max_pending_priority) {
+          active_priorities_MIN.emplace(std::make_tuple(thread.GetPriority(), active_id));
+        }
+      }
+
+      // (3) For each pending thread (while pending.max > active.min), activate pending.
+      // - Because we can't efficiently remove elements from the pending queue, track which pending
+      //   ids we want to spawn and which we don't.
+
+      // Map from each pending thread we want to activate to the active thread it will replace.
+      std::unordered_map<size_t, std::pair<bool, size_t>> pending_to_active;
+
+      // First, mark as many pending threads (in max priority order) to be set to active as there is
+      // space.
+      while (((pending_to_active.size() + active_threads.size()) < max_active_threads) && pending_priorities_MAX.size()) {
+        const size_t pending_id_MAX = std::get<1>(pending_priorities_MAX.top());
+        pending_to_active.emplace(pending_id_MAX, std::make_pair(false, max_thread_space));
+        pending_priorities_MAX.pop();
+      }
+
+      // Are there any active thread_ids (+priorities) to consider killing?
+      // To activate any more pending threads, we will need to kill a currently active thread.
+      while (active_priorities_MIN.size() && pending_priorities_MAX.size()) {
+        const double pending_priority_MAX = std::get<0>(pending_priorities_MAX.top());
+        const double active_priority_MIN = std::get<0>(active_priorities_MIN.top());
+        if (pending_priority_MAX > active_priority_MIN) {
+          const size_t pending_id_MAX = std::get<1>(pending_priorities_MAX.top());
+          const size_t active_id_MIN = std::get<1>(active_priorities_MIN.top());
+          pending_to_active.emplace(pending_id_MAX, std::make_pair(true, active_id_MIN)); // Map current pending id to current active id.
+          pending_priorities_MAX.pop();
+          active_priorities_MIN.pop();
+        } else {
+          break; // If we ever hit a pending priority that is <= the min active priority, break.
+        }
+      }
+
+      // For each pending thread, if we marked it to transition to active,
+      // activate it and kill associated active; otherwise, deny it (mark it as dead, move to unused).
+      // std::cout << "  Processing pending threads" << std::endl;
+      while (pending_threads.size()) {
+        const size_t pending_id = pending_threads.front();
+        // std::cout << "  > pending id=" << pending_id << std::endl;
+        if (emp::Has(pending_to_active, pending_id)) {
+          // std::cout << "    Should activate this pthread (" << threads[pending_id].GetPriority() << ")" << std::endl;
+          if (pending_to_active[pending_id].first) {
+            // Need to kill associated active.
+            const size_t active_id = pending_to_active[pending_id].second;
+            // std::cout << "    Need to first kill an active thread (" << active_id << std::endl;
+            KillActiveThread(active_id);
+            // std::cout << "    Killed active." << std::endl;
+          }
+          // std::cout << "    Activate this thread now." << std::endl;
+          ActivateThread(pending_id);
+          pending_threads.pop_front();
+        } else {
+          // Kill this pending thread.
+          KillNextPendingThread();
+        }
+      }
+    }
+    // Are there remaining threads we need to clean up?
+    while (pending_threads.size()) {
+      KillNextPendingThread();
+    }
+    // emp_assert(ValidateThreadState()); this is real slow
+  }
+
+  /// Reset the base hardware state:
+  /// - Clear event queue.
+  /// - Reset all threads, move all to unused; clear pending.
+  template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
+  void SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::ResetBaseHardwareState()
+  {
+    emp_assert(!is_executing, "Cannot reset hardware while executing.");
+    event_queue.clear();
+    for (auto & thread : threads) {
+      thread.Reset();
+    }
+    thread_exec_order.clear(); // No threads to execute.
+    active_threads.clear();    // No active threads.
+    pending_threads.clear();   // No pending threads.
+    unused_threads.resize(threads.size());
+    // unused_threads.resize(max); TODO - fix
+    // Add all available threads to unused.
+    for (size_t i = 0; i < unused_threads.size(); ++i) {
+      unused_threads[i] = (unused_threads.size() - 1) - i;
+    }
+    cur_thread.Invalidate();
+    cur_thread.id = max_thread_space;
+    // cur_thread_id = (size_t)-1;
+    is_executing = false;
+  }
+
+  /// Remove all currently pending threads.
+  template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
+  void SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::RemoveAllPendingThreads()
+  {
+    while (pending_threads.size()) {
+      const size_t thread_id = pending_threads.back();
+      pending_threads.pop_back();
+      threads[thread_id].Reset(); // this should be safe - todo - think on it
+      unused_threads.emplace_back(thread_id);
+    }
+  }
 
 }}
 
