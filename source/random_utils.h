@@ -18,7 +18,6 @@
 #include <algorithm>
 
 #include "base/errors.h"
-#include "hardware/EventDrivenGP.h"
 #include "tools/BitSet.h"
 #include "tools/math.h"
 #include "tools/Random.h"
@@ -47,12 +46,13 @@ namespace emp {
     return new_bitset;
   }
 
-  /// Generate 'count' number of random SignalGP tags (BitSet<TAG_WIDTH>).
-  /// Given a vector of other tags (unique_from), this function will guarantee the tags generated are unique with respect to those tags.
-  /// @param rnd - Random number generator to use when generating a random tag.
-  /// @param count - How many tags should be generated?
-  /// @param guarantee_unique - Should generated tags be guaranteed to be unique from each other?
-  /// @param unique_from - Other tags that the tag being generated should be unique with respect to. Only used if 'guarantee_unique' is true.
+  /// Generate 'count' number of random BitSet<W>.
+  /// Given a vector of other bitsets (unique_from), this function will guarantee the bitsets generated
+  /// and returned are unique with respect to unique_from.
+  /// @param rnd - Random number generator to use when generating a random bitset.
+  /// @param count - How many bitsets should be generated?
+  /// @param guarantee_unique - Should generated bitsets be guaranteed to be unique from each other?
+  /// @param unique_from - Other bitsets that the bitsets being generated should be unique with respect to. Only used if 'guarantee_unique' is true.
   template<size_t W>
   emp::vector<BitSet<W>> RandomBitSets(emp::Random & rnd, size_t count, bool guarantee_unique=false,
                                        const emp::vector<BitSet<W>> & unique_from=emp::vector<BitSet<W>>())
