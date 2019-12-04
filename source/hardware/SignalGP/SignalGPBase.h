@@ -455,87 +455,40 @@ namespace emp { namespace signalgp {
     bool IsExecuting() const { return is_executing; }
 
     /// TODO - TEST
-    // Warning: If you decrease max threads, you may kill actively running threads.
-    // Slow operation.
-    void SetActiveThreadLimit(size_t n) {
-      emp_assert(n, "Max active thread limit must be > 0.", n);
-      emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
-      // NOTE - this cannot DECREASE the capacity of the 'threads' member variable.
-      //        It can, however, INCREASE the capacity of the 'threads' member variable.
-      // Adjust max_thread_space if necessary.
-      SetActiveThreadLimit_impl(n);
-    }
+    /// Set this hardware's active thread limit (i.e., the maximum number of threads that can be running
+    /// simultaneously).
+    /// NOTE: this function was not intended to be run mid-hardware execution. It is better to set
+    ///       the hardware's active thread limit during initial hardware configuration.
+    /// Warning: If you decrease max threads, you may kill actively running threads.
+    /// Warning: This is a slow operation.
+    void SetActiveThreadLimit(size_t n);
 
-    /// Maximum allowed number of pending + active threads.
-    // todo - test!
-    void SetThreadCapacity(size_t n) {
-      emp_assert(n, "Max thread count must be greater than 0.");
-      emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
-      // This function can both decrease AND increase the size of the threads
-      // vector.
-
-      // If new thread cap < max active threads, decrease max active threads to new cap.
-      if (n < max_active_threads) {
-        SetActiveThreadLimit(n);
-      }
-
-      // If new thread cap < current thread storage, decrease thread storage, and
-      // update thread tracking.
-      if (n < threads.size()) {
-        // Lazily update
-        emp::vector<size_t> new_thread_exec_order;
-        emp::vector<size_t> new_unused_threads;
-        std::deque<size_t> new_pending_threads;
-        for (size_t id : thread_exec_order) {
-          if (id < n && !threads[id].IsDead()) new_thread_exec_order.emplace_back(id);
-        }
-        for (size_t id : unused_threads) {
-          if (id < n) new_unused_threads.emplace_back(id);
-        }
-        for (size_t id : new_pending_threads) {
-          if (id < n) new_pending_threads.emplace_back(id);
-        }
-        for (size_t id : active_threads) {
-          if (id >= n) active_threads.erase(n);
-        }
-        thread_exec_order = new_thread_exec_order;
-        unused_threads = new_unused_threads;
-        pending_threads = new_pending_threads;
-        threads.resize(n); // Decrease thread storage.
-      }
-
-      max_thread_space = n;
-    }
+    /// TODO - test!
+    /// Set the maximum allowed number of pending + active threads (max_thread_space member variable
+    /// and max size of threads member variable).
+    /// If new thread cap < current thread storage, this function will lazy-update thread management state.
+    /// NOTE: this function was not intended to be run mid-hardware execution. It is better to set
+    ///       the hardware's thread capacity during initial hardware configuration.
+    /// Warning: If you decrease the maximum capacity, you may kill actively running threads.
+    /// Warning: This is a slow operation.
+    void SetThreadCapacity(size_t n);
 
     /// @discussion - Better name?
     /// Remove all currently pending threads.
     void RemoveAllPendingThreads();
 
-    /// Spawn a number of threads (<= n). Use tag to select which modules to call.
-    /// Return a vector of spawned thread IDs.
-    ///  - If hardware is executing, these threads will be marked as pending.
-    ///  - If hardware is not executing, each requested new thread will:
-    ///    - Be initialized if # active threads < max_threads
-    ///    - Be initialized if # active threads == max_threads && priority level
-    ///      is greater than lowest priority level of active threads.
-    ///    - Not be initialized if # active threads == max-threads && priority level
-    ///      is less than lowest priority level of active threads.
-    emp::vector<size_t> SpawnThreads(const tag_t & tag, size_t n, double priority=1.0) {
-      emp::vector<size_t> matches(GetHardware().FindModuleMatch(tag, n));
-      emp::vector<size_t> thread_ids;
-      for (size_t match : matches) {
-        const auto thread_id = SpawnThreadWithID(match, priority);
-        if (thread_id) {
-          thread_ids.emplace_back(thread_id.value());
-        }
-      }
-      return thread_ids;
-    }
+    /// Request that up to n threads are spawned using the given tag at the given priority.
+    /// All spawned threads will be marked as pending until the next SingleProcess where they will
+    /// have the chance to run.
+    /// Note that 'spawned' threads will not necessarily run. If the number of actively running threads
+    /// is at the current limit, low-priority threads will not run.
+    /// @param tag Use tag to select which modules to call.
+    /// @param n How many modules should be requested? Up to n modules may spawned.
+    /// @param priority What priority level should any threads spawned as a result of this call have?
+    /// @return A vector of thread IDs that were 'spawned'.
+    emp::vector<size_t> SpawnThreads(const tag_t & tag, size_t n, double priority=1.0);
 
-    std::optional<size_t> SpawnThreadWithTag(const tag_t & tag, double priority=1.0) {
-      emp::vector<size_t> match(GetHardware().FindModuleMatch(tag, 1));
-      return (match.size()) ? SpawnThreadWithID(match[0], priority) : std::nullopt;
-    }
+    std::optional<size_t> SpawnThreadWithTag(const tag_t & tag, double priority=1.0);
 
     /// Spawn a new thread with given ID.
     /// If no unused threads & already maxed out thread space, will not spawn new
@@ -823,7 +776,8 @@ namespace emp { namespace signalgp {
 
   };
 
-  /// Attempt to activate all pending threads.
+  // -------------------- SignalGPBase method implementations --------------------
+
   template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
   void SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::ActivatePendingThreads()
   {
@@ -946,9 +900,6 @@ namespace emp { namespace signalgp {
     // emp_assert(ValidateThreadState()); this is real slow
   }
 
-  /// Reset the base hardware state:
-  /// - Clear event queue.
-  /// - Reset all threads, move all to unused; clear pending.
   template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
   void SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::ResetBaseHardwareState()
   {
@@ -972,7 +923,52 @@ namespace emp { namespace signalgp {
     is_executing = false;
   }
 
-  /// Remove all currently pending threads.
+  template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
+  void SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::SetActiveThreadLimit(size_t n) {
+    emp_assert(n, "Max active thread limit must be > 0.", n);
+    emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
+    // NOTE - this cannot DECREASE the capacity of the 'threads' member variable.
+    //        It can, however, INCREASE the capacity of the 'threads' member variable.
+    // Adjust max_thread_space if necessary.
+    SetActiveThreadLimit_impl(n);
+  }
+
+  template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
+  void SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::SetThreadCapacity(size_t n)
+  {
+    emp_assert(n, "Max thread count must be greater than 0.");
+    emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
+    // This function can both decrease AND increase the size of the threads vector.
+    // If new thread cap < max active threads, decrease max active threads to new cap.
+    if (n < max_active_threads) {
+      SetActiveThreadLimit(n);
+    }
+    // If new thread cap < current thread storage, decrease thread storage, and update thread tracking.
+    if (n < threads.size()) {
+      // Lazily update
+      emp::vector<size_t> new_thread_exec_order;
+      emp::vector<size_t> new_unused_threads;
+      std::deque<size_t> new_pending_threads;
+      for (size_t id : thread_exec_order) {
+        if (id < n && !threads[id].IsDead()) new_thread_exec_order.emplace_back(id);
+      }
+      for (size_t id : unused_threads) {
+        if (id < n) new_unused_threads.emplace_back(id);
+      }
+      for (size_t id : new_pending_threads) {
+        if (id < n) new_pending_threads.emplace_back(id);
+      }
+      for (size_t id : active_threads) {
+        if (id >= n) active_threads.erase(n);
+      }
+      thread_exec_order = new_thread_exec_order;
+      unused_threads = new_unused_threads;
+      pending_threads = new_pending_threads;
+      threads.resize(n); // Decrease thread storage.
+    }
+    max_thread_space = n;
+  }
+
   template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
   void SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::RemoveAllPendingThreads()
   {
@@ -982,6 +978,29 @@ namespace emp { namespace signalgp {
       threads[thread_id].Reset(); // this should be safe - todo - think on it
       unused_threads.emplace_back(thread_id);
     }
+  }
+
+  template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
+  emp::vector<size_t> SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::SpawnThreads(
+    const tag_t & tag, size_t n, double priority
+  ) {
+    emp::vector<size_t> matches(GetHardware().FindModuleMatch(tag, n));
+    emp::vector<size_t> thread_ids;
+    for (size_t match : matches) {
+      const auto thread_id = SpawnThreadWithID(match, priority);
+      if (thread_id) {
+        thread_ids.emplace_back(thread_id.value());
+      }
+    }
+    return thread_ids;
+  }
+
+  template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
+  std::optional<size_t> SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::SpawnThreadWithTag(
+    const tag_t & tag, double priority
+  ) {
+    emp::vector<size_t> match(GetHardware().FindModuleMatch(tag, 1));
+    return (match.size()) ? SpawnThreadWithID(match[0], priority) : std::nullopt;
   }
 
 }}
