@@ -81,6 +81,8 @@ namespace emp { namespace signalgp {
     using event_t = BaseEvent;
     using event_lib_t = EventLibrary<hardware_t>;
 
+    using module_id_t = size_t;
+
     using thread_t = Thread;
 
     using fun_print_hardware_state_t = std::function<void(const hardware_t&, std::ostream &)>;
@@ -210,11 +212,12 @@ namespace emp { namespace signalgp {
     /// - (3) Reclaim thread id (put into unused_threads)
     /// NOTE that this function does not remove this thread ID from the execution order. Calling KillActiveThread
     /// on an active thread, then calling ActivateThread on the same id will result in an error.
-    void KillActiveThread(size_t thread_id) {
+    void KillActiveThread_impl(size_t thread_id) {
       emp_assert(thread_id < threads.size());
       emp_assert(emp::Has(active_threads, thread_id), "Thread ID not in active_threads", thread_id);
       emp_assert(!emp::Has(unused_threads, thread_id), "Thread ID already in unused_threads", thread_id);
       active_threads.erase(thread_id);
+      // NOTE: Don't want to reset thread here because this function could be called during this thread's execution.
       threads[thread_id].SetDead();
       unused_threads.emplace_back(thread_id);
     }
@@ -283,17 +286,40 @@ namespace emp { namespace signalgp {
     /// Given a TAG_T (tag) and a maximum number of modules to search for (n), return a vector of valid
     /// module matches (valid as specified by DERIVED_T).
     /// It is valid for the return value to have a size from [0:n].
-    virtual vector<size_t> FindModuleMatch(const tag_t &, size_t) = 0;
+    virtual vector<module_id_t> FindModuleMatch(const tag_t &, size_t) = 0;
 
     /// REQUIRED - Must be implemented by DERIVED_T
     /// This function should take a thread_t & thread and size_t module_id as input and initialize
     /// the given thread using the specified module_id.
-    virtual void InitThread(thread_t &, size_t) = 0;
+    virtual void InitThread(thread_t &, module_id_t) = 0;
 
     /// Reset the base hardware state:
     /// - Clear event queue.
     /// - Reset all threads, move all to unused; clear pending.
     void ResetBaseHardwareState();
+
+    /// Reset thread states.
+    /// Cannot call while hardware is executing.
+    void ResetThreads() {
+      emp_assert(!is_executing, "Cannot reset hardware while executing.");
+      for (auto & thread : threads) {
+        thread.Reset();
+      }
+      thread_exec_order.clear(); // No threads to execute.
+      active_threads.clear();    // No active threads.
+      pending_threads.clear();   // No pending threads.
+      unused_threads.resize(threads.size());
+      // Add all available threads to unused.
+      for (size_t i = 0; i < unused_threads.size(); ++i) {
+        unused_threads[i] = (unused_threads.size() - 1) - i;
+      }
+      cur_thread.Invalidate();
+      cur_thread.id = max_thread_space;
+    }
+
+    /// Remove all events from event queue.
+    /// Safe to do while executing.
+    void ClearEventQueue() { event_queue.clear(); }
 
     /// Full hardware reset.
     void Reset() {
@@ -415,8 +441,38 @@ namespace emp { namespace signalgp {
     /// Remove all currently pending threads.
     void RemoveAllPendingThreads();
 
-    /// Remoe all events from event queue.
-    void ClearEventQueue() { event_queue.clear(); }
+    /// Kill a thread specified by the thread id.
+    /// if executing: mark as dead
+    bool KillActiveThread(size_t thread_id) {
+      emp_assert(thread_id < threads.size(), "Thread ID is invalid.");
+      auto & thread = GetThread(thread_id);
+      if (!thread.IsRunning()) return false;
+      // If hardware is executing, mark thread as dead. Let SingleProcess actually kill the thread.
+      // Otherwise, assert the thread is in active threads and actually kill the thread.
+      if (is_executing) {
+        thread.SetDead();
+      } else {
+        emp_assert(emp::Has(active_threads, thread_id), "thread_id not found in active threads", thread_id);
+        KillActiveThread_impl(thread_id);
+      }
+      return true;
+    }
+
+    /// This function will only kill (mark as dead) the current thread WHILE the hardware is executing.
+    /// If the hardware is not executing, this function will throw an error if compiled in debug mode
+    /// and will return an invalid id when not compiled in debug mode.
+    bool KillCurThread() {
+      emp_assert(is_executing, "Hardware is not executing! No current thread.");
+      emp_assert(cur_thread.IsValid(), "There is no currently executing thread.");
+      emp_assert(cur_thread.ID() < threads.size(), "Current thread ID is invalid.");
+      // Is current thread in active threads?
+      if (!is_executing) return false;
+      // Mark this thread as dead (let SingleProcess clean it up)
+      // If we were to kill it outright, we could run into edge-case side effects where it gets reclaimed
+      // as a pending thread, which would reset it and potentially invalidate important references.
+      GetCurThreadID().SetDead();
+      return true;
+    }
 
     /// Request that up to n threads are spawned using the given tag at the given priority.
     /// All spawned threads will be marked as pending until the next SingleProcess where they will
@@ -435,7 +491,8 @@ namespace emp { namespace signalgp {
     /// If no unused threads & already maxed out thread space, will not spawn new
     /// thread.
     /// Otherwise, mark thread as pending.
-    std::optional<size_t> SpawnThreadWithID(size_t module_id, double priority=1.0);
+    /// @return Thread id of spawned thread (if a thread was successfully spawned)
+    std::optional<size_t> SpawnThreadWithID(module_id_t module_id, double priority=1.0);
 
     /// Handle an event (on this hardware) now!
     void HandleEvent(const event_t & event) { event_lib.HandleEvent(GetHardware(), event); }
@@ -612,7 +669,7 @@ namespace emp { namespace signalgp {
             // Need to kill associated active.
             const size_t active_id = pending_to_active[pending_id].second;
             // std::cout << "    Need to first kill an active thread (" << active_id << std::endl;
-            KillActiveThread(active_id);
+            KillActiveThread_impl(active_id);
             // std::cout << "    Killed active." << std::endl;
           }
           // std::cout << "    Activate this thread now." << std::endl;
@@ -664,7 +721,7 @@ namespace emp { namespace signalgp {
       for (size_t i = 0; i < num_kill; ++i) {
         const size_t thread_id = ids[i];
         emp_assert(threads[thread_id].IsRunning());
-        KillActiveThread(thread_id);
+        KillActiveThread_impl(thread_id);
       }
       // Fix execution order in case we broke it.
       emp::vector<size_t> new_thread_exec_order;
@@ -700,7 +757,7 @@ namespace emp { namespace signalgp {
       while (num_kill) {
         const size_t thread_id = thread_exec_order.back();
         if (threads[thread_id].IsRunning()) {
-          KillActiveThread(thread_id);
+          KillActiveThread_impl(thread_id);
           --num_kill;
         }
         // Either thread was running and we killed it or thread was already dead.
@@ -715,22 +772,8 @@ namespace emp { namespace signalgp {
   void SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::ResetBaseHardwareState()
   {
     emp_assert(!is_executing, "Cannot reset hardware while executing.");
-    event_queue.clear();
-    for (auto & thread : threads) {
-      thread.Reset();
-    }
-    thread_exec_order.clear(); // No threads to execute.
-    active_threads.clear();    // No active threads.
-    pending_threads.clear();   // No pending threads.
-    unused_threads.resize(threads.size());
-    // unused_threads.resize(max); TODO - fix
-    // Add all available threads to unused.
-    for (size_t i = 0; i < unused_threads.size(); ++i) {
-      unused_threads[i] = (unused_threads.size() - 1) - i;
-    }
-    cur_thread.Invalidate();
-    cur_thread.id = max_thread_space;
-    // cur_thread_id = (size_t)-1;
+    ClearEventQueue();
+    ResetThreads();
     is_executing = false;
   }
 
@@ -786,7 +829,7 @@ namespace emp { namespace signalgp {
     while (pending_threads.size()) {
       const size_t thread_id = pending_threads.back();
       pending_threads.pop_back();
-      threads[thread_id].Reset(); // this should be safe - todo - think on it
+      threads[thread_id].Reset(); // this should be safe
       unused_threads.emplace_back(thread_id);
     }
   }
@@ -795,7 +838,7 @@ namespace emp { namespace signalgp {
   emp::vector<size_t> SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::SpawnThreads(
     const tag_t & tag, size_t n, double priority
   ) {
-    emp::vector<size_t> matches(GetHardware().FindModuleMatch(tag, n));
+    emp::vector<module_id_t> matches(GetHardware().FindModuleMatch(tag, n));
     emp::vector<size_t> thread_ids;
     for (size_t match : matches) {
       const auto thread_id = SpawnThreadWithID(match, priority);
@@ -810,13 +853,13 @@ namespace emp { namespace signalgp {
   std::optional<size_t> SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::SpawnThreadWithTag(
     const tag_t & tag, double priority
   ) {
-    emp::vector<size_t> match(GetHardware().FindModuleMatch(tag, 1));
+    emp::vector<module_id_t> match(GetHardware().FindModuleMatch(tag, 1));
     return (match.size()) ? SpawnThreadWithID(match[0], priority) : std::nullopt;
   }
 
   template<typename DERIVED_T, typename EXEC_STATE_T, typename TAG_T, typename CUSTOM_COMPONENT_T>
   std::optional<size_t> SignalGPBase<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::SpawnThreadWithID(
-    size_t module_id, double priority
+    module_id_t module_id, double priority
   ) {
     size_t thread_id;
     bool already_pending = false; // Flag if claimed thread id is already pending.
@@ -902,7 +945,7 @@ namespace emp { namespace signalgp {
       // Is this a valid thread id?
       if (cur_thread.id >= threads.size()) {
         // If this thread is active, kill it.
-        if (emp::Has(active_threads, cur_thread.ID())) KillActiveThread(cur_thread.ID());
+        if (emp::Has(active_threads, cur_thread.ID())) KillActiveThread_impl(cur_thread.ID());
         ++adjust;
         ++exec_order_id;
         continue;
@@ -910,7 +953,7 @@ namespace emp { namespace signalgp {
       // Is this thread dead?
       if (threads[cur_thread.ID()].IsDead()) {
         // If this thread is active, kill it.
-        if (emp::Has(active_threads, cur_thread.ID())) KillActiveThread(cur_thread.ID());
+        if (emp::Has(active_threads, cur_thread.ID())) KillActiveThread_impl(cur_thread.ID());
         ++adjust;
         ++exec_order_id;
         continue;
@@ -921,7 +964,7 @@ namespace emp { namespace signalgp {
 
       // Did the thread die?
       if (threads[cur_thread.ID()].IsDead()) {
-        KillActiveThread(cur_thread.ID());
+        KillActiveThread_impl(cur_thread.ID());
         ++adjust;
       }
       ++exec_order_id;
