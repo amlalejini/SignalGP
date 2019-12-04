@@ -18,13 +18,13 @@
 #include "../utils/linear_signalgp_utils.h"
 #include "../utils/LinearFunctionsProgram.h"
 
-namespace emp { namespace signalgp {
+namespace sgp {
   // @discussion: std::ratio for thresh is unintuitive w/out some handholding
   template<typename MEMORY_MODEL_T,
            typename TAG_T=emp::BitSet<16>,
            typename INST_ARGUMENT_T=int,
            typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<> >,
-           typename CUSTOM_COMPONENT_T=emp::signalgp::DefaultCustomComponent>
+           typename CUSTOM_COMPONENT_T=sgp::DefaultCustomComponent>
   class LinearFunctionsProgramSignalGP : public SignalGPBase<LinearFunctionsProgramSignalGP<MEMORY_MODEL_T,TAG_T,INST_ARGUMENT_T,MATCHBIN_T,CUSTOM_COMPONENT_T>,
                                                              lsgp_utils::ExecState<MEMORY_MODEL_T>,
                                                              TAG_T,
@@ -44,7 +44,7 @@ namespace emp { namespace signalgp {
     using matchbin_t = MATCHBIN_T;
     using memory_model_t = MEMORY_MODEL_T;
     using memory_state_t = typename memory_model_t::memory_state_t;
-    using program_t = emp::signalgp::LinearFunctionsProgram<tag_t, arg_t>;
+    using program_t = sgp::LinearFunctionsProgram<tag_t, arg_t>;
     using base_hw_t = SignalGPBase<this_t, exec_state_t, tag_t, CUSTOM_COMPONENT_T>;
     using thread_t = typename base_hw_t::Thread;
     using event_lib_t = typename base_hw_t::event_lib_t; // EventLibrary<this_t>
@@ -260,7 +260,7 @@ namespace emp { namespace signalgp {
     }
 
     /// Get a reference to a random number generator used by this hardware.
-    Random & GetRandom() { return random; }
+    emp::Random & GetRandom() { return random; }
 
     /// Get a reference to the hardware's flow handler.
     flow_handler_t & GetFlowHandler() { return flow_handler; }
@@ -415,6 +415,6 @@ namespace emp { namespace signalgp {
 
   };
 
-}}
+}
 
 #endif

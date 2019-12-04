@@ -18,13 +18,13 @@
 #include "../utils/linear_signalgp_utils.h"
 #include "../utils/LinearProgram.h"
 
-namespace emp { namespace signalgp {
+namespace sgp {
 
   template<typename MEMORY_MODEL_T,
            typename TAG_T=emp::BitSet<16>,
            typename INST_ARGUMENT_T=int,
            typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<> >,
-           typename CUSTOM_COMPONENT_T=emp::signalgp::DefaultCustomComponent>
+           typename CUSTOM_COMPONENT_T=sgp::DefaultCustomComponent>
   class LinearProgramSignalGP : public SignalGPBase<LinearProgramSignalGP<MEMORY_MODEL_T,TAG_T,INST_ARGUMENT_T,MATCHBIN_T,CUSTOM_COMPONENT_T>,
                                                     lsgp_utils::ExecState<MEMORY_MODEL_T>,
                                                     TAG_T,
@@ -55,11 +55,11 @@ namespace emp { namespace signalgp {
     using memory_model_t = MEMORY_MODEL_T;
     using memory_state_t = typename memory_model_t::memory_state_t;
 
-    using program_t = emp::signalgp::LinearProgram<tag_t, arg_t>;
+    using program_t = sgp::LinearProgram<tag_t, arg_t>;
 
     using base_hw_t = SignalGPBase<this_t, exec_state_t, tag_t, CUSTOM_COMPONENT_T>;
     using thread_t = typename base_hw_t::Thread;
-    using event_lib_t = emp::EventLibrary<this_t>;
+    using event_lib_t = sgp::EventLibrary<this_t>;
     using event_t = typename base_hw_t::event_t;
 
     /// Blocks are within-module flow control segments (e.g., while loops, if statements, etc)
@@ -104,7 +104,7 @@ namespace emp { namespace signalgp {
       size_t GetEnd() const { return end; }
 
       /// Returns whether or not a given instruction position within this module.
-      bool InModule(size_t ip) const { return Has(in_module, ip); }
+      bool InModule(size_t ip) const { return emp::Has(in_module, ip); }
     };
 
   protected:
@@ -379,7 +379,7 @@ namespace emp { namespace signalgp {
     }
 
     /// Get reference to random number generator used by this hardware.
-    Random & GetRandom() { return random; }
+    emp::Random & GetRandom() { return random; }
 
     flow_handler_t & GetFlowHandler() { return flow_handler; }
 
@@ -613,6 +613,6 @@ namespace emp { namespace signalgp {
       os << "-----------------";
     }
   };
-}}
+}
 
 #endif

@@ -14,7 +14,7 @@
 #include "../EventLibrary.h"
 #include "InstructionLibrary.h"
 
-namespace emp { namespace signalgp { namespace lfp_inst_impl {
+namespace sgp { namespace lfp_inst_impl {
 
   // These instructions work with:
   // - LinearFunctionsProgram<Tags=BitSet, Args=int>
@@ -144,6 +144,6 @@ namespace emp { namespace signalgp { namespace lfp_inst_impl {
     }
   }
 
-}}}
+}}
 
 #endif

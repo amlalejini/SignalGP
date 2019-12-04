@@ -16,7 +16,7 @@
 
 // #include "../SignalGP.h"
 
-namespace emp { namespace signalgp { namespace inst_impl {
+namespace sgp { namespace inst_impl {
 
   // These instructions work with:
   // - SimpleExecutionStepper
@@ -123,7 +123,7 @@ namespace emp { namespace signalgp { namespace inst_impl {
     const int denom = (int)mem_state.AccessWorking(inst.GetArg(1));
     if (denom == 0.0) return; // Do nothing.
     const int num = (int)mem_state.AccessWorking(inst.GetArg(0));
-    mem_state.SetWorking(inst.GetArg(2), Mod(num, denom));
+    mem_state.SetWorking(inst.GetArg(2), emp::Mod(num, denom));
   }
 
   // - Inst_TestEqu
@@ -654,6 +654,6 @@ namespace emp { namespace signalgp { namespace inst_impl {
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Nop(HARDWARE_T & hw, const INSTRUCTION_T & inst) { ; }
 
-}}}
+}}
 
 #endif

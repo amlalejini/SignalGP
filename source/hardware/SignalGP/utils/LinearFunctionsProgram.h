@@ -16,7 +16,7 @@
 #include "InstructionLibrary.h"
 #include "LinearProgram.h"
 
-namespace emp { namespace signalgp {
+namespace sgp {
 
   template<typename TAG_T, typename ARGUMENT_T>
   class LinearFunction {
@@ -249,10 +249,10 @@ namespace emp { namespace signalgp {
   // GenRandLinearFunction => {RandomBitSet, GenRandLinearProgram}
   // todo - clean up arguments
   template<typename HARDWARE_T, size_t TAG_WIDTH>
-  LinearFunction<BitSet<TAG_WIDTH>, int> GenRandLinearFunction(
+  LinearFunction<emp::BitSet<TAG_WIDTH>, int> GenRandLinearFunction(
     emp::Random & rnd,
     const InstructionLibrary<HARDWARE_T,
-                             typename LinearProgram< BitSet<TAG_WIDTH>, int>::Instruction,
+                             typename LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction,
                              typename HARDWARE_T::inst_prop_t> & inst_lib,
     size_t num_func_tags=1,
     const emp::Range<size_t> & inst_cnt_range={1, 32},
@@ -260,7 +260,7 @@ namespace emp { namespace signalgp {
     size_t num_inst_args=3,
     const emp::Range<int> & arg_val_range={0, 15}
   ) {
-    return {RandomBitSets<TAG_WIDTH>(rnd, num_func_tags),
+    return {emp::RandomBitSets<TAG_WIDTH>(rnd, num_func_tags),
             GenRandLinearProgram<HARDWARE_T,TAG_WIDTH>(rnd, inst_lib,
                                                        inst_cnt_range,
                                                        num_inst_tags, num_inst_args,
@@ -269,10 +269,10 @@ namespace emp { namespace signalgp {
 
   // Todo - DEAR GOD THESE ARGUMENTS ARE TERRIBLE
   template<typename HARDWARE_T, size_t TAG_WIDTH>
-  LinearFunctionsProgram<BitSet<TAG_WIDTH>, int> GenRandLinearFunctionsProgram(
+  LinearFunctionsProgram<emp::BitSet<TAG_WIDTH>, int> GenRandLinearFunctionsProgram(
     emp::Random & rnd,
     const InstructionLibrary<HARDWARE_T,
-                             typename LinearProgram< BitSet<TAG_WIDTH>, int>::Instruction,
+                             typename LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction,
                              typename HARDWARE_T::inst_prop_t> & inst_lib,
     const emp::Range<size_t> & num_func_range={1, 4},
     size_t num_func_tags=1,
@@ -282,7 +282,7 @@ namespace emp { namespace signalgp {
     const emp::Range<int> & arg_val_range={0, 15}
   ) {
     const size_t func_cnt = rnd.GetUInt(num_func_range.GetLower(), num_func_range.GetUpper()+1);
-    LinearFunctionsProgram<BitSet<TAG_WIDTH>, int> new_program;
+    LinearFunctionsProgram<emp::BitSet<TAG_WIDTH>, int> new_program;
     for (size_t fID = 0; fID < func_cnt; ++fID) {
       new_program.PushFunction(GenRandLinearFunction<HARDWARE_T, TAG_WIDTH>(rnd, inst_lib,
                                                                             num_func_tags,
@@ -293,6 +293,6 @@ namespace emp { namespace signalgp {
     }
     return new_program;
   }
-}}
+}
 
 #endif

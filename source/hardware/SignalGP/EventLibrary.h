@@ -21,7 +21,7 @@
 // - What is an event?
 //   - label <==> payload
 
-namespace emp {
+namespace sgp {
 
 
   /// Base event struct. All SignalGP events should be derived from this.
@@ -44,7 +44,7 @@ namespace emp {
     using event_t = BaseEvent;
     using event_handler_fun_t = std::function<void(hardware_t &, const event_t &)>;     ///< Type alias for event-handler functions.
     using event_dispatcher_fun_t = std::function<void(hardware_t &, const event_t &)>;  ///< Type alias for event-dispatcher functions.
-    using event_dispatcher_set_t = FunctionSet<void(hardware_t &, const event_t &)>;    ///< Type alias for dispatcher function set type.
+    using event_dispatcher_set_t = emp::FunctionSet<void(hardware_t &, const event_t &)>;    ///< Type alias for dispatcher function set type.
 
     struct EventDef {
       std::string name;                     ///< Name of this event.
@@ -81,8 +81,8 @@ namespace emp {
 
     /// Get the event ID of the event given by string name.
     size_t GetID(const std::string & name) const {
-      emp_assert(Has(name_map, name), name);
-      return Find(name_map, name, (size_t)-1);
+      emp_assert(emp::Has(name_map, name), name);
+      return emp::Find(name_map, name, (size_t)-1);
     }
 
     /// Get the handler function of the specified event definition.

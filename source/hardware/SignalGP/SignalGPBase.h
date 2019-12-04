@@ -20,7 +20,7 @@
 // @discussion - where should I put configurable lambdas?
 // todo - move function implementations outside of class
 
-namespace emp { namespace signalgp {
+namespace sgp {
 
   /// Placeholder additional component type.
   struct DefaultCustomComponent { };
@@ -286,7 +286,7 @@ namespace emp { namespace signalgp {
     /// Given a TAG_T (tag) and a maximum number of modules to search for (n), return a vector of valid
     /// module matches (valid as specified by DERIVED_T).
     /// It is valid for the return value to have a size from [0:n].
-    virtual vector<module_id_t> FindModuleMatch(const tag_t &, size_t) = 0;
+    virtual emp::vector<module_id_t> FindModuleMatch(const tag_t &, size_t) = 0;
 
     /// REQUIRED - Must be implemented by DERIVED_T
     /// This function should take a thread_t & thread and size_t module_id as input and initialize
@@ -1076,6 +1076,6 @@ namespace emp { namespace signalgp {
     return true;
   }
 
-}}
+}
 
 #endif

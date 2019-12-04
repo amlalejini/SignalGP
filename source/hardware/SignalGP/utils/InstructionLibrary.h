@@ -26,7 +26,7 @@
 
 // Hardware specifies instruction type? => specifies argument type?
 
-namespace emp {
+namespace sgp {
 
   template<typename HARDWARE_T, typename INSTRUCTION_T, typename INSTRUCTION_PROPERTY_T=size_t>
   class InstructionLibrary {
@@ -110,13 +110,13 @@ namespace emp {
 
     /// Is the given instruction (specified by name) in the instruction library?
     bool IsInst(const std::string & name) const {
-        return Has(name_map, name);
+        return emp::Has(name_map, name);
     }
 
     /// Return the ID of the instruction that has the specified name.
     size_t GetID(const std::string & name) const {
-      emp_assert(Has(name_map, name), name);
-      return Find(name_map, name, (size_t) -1);
+      emp_assert(emp::Has(name_map, name), name);
+      return emp::Find(name_map, name, (size_t) -1);
     }
 
     /// Add a new instruction to the instruction set.

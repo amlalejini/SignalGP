@@ -14,7 +14,7 @@
 #include "../EventLibrary.h"
 #include "InstructionLibrary.h"
 
-namespace emp { namespace signalgp { namespace lsgp_utils {
+namespace sgp { namespace lsgp_utils {
 
 
   /// Library of flow types.
@@ -65,12 +65,12 @@ namespace emp { namespace signalgp { namespace lsgp_utils {
                                            {FlowType::CALL, FlowControl()} };
 
     FlowControl & operator[](FlowType type) {
-      emp_assert(Has(lib, type), "FlowType not recognized!");
+      emp_assert(emp::Has(lib, type), "FlowType not recognized!");
       return lib[type];
     }
 
     const FlowControl & operator[](FlowType type) const {
-      emp_assert(Has(lib, type), "FlowType not recognized!");
+      emp_assert(emp::Has(lib, type), "FlowType not recognized!");
       return lib[type];
     }
 
@@ -86,17 +86,17 @@ namespace emp { namespace signalgp { namespace lsgp_utils {
 
     void OpenFlow(hardware_t & hw, const FlowInfo & new_flow, exec_state_t & state) {
       FlowType type = new_flow.type;
-      emp_assert(Has(lib, type), "FlowType not recognized!");
+      emp_assert(emp::Has(lib, type), "FlowType not recognized!");
       lib[type].open_flow_fun(hw, state, new_flow);
     }
 
     void CloseFlow(hardware_t & hw, FlowType type, exec_state_t & state) {
-      emp_assert(Has(lib, type), "FlowType not recognized!");
+      emp_assert(emp::Has(lib, type), "FlowType not recognized!");
       lib[type].close_flow_fun(hw, state);
     }
 
     void BreakFlow(hardware_t & hw, FlowType type, exec_state_t & state) {
-      emp_assert(Has(lib, type), "FlowType not recognized!");
+      emp_assert(emp::Has(lib, type), "FlowType not recognized!");
       lib[type].break_flow_fun(hw, state);
     }
   };
@@ -166,6 +166,6 @@ namespace emp { namespace signalgp { namespace lsgp_utils {
     emp::vector<call_state_t> & GetCallStack() { return call_stack; }
   };
 
-}}}
+}}
 
 #endif

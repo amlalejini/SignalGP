@@ -10,7 +10,7 @@
 #include "tools/MatchBin.h"
 #include "tools/matchbin_utils.h"
 
-namespace emp { namespace signalgp {
+namespace sgp {
 
   // TODO - make on return/on call re-configurable
   // Demonstrative memory model based on original version of SignalGP.
@@ -46,27 +46,27 @@ namespace emp { namespace signalgp {
       /// Get a reference to value at particular key in working memory. If key
       /// not yet in buffer, add key w/value of 0.
       double & AccessWorking(int key) {
-        if (!Has(working_mem, key)) working_mem[key] = 0;
+        if (!emp::Has(working_mem, key)) working_mem[key] = 0;
         return working_mem[key];
       }
 
       /// Get a reference to value at particular key in input memory. If key
       /// not yet in buffer, add key w/value of 0.
       double & AccessInput(int key) {
-        if (!Has(input_mem, key)) input_mem[key] = 0;
+        if (!emp::Has(input_mem, key)) input_mem[key] = 0;
         return input_mem[key];
       }
 
       /// Get a reference to value at particular key in output memory. If key
       /// not yet in buffer, add key w/value of 0.
       double & AccessOutput(int key) {
-        if (!Has(output_mem, key)) output_mem[key] = 0;
+        if (!emp::Has(output_mem, key)) output_mem[key] = 0;
         return output_mem[key];
       }
 
-      double GetWorking(int key) { return Find(working_mem, key, 0.0); }
-      double GetInput(int key) { return Find(input_mem, key, 0.0); }
-      double GetOutput(int key) { return Find(output_mem, key, 0.0); }
+      double GetWorking(int key) { return emp::Find(working_mem, key, 0.0); }
+      double GetInput(int key) { return emp::Find(input_mem, key, 0.0); }
+      double GetOutput(int key) { return emp::Find(output_mem, key, 0.0); }
     };
 
   protected:
@@ -118,10 +118,10 @@ namespace emp { namespace signalgp {
 
     void SetGlobal(int key, double val) { global_mem[key] = val; }
 
-    double GetGlobal(int key) { return Find(global_mem, key, 0.0); }
+    double GetGlobal(int key) { return emp::Find(global_mem, key, 0.0); }
 
     double & AccessGlobal(int key) {
-      if (!Has(global_mem, key)) global_mem[key] = 0;
+      if (!emp::Has(global_mem, key)) global_mem[key] = 0;
       return global_mem[key];
     }
 
@@ -140,6 +140,6 @@ namespace emp { namespace signalgp {
 
   };
 
-}}
+}
 
 #endif
