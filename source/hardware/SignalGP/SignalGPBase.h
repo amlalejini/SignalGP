@@ -236,6 +236,80 @@ namespace emp { namespace signalgp {
     /// Attempt to activate all pending threads.
     void ActivatePendingThreads();
 
+    /// Internal implementation of SetActiveThreadLimit
+    void SetActiveThreadLimit_impl(size_t n) {
+      if (use_thread_priority) SetActiveThreadLimit_UsePriority_impl(n);
+      else SetActiveThreadLimit_NoPriority_impl(n);
+    };
+    // todo - test!
+    /// Internal implementation of SetActiveThreadLimit that uses priority to decide which threads
+    /// to kill if necessary.
+    void SetActiveThreadLimit_UsePriority_impl(size_t n) {
+      max_thread_space = std::max(n, max_thread_space);
+      if (n > max_active_threads) {
+        // Increasing total threads able to run simultaneously. This might increase
+        // thread storage (threads).
+        for (size_t i = threads.size(); i < n; ++i) {
+          // add any new thread ids to unused threads.
+          unused_threads.emplace_back(i);
+        }
+        // If requesting more possible active threads than space, resize.
+        if (n > threads.size()) threads.resize(n);
+      } else if (n < active_threads.size()) {
+        emp_assert(thread_exec_order.size() >= active_threads.size());
+        const size_t num_kill = active_threads.size() - n;
+        // Kill smallest-priority threads.
+        emp::vector<size_t> ids(active_threads.begin(), active_threads.end());
+        std::partial_sort(ids.begin(), ids.begin()+num_kill, ids.end(),
+                          [this](size_t id_a, size_t id_b){ return threads[id_a].GetPriority() < threads[id_b].GetPriority(); });
+        for (size_t i = 0; i < num_kill; ++i) {
+          const size_t thread_id = ids[i];
+          emp_assert(threads[thread_id].IsRunning());
+          KillActiveThread(thread_id);
+        }
+        // Fix execution order in case we broke it.
+        emp::vector<size_t> new_thread_exec_order;
+        for (size_t thread_id : thread_exec_order) {
+          if (thread_id >= threads.size()) continue;
+          if (threads[thread_id].IsDead()) continue;
+          new_thread_exec_order.emplace_back(thread_id);
+        }
+        thread_exec_order = new_thread_exec_order;
+      }
+      max_active_threads = n;
+    }
+    /// Internal implementation of SetActiveThreadLimit that arbitrarily decides which threads to
+    /// kill if necessary.
+    void SetActiveThreadLimit_NoPriority_impl(size_t n) {
+      max_thread_space = std::max(n, max_thread_space);
+      if (n > max_active_threads) {
+        // Increasing total threads able to run simultaneously. This might increase
+        // thread storage (threads).
+        for (size_t i = threads.size(); i < n; ++i) {
+          // add any new thread ids to unused threads.
+          unused_threads.emplace_back(i);
+        }
+        // If requesting more possible active threads than space, resize.
+        if (n > threads.size()) threads.resize(n);
+      } else if (n < active_threads.size()) {
+        // new thread limit is lower than current number of active threads.
+        emp_assert(thread_exec_order.size() >= active_threads.size());
+        // need to kill active threads to abide by new active thread limit.
+        size_t num_kill = active_threads.size() - n;
+        while (num_kill) {
+          const size_t thread_id = thread_exec_order.back();
+          if (threads[thread_id].IsRunning()) {
+            KillActiveThread(thread_id);
+            --num_kill;
+          }
+          // Either thread was running and we killed it or thread was already dead.
+          // - either way, we needed to remove the thread from exec order.
+          thread_exec_order.pop_back();
+        }
+      }
+      max_active_threads = n;
+    }
+
     /// REQUIRED - Must be implemented by DERIVED_T
     /// ResetImpl should fully reset any hardware state information tracked by DERIVED_T.
     /// ResetImpl is called by THIS_T::Reset before doing a ResetBaseHardwareState.
@@ -383,45 +457,13 @@ namespace emp { namespace signalgp {
     /// TODO - TEST
     // Warning: If you decrease max threads, you may kill actively running threads.
     // Slow operation.
-    // TODO - fix set thread limit function
     void SetActiveThreadLimit(size_t n) {
       emp_assert(n, "Max active thread limit must be > 0.", n);
       emp_assert(!is_executing, "Cannot adjust SignalGP hardware max thread count while executing.");
       // NOTE - this cannot DECREASE the capacity of the 'threads' member variable.
       //        It can, however, INCREASE the capacity of the 'threads' member variable.
       // Adjust max_thread_space if necessary.
-
-      // TODO
-      // temp = vector(active.begin(), active.end())
-      // partial sort(temp, [](){get priority})
-
-      max_thread_space = std::max(n, max_thread_space);
-      if (n > max_active_threads) {
-        // Increasing total threads able to run simultaneously. This might increase
-        // thread storage (threads).
-        for (size_t i = threads.size(); i < n; ++i) {
-          // add any new thread ids to unused threads.
-          unused_threads.emplace_back(i);
-        }
-        // If requesting more possible active threads than space, resize.
-        if (n > threads.size()) threads.resize(n);
-      } else if (n < active_threads.size()) {
-        // new thread limit is lower than current number of active threads.
-        emp_assert(thread_exec_order.size() >= active_threads.size());
-        // need to kill active threads to abide by new active thread limit.
-        size_t num_kill = active_threads.size() - n;
-        while (num_kill) {
-          const size_t thread_id = thread_exec_order.back();
-          if (threads[thread_id].IsRunning()) {
-            KillActiveThread(thread_id);
-            --num_kill;
-          }
-          // Either thread was running and we killed it or thread was already dead.
-          // - either way, we needed to remove the thread from exec order.
-          thread_exec_order.pop_back();
-        }
-      }
-      max_active_threads = n;
+      SetActiveThreadLimit_impl(n);
     }
 
     /// Maximum allowed number of pending + active threads.
@@ -581,8 +623,7 @@ namespace emp { namespace signalgp {
       size_t thread_exec_cnt = thread_exec_order.size();
       size_t adjust = 0;
       while (exec_order_id < thread_exec_cnt) {
-        emp_assert(exec_order_id < threads.size()); // Exec order ID should always be valid thread.
-        // cur_thread_id = thread_exec_order[exec_order_id];
+        emp_assert(exec_order_id < thread_exec_order.size()); // Exec order ID should always be valid thread.
         cur_thread.id = thread_exec_order[exec_order_id];
 
         // Do we need to move the current thread id over in the execution ordering
@@ -594,6 +635,14 @@ namespace emp { namespace signalgp {
           thread_exec_order[exec_order_id - adjust] = cur_thread.ID();
         }
 
+        // Is this a valid thread id?
+        if (cur_thread.id >= threads.size()) {
+          // If this thread is active, kill it.
+          if (emp::Has(active_threads, cur_thread.ID())) KillActiveThread(cur_thread.ID());
+          ++adjust;
+          ++exec_order_id;
+          continue;
+        }
         // Is this thread dead?
         if (threads[cur_thread.ID()].IsDead()) {
           // If this thread is active, kill it.
