@@ -23,7 +23,11 @@ namespace sgp {
   template<typename MEMORY_MODEL_T,
            typename TAG_T=emp::BitSet<16>,
            typename INST_ARGUMENT_T=int,
-           typename MATCHBIN_T=emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<> >,
+           typename MATCHBIN_T=emp::MatchBin< size_t,
+                                              emp::HammingMetric<16>,
+                                              emp::RankedSelector<>,
+                                              emp::AdditiveCountdownRegulator<>
+                                            >,
            typename CUSTOM_COMPONENT_T=sgp::DefaultCustomComponent>
   class LinearProgramSignalGP : public SignalGPBase<LinearProgramSignalGP<MEMORY_MODEL_T,TAG_T,INST_ARGUMENT_T,MATCHBIN_T,CUSTOM_COMPONENT_T>,
                                                     lsgp_utils::ExecState<MEMORY_MODEL_T>,

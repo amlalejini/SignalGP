@@ -132,7 +132,11 @@ TEST_CASE("LinearProgram<emp::BitSet<W>,int> - GenRandInst") {
   using mem_model_t = sgp::SimpleMemoryModel;
   using tag_t = emp::BitSet<TAG_WIDTH>;
   using arg_t = int;
-  using matchbin_t = emp::MatchBin< size_t, emp::HammingMetric<TAG_WIDTH>, emp::RankedSelector<> >;
+  using matchbin_t = emp::MatchBin< size_t,
+                                    emp::HammingMetric<TAG_WIDTH>,
+                                    emp::RankedSelector<>,
+                                    emp::AdditiveCountdownRegulator<>
+                                  >;
   using hardware_t = sgp::LinearFunctionsProgramSignalGP<mem_model_t,
                                                                    tag_t,
                                                                    arg_t,
@@ -201,7 +205,7 @@ TEST_CASE("LinearProgram<emp::BitSet<W>,int> - GenRandLinearProgram") {
   using mem_model_t = sgp::SimpleMemoryModel;
   using tag_t = emp::BitSet<TAG_WIDTH>;
   using arg_t = int;
-  using matchbin_t = emp::MatchBin< size_t, emp::HammingMetric<TAG_WIDTH>, emp::RankedSelector<> >;
+  using matchbin_t = emp::MatchBin< size_t, emp::HammingMetric<TAG_WIDTH>, emp::RankedSelector<>, emp::AdditiveCountdownRegulator<>>;
   using hardware_t = sgp::LinearProgramSignalGP<mem_model_t,
                                                           tag_t,
                                                           arg_t,
@@ -279,7 +283,7 @@ TEST_CASE("LinearFunction<emp::BitSet<W>, int> - GenRandLinearFunction") {
   using mem_model_t = sgp::SimpleMemoryModel;
   using tag_t = emp::BitSet<TAG_WIDTH>;
   using arg_t = int;
-  using matchbin_t = emp::MatchBin< size_t, emp::HammingMetric<TAG_WIDTH>, emp::RankedSelector<> >;
+  using matchbin_t = emp::MatchBin< size_t, emp::HammingMetric<TAG_WIDTH>, emp::RankedSelector<>, emp::AdditiveCountdownRegulator<> >;
   using hardware_t = sgp::LinearFunctionsProgramSignalGP<mem_model_t,
                                                                    tag_t,
                                                                    arg_t,
@@ -361,7 +365,7 @@ TEST_CASE("LinearFunctionsProgram<emp::BitSet<W>, int> - GenRandLinearFunctionsP
   using mem_model_t = sgp::SimpleMemoryModel;
   using tag_t = emp::BitSet<TAG_WIDTH>;
   using arg_t = int;
-  using matchbin_t = emp::MatchBin< size_t, emp::HammingMetric<TAG_WIDTH>, emp::RankedSelector<> >;
+  using matchbin_t = emp::MatchBin< size_t, emp::HammingMetric<TAG_WIDTH>, emp::RankedSelector<>, emp::AdditiveCountdownRegulator<> >;
   using hardware_t = sgp::LinearFunctionsProgramSignalGP<mem_model_t,
                                                                    tag_t,
                                                                    arg_t,
@@ -703,10 +707,14 @@ TEST_CASE("Linear Functions Program") {
 TEST_CASE("SignalGP - Linear Functions Program") {
   using mem_model_t = sgp::SimpleMemoryModel;
   using signalgp_t = sgp::LinearFunctionsProgramSignalGP<mem_model_t,
-                                                                   emp::BitSet<16>,
-                                                                   int,
-                                                                   emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>,
-                                                                   sgp::DefaultCustomComponent>;
+                                                         emp::BitSet<16>,
+                                                         int,
+                                                         emp::MatchBin< size_t,
+                                                                        emp::HammingMetric<16>,
+                                                                        emp::RankedSelector<std::ratio<16+8, 16>>,
+                                                                        emp::AdditiveCountdownRegulator<>
+                                                                      >,
+                                                         sgp::DefaultCustomComponent>;
   using inst_lib_t = typename signalgp_t::inst_lib_t;
   using inst_t = typename signalgp_t::inst_t;
   using inst_prop_t = typename signalgp_t::InstProperty;
@@ -3167,10 +3175,14 @@ TEST_CASE("SignalGP - Linear Functions Program") {
 TEST_CASE("SignalGP - Linear Program", "[general]") {
   using mem_model_t = sgp::SimpleMemoryModel;
   using signalgp_t = sgp::LinearProgramSignalGP<mem_model_t,
-                                                          emp::BitSet<16>,
-                                                          int,
-                                                          emp::MatchBin< size_t, emp::HammingMetric<16>, emp::RankedSelector<std::ratio<16+8, 16> >>,
-                                                          sgp::DefaultCustomComponent>;
+                                                emp::BitSet<16>,
+                                                int,
+                                                emp::MatchBin< size_t,
+                                                               emp::HammingMetric<16>,
+                                                               emp::RankedSelector<std::ratio<16+8, 16>>,
+                                                               emp::AdditiveCountdownRegulator<>
+                                                              >,
+                                                sgp::DefaultCustomComponent>;
   using inst_lib_t = typename signalgp_t::inst_lib_t;
   using inst_t = typename signalgp_t::inst_t;
   using inst_prop_t = typename signalgp_t::InstProperty;
