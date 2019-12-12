@@ -559,14 +559,12 @@ namespace sgp { namespace inst_impl {
     emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
     if (!best_fun.size()) return;
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
     hw.GetMatchBin().AdjRegulator(best_fun[0], 1.0);
   }
 
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   static void Inst_IncOwnRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
     auto & flow = call_state.GetTopFlow();
     hw.GetMatchBin().AdjRegulator(flow.GetMP(), 1.0);
   }
@@ -576,14 +574,12 @@ namespace sgp { namespace inst_impl {
     emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
     if (!best_fun.size()) return;
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
     hw.GetMatchBin().AdjRegulator(best_fun[0], -1.0);
   }
 
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   static void Inst_DecOwnRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
     auto & flow = call_state.GetTopFlow();
     hw.GetMatchBin().AdjRegulator(flow.GetMP(), -1.0);
   }
