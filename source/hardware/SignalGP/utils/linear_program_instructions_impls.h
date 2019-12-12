@@ -558,7 +558,6 @@ namespace sgp { namespace inst_impl {
   static void Inst_IncRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
     if (!best_fun.size()) return;
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     hw.GetMatchBin().AdjRegulator(best_fun[0], 1.0);
   }
 
@@ -573,7 +572,6 @@ namespace sgp { namespace inst_impl {
   static void Inst_DecRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
     if (!best_fun.size()) return;
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     hw.GetMatchBin().AdjRegulator(best_fun[0], -1.0);
   }
 
