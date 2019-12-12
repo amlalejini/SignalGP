@@ -505,23 +505,12 @@ namespace sgp { namespace inst_impl {
   void Inst_SetRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     emp::vector<size_t> best_fun(hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1));
     if (best_fun.size() == 0) { return; }
-
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
-
-    double regulator = mem_state.AccessWorking(inst.GetArg(0));
-    if (regulator < 0) {
-      // make sure it's not negative infinity!
-      regulator = std::max(regulator, std::numeric_limits<double>::min());
-      regulator /= std::numeric_limits<double>::min();
-    } else {
-      regulator += 1.0;
-    }
-
-    hw.GetMatchBin().SetRegulator(best_fun[0], regulator);
-    // @discussion - ??
-    const size_t dur = 2 + mem_state.AccessWorking(inst.GetArg(1));
-    hw.GetMatchBin().GetVal(best_fun[0]) = dur;
+    double regulator_val = mem_state.AccessWorking(inst.GetArg(0));
+    // (+) values down regulate
+    // (-) values up regulate
+    hw.GetMatchBin().SetRegulator(best_fun[0], regulator_val);
   }
 
 
@@ -533,96 +522,71 @@ namespace sgp { namespace inst_impl {
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
     auto & flow = call_state.GetTopFlow();
-    double regulator = mem_state.AccessWorking(inst.GetArg(0));
-
-    if (regulator < 0) {
-      regulator = std::max(regulator, std::numeric_limits<double>::min());
-      regulator /= std::numeric_limits<double>::min();
-    } else {
-      regulator += 1.0;
-    }
-
-    hw.GetMatchBin().SetRegulator(flow.GetMP(), regulator);
-    const size_t dur = 2 + mem_state.AccessWorking(inst.GetArg(1));
-    hw.GetMatchBin().GetVal(flow.GetMP()) = dur;
+    double regulator_val = mem_state.AccessWorking(inst.GetArg(0));
+    // (+) values down regulate
+    // (-) values up regulate
+    hw.GetMatchBin().SetRegulator(flow.GetMP(), regulator_val);
   }
 
   /// Non-default instruction: AdjRegulator
   /// Number of arguments: 3
-  /// Description: adjusts the regulator of a tag in the matchbin
-  /// towards a target.
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   static void Inst_AdjRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     // const State & state = hw.GetCurState();
     emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
     if (!best_fun.size()) return;
-
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
-    // auto & flow = call_state.GetTopFlow();
-
-    double target = mem_state.AccessWorking(inst.GetArg(0));
-    if (target < 0) {
-      target = std::max(target, std::numeric_limits<double>::min());
-      target /= std::numeric_limits<double>::min();
-    } else {
-      target += 1.0;
-    }
-
-    const double budge = emp::Mod(mem_state.AccessWorking(inst.GetArg(1)) + 0.2, 1.0);
-    const double cur = hw.GetMatchBin().ViewRegulator(best_fun[0]);
-
-    hw.GetMatchBin().SetRegulator(best_fun[0], target * budge + cur * (1 - budge));
-
-    const size_t dur = 2 + mem_state.AccessWorking(inst.GetArg(2));
-    hw.GetMatchBin().GetVal(best_fun[0]) = dur;
+    const double adj = mem_state.AccessWorking(inst.GetArg(0));
+    hw.GetMatchBin().AdjRegulator(best_fun[0], adj);
   }
 
   /// Non-default instruction: AdjOwnRegulator
   /// Number of arguments: 3
-  /// Description: adjusts the regulator of a tag in the matchbin
-  /// towards a target.
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   static void Inst_AdjOwnRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
     auto & flow = call_state.GetTopFlow();
-
-    double target = mem_state.AccessWorking(inst.GetArg(0));
-    if (target < 0) {
-      target = std::max(target, std::numeric_limits<double>::min());
-      target /= std::numeric_limits<double>::min();
-    } else {
-      target += 1.0;
-    }
-
-    const double budge = emp::Mod(mem_state.AccessWorking(inst.GetArg(1)) + 0.2, 1.0);
-    const double cur = hw.GetMatchBin().ViewRegulator(flow.GetMP());
-
-    hw.GetMatchBin().SetRegulator(flow.GetMP(), target * budge + cur * (1 - budge));
-
-    const size_t dur = 2 + mem_state.AccessWorking(inst.GetArg(2));
-    hw.GetMatchBin().GetVal(flow.GetMP()) = dur;
-
+    const double adj = mem_state.AccessWorking(inst.GetArg(0));
+    hw.GetMatchBin().AdjRegulator(flow.GetMP(), adj);
   }
 
-  /// Non-default instruction: ExtRegulator
-  /// Number of arguments: 1
-  /// Description: extends the decay counter of a
-  /// regulator of a tag in the matchbin.
+  /// Non-default instruction: IncRegulator
+  /// Number of arguments: 3
   template<typename HARDWARE_T, typename INSTRUCTION_T>
-  static void Inst_ExtRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    // const State & state = hw.GetCurState();
+  static void Inst_IncRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
     if (!best_fun.size()) return;
-
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
-
-    const size_t dur = 1 + mem_state.AccessWorking(inst.GetArg(0));
-    hw.GetMatchBin().GetVal(best_fun[0]) += dur;
+    hw.GetMatchBin().AdjRegulator(best_fun[0], 1.0);
   }
 
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  static void Inst_IncOwnRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    auto & flow = call_state.GetTopFlow();
+    hw.GetMatchBin().AdjRegulator(flow.GetMP(), 1.0);
+  }
+
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  static void Inst_DecRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
+    if (!best_fun.size()) return;
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    hw.GetMatchBin().AdjRegulator(best_fun[0], -1.0);
+  }
+
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  static void Inst_DecOwnRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    auto & flow = call_state.GetTopFlow();
+    hw.GetMatchBin().AdjRegulator(flow.GetMP(), -1.0);
+  }
 
   /// Non-default instruction: SenseRegulator
   /// Number of arguments: 1
@@ -636,7 +600,6 @@ namespace sgp { namespace inst_impl {
       mem_state.SetWorking(inst.GetArg(0), hw.GetMatchBin().ViewRegulator(best_fun[0]));
     }
   }
-
 
   /// Non-default instruction: SenseOwnRegulator
   /// Number of arguments: 1
