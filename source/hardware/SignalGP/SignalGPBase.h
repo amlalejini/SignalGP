@@ -153,7 +153,7 @@ namespace sgp {
   protected:
     // -- Event management --
     event_lib_t & event_lib;                           ///< Library of events that hardware can handle.
-    std::deque<std::unique_ptr<event_t>> event_queue;  ///< Queue of events to be processed every time step.
+    std::deque<std::shared_ptr<event_t>> event_queue;  ///< Queue of events to be processed every time step.
 
     // -- Thread management --
     // WARNING: Derived classes can modify these member variables AT THEIR OWN RISK!
