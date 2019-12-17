@@ -498,16 +498,18 @@ namespace sgp {
     std::optional<size_t> SpawnThreadWithID(module_id_t module_id, double priority=1.0);
 
     /// Handle an event (on this hardware) now!
-    void HandleEvent(const event_t & event) { event_lib.HandleEvent(GetHardware(), event); }
+    template<typename EVENT_T>
+    void HandleEvent(const EVENT_T & event) { event_lib.HandleEvent(GetHardware(), event); }
 
     /// Trigger an event (from this hardware).
-    void TriggerEvent(const event_t & event) { event_lib.TriggerEvent(GetHardware(), event); }
+    template<typename EVENT_T>
+    void TriggerEvent(const EVENT_T & event) { event_lib.TriggerEvent(GetHardware(), event); }
 
     /// Queue an event (to be handled by this hardware) next time this hardware
     /// unit is executed.
     template<typename EVENT_T>
     void QueueEvent(const EVENT_T & event) {
-      event_queue.emplace_back(std::make_unique<EVENT_T>(event));
+      event_queue.emplace_back(std::make_shared<EVENT_T>(event));
     }
 
     /// Advance the hardware by a single step.

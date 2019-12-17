@@ -119,12 +119,14 @@ namespace sgp {
     }
 
     /// Trigger an event.
-    void TriggerEvent(hardware_t & hw, const event_t & event) const {
+    template<typename EVENT_T>
+    void TriggerEvent(hardware_t & hw, const EVENT_T & event) const {
       event_lib[event.GetID()].dispatch_funs.Run(hw, event);
     }
 
     /// Handle an event.
-    void HandleEvent(hardware_t & hw, const event_t & event) const {
+    template<typename EVENT_T>
+    void HandleEvent(hardware_t & hw, const EVENT_T & event) const {
       event_lib[event.GetID()].handler_fun(hw, event);
     }
   };

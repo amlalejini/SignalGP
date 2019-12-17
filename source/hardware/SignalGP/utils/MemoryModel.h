@@ -67,6 +67,13 @@ namespace sgp {
       double GetWorking(int key) { return emp::Find(working_mem, key, 0.0); }
       double GetInput(int key) { return emp::Find(input_mem, key, 0.0); }
       double GetOutput(int key) { return emp::Find(output_mem, key, 0.0); }
+
+      mem_buffer_t & GetWorkingMemory() { return working_mem; }
+      const mem_buffer_t & GetWorkingMemory() const { return working_mem; }
+      mem_buffer_t & GetInputMemory() { return input_mem; }
+      const mem_buffer_t & GetInputMemory() const { return input_mem; }
+      mem_buffer_t & GetOutputMemory() { return output_mem; }
+      const mem_buffer_t & GetOutputMemory() const { return output_mem; }
     };
 
   protected:
