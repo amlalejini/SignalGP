@@ -363,6 +363,9 @@ namespace sgp {
     /// Get number of unused threads. May be larger than max number of active threads.
     size_t GetNumUnusedThreads() const { return unused_threads.size(); }
 
+    /// Get the number of queue events.
+    size_t GetNumQueuedEvents() const { return event_queue.size(); }
+
     /// Get a reference to all threads (each thread may be RUNNING, PENDING, or DEAD).
     /// NOTE: use responsibly, there are no safety gloves here!
     /// It is safe to:
