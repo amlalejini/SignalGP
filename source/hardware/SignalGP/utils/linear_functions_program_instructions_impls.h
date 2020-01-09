@@ -104,7 +104,7 @@ namespace sgp { namespace lfp_inst_impl {
     // Because IP gets incremented before execution, cur_ip should never be 0.
     const size_t bob = cur_ip - 1;
     const size_t eob = hw.FindEndOfBlock(cur_mp, cur_ip);
-    const bool skip = !((bool)mem_state.AccessWorking(inst.GetArg(0)));
+    const bool skip = mem_state.AccessWorking(inst.GetArg(0)) <= 0;
     if (skip) {
       // Skip to EOB
       call_state.SetIP(eob);
