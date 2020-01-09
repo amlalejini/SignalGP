@@ -123,7 +123,7 @@ namespace sgp { namespace inst_impl {
     const int denom = (int)mem_state.AccessWorking(inst.GetArg(1));
     if (denom == 0.0) return; // Do nothing.
     const int num = (int)mem_state.AccessWorking(inst.GetArg(0));
-    mem_state.SetWorking(inst.GetArg(2), emp::Mod(num, denom));
+    mem_state.SetWorking(inst.GetArg(2), static_cast<int64_t>(num) % static_cast<int64_t>(base));
   }
 
   // - Inst_TestEqu
