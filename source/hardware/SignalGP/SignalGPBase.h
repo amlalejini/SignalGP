@@ -421,6 +421,11 @@ namespace sgp {
     /// are processed while the hardware is executing.
     bool IsExecuting() const { return is_executing; }
 
+    bool IsThreadPriorityUsed() const { return use_thread_priority; }
+
+    /// Should this hardware use thread priority?
+    void SetThreadPriorityUse(bool use_priority=true) { use_thread_priority = use_priority; }
+
     /// TODO - TEST
     /// Set this hardware's active thread limit (i.e., the maximum number of threads that can be running
     /// simultaneously).
