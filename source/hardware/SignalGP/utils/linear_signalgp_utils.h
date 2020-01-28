@@ -41,6 +41,10 @@ namespace sgp { namespace lsgp_utils {
     size_t GetMP() const { return mp; }
     size_t GetIP() const { return ip; }
     FlowType GetType() const { return type; }
+    bool IsBasic() const { return type == FlowType::BASIC; }
+    bool IsWhileLoop() const { return type == FlowType::WHILE_LOOP; }
+    bool IsRoutine() const { return type == FlowType::ROUTINE; }
+    bool IsCall() const { return type == FlowType::CALL; }
   };
 
   // NEED: hardware_t, flow_t, exec_state_t,

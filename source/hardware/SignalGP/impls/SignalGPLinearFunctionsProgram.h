@@ -274,9 +274,11 @@ namespace sgp {
 
     /// Get a reference to the hardware's memory model.
     memory_model_t & GetMemoryModel() { return memory_model; }
+    const memory_model_t & GetMemoryModel() const { return memory_model; }
 
     /// Get a reference to the hardware's matchbin
     matchbin_t & GetMatchBin() { return matchbin; }
+    const matchbin_t & GetMatchBin() const { return matchbin; }
 
     /// Set program for this hardware object.
     void SetProgram(const program_t & p) {

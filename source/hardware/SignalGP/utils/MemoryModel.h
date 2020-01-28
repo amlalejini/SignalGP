@@ -122,6 +122,7 @@ namespace sgp {
     }
 
     mem_buffer_t & GetGlobalBuffer() { return global_mem; }
+    const mem_buffer_t & GetGlobalBuffer() const { return global_mem; }
 
     void SetGlobal(int key, double val) { global_mem[key] = val; }
 
