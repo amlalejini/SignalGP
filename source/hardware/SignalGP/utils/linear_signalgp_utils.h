@@ -124,6 +124,11 @@ namespace sgp { namespace lsgp_utils {
       return flow_stack.back();
     }
 
+    const FlowInfo & GetTopFlow() const {
+      emp_assert(flow_stack.size());
+      return flow_stack.back();
+    }
+
     bool IsCircular() const { return circular; }
 
     MEMORY_STATE_T & GetMemory() { return memory; }
