@@ -498,6 +498,27 @@ namespace sgp { namespace inst_impl {
     mem_state.SetWorking(inst.GetArg(0), val);
   }
 
+  /// Non-default instruction: Terminal
+  /// Number of arguments: 1
+  /// Description: writes a genetically-encoded value into a register.
+  template<typename HARDWARE_T, typename INSTRUCTION_T,
+           typename MaxRatio=std::ratio<1>, typename MinRatio=std::ratio<0>>
+  static void Inst_NegTerminal(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    constexpr double max = static_cast<double>(MaxRatio::num) / MaxRatio::den;
+    constexpr double min = static_cast<double>(MinRatio::num) / MinRatio::den;
+
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+
+    const auto & tag = inst.GetTag(0);
+
+    const double val = -1 * (
+      tag.GetDouble() / tag.MaxDouble()
+    ) * (max - min) - min;
+
+    mem_state.SetWorking(inst.GetArg(0), val);
+  }
+
   /// Non-default instruction: SetRegulator
   /// Number of arguments: 2
   /// Description: Sets the regulator of a tag in the matchbin.
