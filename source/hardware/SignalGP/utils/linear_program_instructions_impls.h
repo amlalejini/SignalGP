@@ -498,37 +498,16 @@ namespace sgp { namespace inst_impl {
     mem_state.SetWorking(inst.GetArg(0), val);
   }
 
-  /// Non-default instruction: Terminal
-  /// Number of arguments: 1
-  /// Description: writes a genetically-encoded value into a register.
-  template<typename HARDWARE_T, typename INSTRUCTION_T,
-           typename MaxRatio=std::ratio<1>, typename MinRatio=std::ratio<0>>
-  static void Inst_NegTerminal(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
-    constexpr double max = static_cast<double>(MaxRatio::num) / MaxRatio::den;
-    constexpr double min = static_cast<double>(MinRatio::num) / MinRatio::den;
-
-    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
-    auto & mem_state = call_state.GetMemory();
-
-    const auto & tag = inst.GetTag(0);
-
-    const double val = -1 * (
-      tag.GetDouble() / tag.MaxDouble()
-    ) * (max - min) - min;
-
-    mem_state.SetWorking(inst.GetArg(0), val);
-  }
-
   /// Non-default instruction: SetRegulator
   /// Number of arguments: 2
   /// Description: Sets the regulator of a tag in the matchbin.
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  template<typename HARDWARE_T, typename INSTRUCTION_T, int MULTIPLIER=1>
   void Inst_SetRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     emp::vector<size_t> best_fun(hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1));
     if (best_fun.size() == 0) { return; }
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
-    double regulator_val = mem_state.AccessWorking(inst.GetArg(0));
+    const double regulator_val = MULTIPLIER * mem_state.AccessWorking(inst.GetArg(0));
     // (+) values down regulate
     // (-) values up regulate
     hw.GetMatchBin().SetRegulator(best_fun[0], regulator_val);
@@ -538,12 +517,12 @@ namespace sgp { namespace inst_impl {
   /// Non-default instruction: SetOwnRegulator
   /// Number of arguments: 2
   /// Description: Sets the regulator of the currently executing function.
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  template<typename HARDWARE_T, typename INSTRUCTION_T, int MULTIPLIER=1>
   static void Inst_SetOwnRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
     auto & flow = call_state.GetTopFlow();
-    double regulator_val = mem_state.AccessWorking(inst.GetArg(0));
+    const double regulator_val = MULTIPLIER * mem_state.AccessWorking(inst.GetArg(0));
     // (+) values down regulate
     // (-) values up regulate
     hw.GetMatchBin().SetRegulator(flow.GetMP(), regulator_val);
@@ -565,25 +544,25 @@ namespace sgp { namespace inst_impl {
 
   /// Non-default instruction: AdjRegulator
   /// Number of arguments: 3
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  template<typename HARDWARE_T, typename INSTRUCTION_T, int MULTIPLIER=1>
   static void Inst_AdjRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     // const State & state = hw.GetCurState();
     emp::vector<size_t> best_fun = hw.GetMatchBin().MatchRaw(inst.GetTag(0), 1);
     if (!best_fun.size()) return;
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
-    const double adj = mem_state.AccessWorking(inst.GetArg(0));
+    const double adj = MULTIPLIER * mem_state.AccessWorking(inst.GetArg(0));
     hw.GetMatchBin().AdjRegulator(best_fun[0], adj);
   }
 
   /// Non-default instruction: AdjOwnRegulator
   /// Number of arguments: 3
-  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  template<typename HARDWARE_T, typename INSTRUCTION_T, int MULTIPLIER=1>
   static void Inst_AdjOwnRegulator(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
     auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto & mem_state = call_state.GetMemory();
     auto & flow = call_state.GetTopFlow();
-    const double adj = mem_state.AccessWorking(inst.GetArg(0));
+    const double adj = MULTIPLIER * mem_state.AccessWorking(inst.GetArg(0));
     hw.GetMatchBin().AdjRegulator(flow.GetMP(), adj);
   }
 
