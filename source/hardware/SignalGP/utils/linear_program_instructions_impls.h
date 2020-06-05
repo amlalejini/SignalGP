@@ -449,6 +449,30 @@ namespace sgp { namespace inst_impl {
     mem_state.SetWorking(inst.GetArg(1), mem_model.AccessGlobal(inst.GetArg(0)));
   }
 
+  /// Copy full working memory into global memory buffer todo - test
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_FullWorkingToGlobal(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    auto & mem_model = hw.GetMemoryModel();
+    auto & working_mem_buffer = mem_state.GetWorkingMemory();
+    for (auto & mem : working_mem_buffer) {
+      mem_model.SetGlobal(mem.first, mem.second);
+    }
+  }
+
+  /// Copy full working memory into global memory buffer todo - test
+  template<typename HARDWARE_T, typename INSTRUCTION_T>
+  void Inst_FullGlobalToWorking(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
+    auto & call_state = hw.GetCurThread().GetExecState().GetTopCallState();
+    auto & mem_state = call_state.GetMemory();
+    auto & mem_model = hw.GetMemoryModel();
+    auto & global_mem_buffer = mem_model.GetGlobalBuffer();
+    for (auto & mem : global_mem_buffer) {
+      mem_state.SetWorking(mem.first, mem.second);
+    }
+  }
+
   // - Inst_Fork
   template<typename HARDWARE_T, typename INSTRUCTION_T>
   void Inst_Fork(HARDWARE_T & hw, const INSTRUCTION_T & inst) {
