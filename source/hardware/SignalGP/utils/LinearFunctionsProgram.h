@@ -2,7 +2,6 @@
 #define EMP_SIGNALGP_LINEAR_FUNCTIONS_PROGRAM_H
 
 #include <iostream>
-#include <ostream>
 #include <utility>
 #include <tuple>
 
