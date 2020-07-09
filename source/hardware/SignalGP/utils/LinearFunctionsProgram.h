@@ -2,6 +2,7 @@
 #define EMP_SIGNALGP_LINEAR_FUNCTIONS_PROGRAM_H
 
 #include <iostream>
+#include <ostream>
 #include <utility>
 #include <tuple>
 
@@ -104,6 +105,11 @@ namespace sgp {
     bool IsValidInst(const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T> & ilib,
                      const inst_t & inst) {
       return inst_sequence.IsValidInst(ilib, inst);
+    }
+
+    template<typename HARDWARE_T, typename INST_PROPERTY_T>
+    void Print(std::ostream& out, const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib) const{
+      inst_sequence.Print(out, ilib);
     }
   };
 
@@ -243,7 +249,18 @@ namespace sgp {
 
     // todo - various load from string functions (configurable?)
 
-    // todo - prints
+    // todo - support tabbing/levels for block type instructions
+    // todo - easier to read print without tags
+    template<typename HARDWARE_T, typename INST_PROPERTY_T>
+    void Print(std::ostream& out, const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib) const{
+      for (size_t i = 0; i < GetSize(); ++i){
+        // Skip the last tag so we dont get an extra delimeter
+        std::copy(program[i].GetTags().begin(), program[i].GetTags().end() - 1, std::ostream_iterator<tag_t>(out, "\n"));
+        out << program[i].GetTags().back() << " Fn-"<< i+1 << "\n";
+        program[i].Print(out, ilib);
+        out << "\n";
+      }
+    }
   };
 
   // GenRandLinearFunction => {RandomBitSet, GenRandLinearProgram}
