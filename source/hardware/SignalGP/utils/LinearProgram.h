@@ -64,6 +64,17 @@ namespace sgp {
 
       const arg_t & GetArg(size_t i) const { return args[i]; }
       const tag_t & GetTag(size_t i) const { return tags[i]; }
+
+      // Print each of the instruction's tag followed by the instruction and its arguments
+      template<typename HARDWARE_T, typename INST_PROPERTY_T>
+      void Print(std::ostream& out, const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib) const{
+        out << "\t";
+        // Skip last tag & arg so we dont get an extra delimiter.
+        std::copy(tags.begin(), tags.end() - 1, std::ostream_iterator<tag_t>(out, "\n\t"));
+        out << tags.back() << " " << ilib.GetName(id) << " [";
+        std::copy(args.begin(), args.end() - 1, std::ostream_iterator<arg_t>(out, ", "));
+        out << args.back() << "]\n";
+      }
     };
 
   protected:
@@ -117,7 +128,7 @@ namespace sgp {
                   const std::string & name,
                   const emp::vector<arg_t> & args=emp::vector<arg_t>(),
                   const emp::vector<tag_t> & tags=emp::vector<tag_t>()) {
-      emp_assert(ilib.IsInst(name), "Uknown instruction name", name);
+      emp_assert(ilib.IsInst(name), "Unknown instruction name", name);
       PushInst(ilib.GetID(name), args, tags);
     }
 
@@ -129,6 +140,14 @@ namespace sgp {
     static bool IsValidInst(const InstructionLibrary<HARDWARE_T, Instruction, INST_PROPERTY_T> & ilib,
                             const Instruction & inst) {
       return inst.id < ilib.GetSize();
+    }
+    
+    // Print each instruction out
+    template<typename HARDWARE_T, typename INST_PROPERTY_T>
+    void Print(std::ostream& out, const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib) const{
+      for(auto const& inst : inst_seq){
+        inst.Print(out, ilib);
+      }
     }
   };
 

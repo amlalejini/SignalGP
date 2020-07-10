@@ -105,6 +105,11 @@ namespace sgp {
                      const inst_t & inst) {
       return inst_sequence.IsValidInst(ilib, inst);
     }
+
+    template<typename HARDWARE_T, typename INST_PROPERTY_T>
+    void Print(std::ostream& out, const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib) const{
+      inst_sequence.Print(out, ilib);
+    }
   };
 
   template<typename TAG_T, typename ARGUMENT_T=int>
@@ -243,7 +248,21 @@ namespace sgp {
 
     // todo - various load from string functions (configurable?)
 
-    // todo - prints
+    // todo - support tabbing/levels for block type instructions
+    // todo - easier to read print without tags
+    
+    // Full print for a program. Prints all tags, functions, instructions and args.
+    // Prints each tag on a new line followed by the function number.
+    template<typename HARDWARE_T, typename INST_PROPERTY_T>
+    void Print(std::ostream& out, const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib) const{
+      for (size_t i = 0; i < GetSize(); ++i){
+        // Skip the last tag so we dont get an extra delimeter
+        std::copy(program[i].GetTags().begin(), program[i].GetTags().end() - 1, std::ostream_iterator<tag_t>(out, "\n"));
+        out << program[i].GetTags().back() << " Fn-"<< i << "\n";
+        program[i].Print(out, ilib);
+        out << "\n";
+      }
+    }
   };
 
   // GenRandLinearFunction => {RandomBitSet, GenRandLinearProgram}
