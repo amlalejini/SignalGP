@@ -65,6 +65,7 @@ namespace sgp {
       const arg_t & GetArg(size_t i) const { return args[i]; }
       const tag_t & GetTag(size_t i) const { return tags[i]; }
 
+      // Print each of the instruction's tag followed by the instruction and its arguments
       template<typename HARDWARE_T, typename INST_PROPERTY_T>
       void Print(std::ostream& out, const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib) const{
         out << "\t";
@@ -140,7 +141,8 @@ namespace sgp {
                             const Instruction & inst) {
       return inst.id < ilib.GetSize();
     }
-
+    
+    // Print each instruction out
     template<typename HARDWARE_T, typename INST_PROPERTY_T>
     void Print(std::ostream& out, const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib) const{
       for(auto const& inst : inst_seq){
