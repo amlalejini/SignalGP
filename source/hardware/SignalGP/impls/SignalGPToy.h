@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "base/vector.h"
+#include "emp/base/vector.hpp"
 
 #include "../SignalGPBase.h"
 

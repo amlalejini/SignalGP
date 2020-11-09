@@ -4,12 +4,12 @@
 #include <iostream>
 #include <utility>
 
-#include "base/Ptr.h"
-#include "base/vector.h"
-#include "tools/Random.h"
-#include "tools/MatchBin.h"
-#include "tools/matchbin_utils.h"
-#include "tools/Range.h"
+#include "emp/base/Ptr.hpp"
+#include "emp/base/vector.hpp"
+#include "emp/math/Random.hpp"
+#include "emp/matchbin/MatchBin.hpp"
+#include "emp/matchbin/matchbin_utils.hpp"
+#include "emp/math/Range.hpp"
 
 #include "../EventLibrary.h"
 #include "InstructionLibrary.h"
@@ -141,7 +141,7 @@ namespace sgp {
                             const Instruction & inst) {
       return inst.id < ilib.GetSize();
     }
-    
+
     // Print each instruction out
     template<typename HARDWARE_T, typename INST_PROPERTY_T>
     void Print(std::ostream& out, const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib) const{

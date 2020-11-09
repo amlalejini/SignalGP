@@ -17,12 +17,12 @@
 #include <functional>
 #include <algorithm>
 
-#include "base/errors.h"
-#include "tools/BitSet.h"
-#include "tools/math.h"
-#include "tools/Random.h"
-#include "tools/random_utils.h"
-#include "tools/map_utils.h"
+#include "emp/base/errors.hpp"
+#include "emp/bits/BitSet.hpp"
+#include "emp/math/math.hpp"
+#include "emp/math/Random.hpp"
+#include "emp/math/random_utils.hpp"
+#include "emp/datastructs/map_utils.hpp"
 
 namespace emp {
 

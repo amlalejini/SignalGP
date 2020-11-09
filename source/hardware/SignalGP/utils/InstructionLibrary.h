@@ -5,10 +5,10 @@
 #include <unordered_set>
 #include <string>
 
-#include "base/Ptr.h"
-#include "base/vector.h"
-#include "tools/map_utils.h"
-#include "tools/string_utils.h"
+#include "emp/base/Ptr.hpp"
+#include "emp/base/vector.hpp"
+#include "emp/datastructs/map_utils.hpp"
+#include "emp/tools/string_utils.hpp"
 
 // Comments:
 // - @AML: Why are instruction functions stored in multiple places? (inst def & fun_call lib)

@@ -9,11 +9,11 @@
 #include <tuple>
 #include <memory>
 
-#include "base/Ptr.h"
-#include "base/vector.h"
-#include "tools/Random.h"
-#include "tools/set_utils.h"
-#include "tools/vector_utils.h"
+#include "emp/base/Ptr.hpp"
+#include "emp/base/vector.hpp"
+#include "emp/math/Random.hpp"
+#include "emp/datastructs/set_utils.hpp"
+#include "emp/datastructs/vector_utils.hpp"
 
 #include "EventLibrary.h"
 

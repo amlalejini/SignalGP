@@ -5,11 +5,11 @@
 #include <utility>
 #include <memory>
 
-#include "base/Ptr.h"
-#include "base/vector.h"
-#include "tools/Random.h"
-#include "tools/MatchBin.h"
-#include "tools/matchbin_utils.h"
+#include "emp/base/Ptr.hpp"
+#include "emp/base/vector.hpp"
+#include "emp/math/Random.hpp"
+#include "emp/matchbin/MatchBin.hpp"
+#include "emp/matchbin/matchbin_utils.hpp"
 
 #include "../EventLibrary.h"
 #include "InstructionLibrary.h"

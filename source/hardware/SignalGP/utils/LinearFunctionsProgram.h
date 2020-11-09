@@ -5,12 +5,12 @@
 #include <utility>
 #include <tuple>
 
-#include "base/Ptr.h"
-#include "base/vector.h"
-#include "tools/Random.h"
-#include "tools/MatchBin.h"
-#include "tools/matchbin_utils.h"
-#include "tools/Range.h"
+#include "emp/base/Ptr.hpp"
+#include "emp/base/vector.hpp"
+#include "emp/math/Random.hpp"
+#include "emp/matchbin/MatchBin.hpp"
+#include "emp/matchbin/matchbin_utils.hpp"
+#include "emp/math/Range.hpp"
 
 #include "../EventLibrary.h"
 #include "InstructionLibrary.h"
@@ -250,7 +250,7 @@ namespace sgp {
 
     // todo - support tabbing/levels for block type instructions
     // todo - easier to read print without tags
-    
+
     // Full print for a program. Prints all tags, functions, instructions and args.
     // Prints each tag on a new line followed by the function number.
     template<typename HARDWARE_T, typename INST_PROPERTY_T>

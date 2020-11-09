@@ -4,8 +4,8 @@
 
 #include <limits>
 
-#include "tools/BitSet.h"
-#include "tools/Range.h"
+#include "emp/bits/BitSet.hpp"
+#include "emp/math/Range.hpp"
 
 #include "EventLibrary.h"
 
@@ -2495,7 +2495,7 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     tag_t zeros, ones;
-    ones.SetUInt(0, (uint32_t)-1);
+    ones.SetUInt(0, (uint16_t)-1);
     program.PushFunction(zeros);
     program.PushInst(inst_lib,   "SetMem", {2, 2});
     program.PushInst(inst_lib,   "SetMem", {3, 3});
@@ -2526,7 +2526,7 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     tag_t zeros, ones;
-    ones.SetUInt(0, (uint32_t)-1);
+    ones.SetUInt(0, (uint16_t)-1);
     program.PushFunction(zeros);
     program.PushInst(inst_lib,   "SetMem", {2, 2});
     program.PushInst(inst_lib,   "SetMem", {3, 3});
@@ -2571,7 +2571,7 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     tag_t zeros, ones;
-    ones.SetUInt(0, (uint32_t)-1);
+    ones.SetUInt(0, (uint16_t)-1);
     program.PushFunction(zeros);
     program.PushInst(inst_lib,   "SetMem", {2, 2});
     program.PushInst(inst_lib,   "SetMem", {3, 3});
@@ -2602,7 +2602,7 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     // Return from 2 Calls (=> should only return from top call)
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
-    ones.SetUInt(0, (uint32_t)-1);
+    ones.SetUInt(0, (uint16_t)-1);
     program.PushFunction(zeros);
     program.PushInst(inst_lib,   "SetMem", {2, 2});
     program.PushInst(inst_lib,   "SetMem", {3, 3});
@@ -2974,7 +2974,7 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     tag_t zeros, ones;
-    ones.SetUInt(0, (uint32_t)-1);
+    ones.SetUInt(0, (uint16_t)-1);
     program.PushFunction(zeros);
     program.PushInst(inst_lib, "SetMem", {2, 2});
     program.PushInst(inst_lib, "WorkingToGlobal", {2, 1, 0});
@@ -3001,7 +3001,7 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     tag_t zeros, ones;
-    ones.SetUInt(0, (uint32_t)-1);
+    ones.SetUInt(0, (uint16_t)-1);
     program.PushFunction(zeros);
     program.PushInst(inst_lib, "SetMem", {2, 2});
     program.PushInst(inst_lib, "WorkingToGlobal", {2, 1, 0});
@@ -3033,8 +3033,8 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     tag_t zeros, ones, two;
-    ones.SetUInt(0, (uint32_t)-1);
-    two.SetUInt(0, (uint32_t)2);
+    ones.SetUInt(0, (uint16_t)-1);
+    two.SetUInt(0, (uint16_t)2);
     program.PushFunction(zeros);
     program.PushInst(inst_lib,   "SetMem", {2, 2});
     program.PushInst(inst_lib,   "SetMem", {3, 3});
@@ -3100,8 +3100,8 @@ TEST_CASE("SignalGP - Linear Functions Program") {
     program.Clear();
     hardware.Reset(); // Reset program & hardware.
     tag_t zeros, ones, two;
-    ones.SetUInt(0, (uint32_t)-1);
-    two.SetUInt(0, (uint32_t)2);
+    ones.SetUInt(0, (uint16_t)-1);
+    two.SetUInt(0, (uint16_t)2);
     program.PushFunction(zeros);
     program.PushInst(inst_lib,   "SetMem", {2, 2});
     program.PushInst(inst_lib,   "SetMem", {3, 3});
@@ -4955,7 +4955,7 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
 
     // Build program to test inc instruction.
     tag_t zeros, ones;
-    ones.SetUInt(0, (uint32_t)-1);
+    ones.SetUInt(0, (uint16_t)-1);
     // SetUInt
     program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {zeros});
     program.PushInst(inst_lib,   "SetMem", {2, 2});
@@ -5021,3 +5021,4 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
   // }
 
 }
+

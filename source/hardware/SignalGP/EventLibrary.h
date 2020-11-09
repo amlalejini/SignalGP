@@ -7,9 +7,9 @@
 #include <string>
 #include <iostream>
 
-#include "tools/FunctionSet.h"
-#include "tools/map_utils.h"
-#include "base/vector.h"
+#include "emp/functional/FunctionSet.hpp"
+#include "emp/datastructs/map_utils.hpp"
+#include "emp/base/vector.hpp"
 
 // Assumptions:
 //  - this really does assume that it is a _SignalGP_ event library
