@@ -9,6 +9,7 @@
 #include "emp/base/vector.hpp"
 #include "emp/datastructs/map_utils.hpp"
 #include "emp/tools/string_utils.hpp"
+#include "emp/control/Signal.hpp"
 
 // Comments:
 // - @AML: Why are instruction functions stored in multiple places? (inst def & fun_call lib)
@@ -58,9 +59,11 @@ namespace sgp {
     emp::vector<InstructionDef> inst_lib;      ///< Full definitions for instructions.
     std::map<std::string, size_t> name_map;    ///< How do names link to instructions?
 
+    emp::Signal<void(hardware_t&, const inst_t&)> before_inst_exec;
+
   public:
 
-    InstructionLibrary() : inst_lib(), name_map() { ; }
+    InstructionLibrary() : inst_lib(), name_map(), before_inst_exec() { ; }
     InstructionLibrary(const InstructionLibrary &) = delete;    // @AML: Why?
     InstructionLibrary(InstructionLibrary &&) = delete;
     ~InstructionLibrary() { ; }
@@ -131,16 +134,26 @@ namespace sgp {
     }
 
     /// Process a specified instruction in the provided hardware.
-    void ProcessInst(hardware_t & hw, const inst_t & inst) const {
+    void ProcessInst(hardware_t & hw, const inst_t & inst) {
+      before_inst_exec.Trigger(hw, inst);
       inst_lib[inst.GetID()].fun_call(hw, inst);
     }
 
     /// Process a specified instruction on hardware that can be converted to the correct type.
     template <typename IN_HW>
-    void ProcessInst(emp::Ptr<IN_HW> hw, const inst_t & inst) const {
+    void ProcessInst(emp::Ptr<IN_HW> hw, const inst_t & inst) {
       emp_assert( dynamic_cast<hardware_t*>(hw.Raw()) );
       ProcessInst(*(hw.template Cast<hardware_t>()), inst);
     }
+
+    emp::SignalKey OnBeforeInstExec(const std::function<void(hardware_t&, const inst_t&)> & fun) {
+      return before_inst_exec.AddAction(fun);
+    }
+
+    void ResetBeforeInstExecSignal() {
+      before_inst_exec.Clear();
+    }
+
   };
 }
 
