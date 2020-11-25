@@ -139,7 +139,7 @@ namespace sgp {
     template <typename IN_HW>
     void ProcessInst(emp::Ptr<IN_HW> hw, const inst_t & inst) const {
       emp_assert( dynamic_cast<hardware_t*>(hw.Raw()) );
-      inst_lib[inst.id].fun_call(*(hw.template Cast<hardware_t>()), inst);
+      ProcessInst(*(hw.template Cast<hardware_t>()), inst);
     }
   };
 }
