@@ -34,3 +34,4 @@
 # Local
 .vscode
 .DS_Store
+local/
