@@ -6,8 +6,7 @@
 
 #include "BaseCPU.hpp"
 
-namespace sgp {
-namespace cpu {
+namespace sgp::cpu {
 
 namespace toy_cpu_impl {
 
@@ -18,8 +17,8 @@ struct ExecState {
 
 } // End toy_cpu_impl
 
-template<typename CUSTOM_COMPONET_T=sgp::DefaultCustomComponent>
-class ToyCPU : public sgp::BaseCPU<
+template<typename CUSTOM_COMPONET_T=DefaultCustomComponent>
+class ToyCPU : public BaseCPU<
   ToyCPU<CUSTOM_COMPONET_T>, /* DERIVED_T */
   toy_cpu_impl::ExecState,   /* EXEC_STATE_T */
   size_t,                         /* TAG_T */
@@ -98,5 +97,4 @@ public:
 
 };
 
-} // End cpu namespace
-} // End sgp namespace
+}

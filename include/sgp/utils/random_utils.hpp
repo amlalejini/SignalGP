@@ -12,9 +12,7 @@
 #include "emp/math/random_utils.hpp"
 #include "emp/datastructs/map_utils.hpp"
 
-namespace sgp {
-
-namespace utils {
+namespace sgp::utils {
 
 /// Generate one random BitSet<W>.
 /// Given a vector of other BitSets (unique_from), this function will guarantee
@@ -83,8 +81,6 @@ emp::vector<emp::BitSet<W>> RandomBitSets(
     unique_from_set.emplace(bs);
   }
   return new_bitsets;
-}
-
 }
 
 }

@@ -19,7 +19,7 @@
 // @discussion - where should I put configurable lambdas?
 // todo - move function implementations outside of class
 
-namespace sgp {
+namespace sgp::cpu {
 
 /// Placeholder additional component type.
 struct DefaultCustomComponent { };
@@ -1183,4 +1183,4 @@ bool BaseCPU<DERIVED_T, EXEC_STATE_T, TAG_T, CUSTOM_COMPONENT_T>::ValidateThread
   return true;
 }
 
-} // End sgp namespace
+} // End namespace

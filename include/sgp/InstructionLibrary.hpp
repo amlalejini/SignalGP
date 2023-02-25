@@ -126,6 +126,14 @@ public:
     name_map[name] = id;
   }
 
+  void AddInst(
+    const InstructionDef& definition
+  ) {
+    const size_t id = inst_lib.size();
+    inst_lib.emplace_back(definition);
+    name_map[definition.name] = id;
+  }
+
   /// Process a specified instruction in the provided hardware.
   void ProcessInst(hardware_t& hw, const inst_t& inst) {
     before_inst_exec.Trigger(hw, inst);
