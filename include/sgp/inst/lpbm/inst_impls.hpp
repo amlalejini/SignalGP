@@ -79,18 +79,18 @@ struct InstructionDirectory {
     std::string,
     inst_def_t
   > regulation_instructions = {
-    { "SetRegulator", BuildInstDef<hw_t, Inst_SetRegulator<hw_t>>::Gen() }
-    // { "SetOwnRegulator", BuildInstDef<hw_t, Inst_SetOwnRegulator<hw_t>>::Gen() },
-    // { "ClearRegulator", BuildInstDef<hw_t, Inst_ClearRegulator<hw_t>>::Gen() },
-    // { "ClearOwnRegulator", BuildInstDef<hw_t, Inst_ClearOwnRegulator<hw_t>>::Gen() },
-    // { "AdjRegulator", BuildInstDef<hw_t, Inst_AdjRegulator<hw_t>>::Gen() },
-    // { "AdjOwnRegulator", BuildInstDef<hw_t, Inst_AdjOwnRegulator<hw_t>>::Gen() },
-    // { "IncRegulator", BuildInstDef<hw_t, Inst_IncRegulator<hw_t>>::Gen() },
-    // { "IncOwnRegulator", BuildInstDef<hw_t, Inst_IncOwnRegulator<hw_t>>::Gen() },
-    // { "DecRegulator", BuildInstDef<hw_t, Inst_DecRegulator<hw_t>>::Gen() },
-    // { "DecOwnRegulator", BuildInstDef<hw_t, Inst_DecOwnRegulator<hw_t>>::Gen() },
-    // { "SenseRegulator", BuildInstDef<hw_t, Inst_SenseRegulator<hw_t>>::Gen() },
-    // { "SenseOwnRegulator", BuildInstDef<hw_t, Inst_SenseOwnRegulator<hw_t>>::Gen() }
+    { "SetRegulator", BuildInstDef<hw_t, Inst_SetRegulator<hw_t>>::Gen() },
+    { "SetOwnRegulator", BuildInstDef<hw_t, Inst_SetOwnRegulator<hw_t>>::Gen() },
+    { "ClearRegulator", BuildInstDef<hw_t, Inst_ClearRegulator<hw_t>>::Gen() },
+    { "ClearOwnRegulator", BuildInstDef<hw_t, Inst_ClearOwnRegulator<hw_t>>::Gen() },
+    { "AdjRegulator", BuildInstDef<hw_t, Inst_AdjRegulator<hw_t>>::Gen() },
+    { "AdjOwnRegulator", BuildInstDef<hw_t, Inst_AdjOwnRegulator<hw_t>>::Gen() },
+    { "IncRegulator", BuildInstDef<hw_t, Inst_IncRegulator<hw_t>>::Gen() },
+    { "IncOwnRegulator", BuildInstDef<hw_t, Inst_IncOwnRegulator<hw_t>>::Gen() },
+    { "DecRegulator", BuildInstDef<hw_t, Inst_DecRegulator<hw_t>>::Gen() },
+    { "DecOwnRegulator", BuildInstDef<hw_t, Inst_DecOwnRegulator<hw_t>>::Gen() },
+    { "SenseRegulator", BuildInstDef<hw_t, Inst_SenseRegulator<hw_t>>::Gen() },
+    { "SenseOwnRegulator", BuildInstDef<hw_t, Inst_SenseOwnRegulator<hw_t>>::Gen() }
   };
 
   void AddAllDefaultInstructions(

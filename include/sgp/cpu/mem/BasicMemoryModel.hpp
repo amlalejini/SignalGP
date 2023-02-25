@@ -6,6 +6,7 @@
 
 #include "emp/base/vector.hpp"
 #include "emp/datastructs/set_utils.hpp"
+#include "emp/datastructs/map_utils.hpp"
 
 namespace sgp::cpu::mem {
 
