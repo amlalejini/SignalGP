@@ -92,3 +92,73 @@ TEST_CASE("LinearFunction<emp::BitSet<W>, int> - GenRandLinearFunction") {
     }
   }
 }
+
+TEST_CASE("LinearFunctionsProgram<emp::BitSet<W>, int> - GenRandLinearFunctionsProgram") {
+  constexpr size_t TAG_WIDTH = 16;
+  using mem_model_t = sgp::cpu::mem::BasicMemoryModel;
+  using arg_t = int;
+  using matchbin_t = emp::MatchBin<
+    size_t,
+    emp::HammingMetric<TAG_WIDTH>,
+    emp::RankedSelector<>,
+    emp::AdditiveCountdownRegulator<>
+  >;
+  using hardware_t = sgp::cpu::LinearFunctionsProgramCPU<
+    mem_model_t,
+    arg_t,
+    matchbin_t
+  >;
+  using inst_lib_t = typename hardware_t::inst_lib_t;
+  using program_t = typename hardware_t::program_t;
+  using function_t = typename program_t::function_t;
+
+  constexpr int RANDOM_SEED = 1;
+  constexpr size_t NUM_FUNC_TAGS = 3;
+  constexpr size_t MIN_NUM_FUNC = 1;
+  constexpr size_t MAX_NUM_FUNC = 32;
+  constexpr size_t NUM_INST_TAGS = 10;
+  constexpr size_t NUM_INST_ARGS = 3;
+  constexpr size_t MIN_ARG_VAL = 0;
+  constexpr size_t MAX_ARG_VAL = 15;
+  constexpr size_t MIN_INST_CNT = 1;
+  constexpr size_t MAX_INST_CNT = 512;
+
+  emp::Random random(RANDOM_SEED);
+  // Build a limited instruction library.
+  inst_lib_t inst_lib;
+  AddBasicInstructions(inst_lib);
+
+  // Generate a bunch of random instructions, check that they conform with requested bounds.
+  for (size_t i = 0; i < 1000; ++i) {
+    // std::cout << "i="<<i<<std::endl;
+    program_t program(
+      sgp::cpu::lfunprg::GenRandLinearFunctionsProgram<hardware_t, TAG_WIDTH>(
+        random,
+        inst_lib,
+        {MIN_NUM_FUNC, MAX_NUM_FUNC},
+        NUM_FUNC_TAGS,
+        {MIN_INST_CNT, MAX_INST_CNT},
+        NUM_INST_TAGS, NUM_INST_ARGS,
+        {MIN_ARG_VAL, MAX_ARG_VAL}
+      )
+    );
+    REQUIRE(program.GetSize() >= MIN_NUM_FUNC);
+    REQUIRE(program.GetSize() <= MAX_NUM_FUNC);
+    for (size_t fID = 0; fID < program.GetSize(); ++fID) {
+      function_t& function = program[fID];
+      REQUIRE(function.GetSize() >= MIN_INST_CNT);
+      REQUIRE(function.GetSize() <= MAX_INST_CNT);
+      REQUIRE(function.GetTags().size() == NUM_FUNC_TAGS);
+      for (size_t pID = 0; pID < function.GetSize(); ++pID) {
+        auto& inst = function[pID];
+        REQUIRE(inst.id < inst_lib.GetSize());
+        REQUIRE(inst.GetTags().size() == NUM_INST_TAGS);
+        REQUIRE(inst.GetArgs().size() == NUM_INST_ARGS);
+        for (auto& arg : inst.GetArgs()) {
+          REQUIRE(arg >= (int)MIN_ARG_VAL);
+          REQUIRE(arg <= (int)MAX_ARG_VAL);
+        }
+      }
+    }
+  }
+}

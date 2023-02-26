@@ -1,4 +1,4 @@
-TEST_NAMES := RandomBitSet ToyCPU LinearProgram LinearProgramCPU LinearFunctionsProgram
+TEST_NAMES := RandomBitSet ToyCPU LinearProgram LinearProgramCPU LinearFunctionsProgram LinearFunctionsProgramCPU
 
 TO_ROOT := $(shell git rev-parse --show-cdup)
 
