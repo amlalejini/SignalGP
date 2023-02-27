@@ -10,9 +10,6 @@
 #include "emp/tools/string_utils.hpp"
 #include "emp/control/Signal.hpp"
 
-// Comments:
-// - @AML: Why are instruction functions stored in multiple places? (inst def & fun_call lib)
-
 // Requirements:
 // - instruction_t MUST have a valid GetID() function
 
@@ -26,46 +23,61 @@
 
 // Hardware specifies instruction type? => specifies argument type?
 
-namespace sgp {
+namespace sgp::inst {
 
-template<
-  typename HARDWARE_T,
-  typename INSTRUCTION_T,
-  typename INSTRUCTION_PROPERTY_T=size_t
->
+/// Special properties that can be associated with an instruction definition.
+enum class InstProperty {
+  MODULE,
+  BLOCK_CLOSE,
+  BLOCK_DEF
+};
+
+template<typename HARDWARE_T, typename INSTRUCTION_T>
+struct InstructionDef {
+  using inst_fun_t = std::function<void(HARDWARE_T&, const INSTRUCTION_T&)>;
+  std::string name;     ///< Name of this instruction.
+  std::string desc;     ///< Description of the instruction.
+  inst_fun_t fun_call;  ///< Function to call when the instruction is executed.
+  std::unordered_set<InstProperty> properties; ///< Properties specific to this instruction.
+
+  InstructionDef(
+    const std::string& _name,
+    inst_fun_t _fun_call,
+    const std::string& _desc,
+    const std::unordered_set<InstProperty>& _properties={}
+  ) :
+    name(_name),
+    desc(_desc),
+    fun_call(_fun_call),
+    properties(_properties)
+  { ; }
+
+  InstructionDef(const InstructionDef&) = default;
+};
+
+template<typename INST_SPEC_T,typename INST_DEF_T>
+INST_DEF_T BuildInstructionDef() {
+  return {
+    INST_SPEC_T::name(),
+    INST_SPEC_T::run,
+    INST_SPEC_T::desc(),
+    INST_SPEC_T::properties()
+  };
+}
+
+template<typename HARDWARE_T, typename INSTRUCTION_T>
 class InstructionLibrary {
 public:
 
   using hardware_t = HARDWARE_T;
   using inst_t = INSTRUCTION_T;
   using inst_fun_t = std::function<void(hardware_t&, const inst_t&)>;
-  using inst_prop_t = INSTRUCTION_PROPERTY_T;
-
-  struct InstructionDef {
-    std::string name;           ///< Name of this instruction.
-    inst_fun_t fun_call;        ///< Function to call when instruction is executed.
-    std::string desc;           ///< Description of instruction.
-    std::unordered_set<inst_prop_t> properties;
-    // Maybe need an instruction category?
-
-    InstructionDef(
-      const std::string& _name,
-      inst_fun_t _fun_call,
-      const std::string& _desc,
-      const std::unordered_set<inst_prop_t>& _properties=std::unordered_set<inst_prop_t>()
-    ) :
-      name(_name),
-      fun_call(_fun_call),
-      desc(_desc),
-      properties(_properties)
-    { ; }
-
-    InstructionDef(const InstructionDef&) = default;
-  };
+  using inst_prop_t = InstProperty;
+  using inst_def_t = InstructionDef<HARDWARE_T, INSTRUCTION_T>;
 
 protected:
 
-  emp::vector<InstructionDef> inst_lib;      ///< Full definitions for instructions.
+  emp::vector<inst_def_t> inst_lib;      ///< Full definitions for instructions.
   std::map<std::string, size_t> name_map;    ///< How do names link to instructions?
   emp::Signal<void(hardware_t&, const inst_t&)> before_inst_exec;
 
@@ -127,11 +139,33 @@ public:
   }
 
   void AddInst(
-    const InstructionDef& definition
+    const inst_def_t& definition
   ) {
     const size_t id = inst_lib.size();
     inst_lib.emplace_back(definition);
     name_map[definition.name] = id;
+  }
+
+  template<typename INST_SPEC_T>
+  void AddInst(
+    const INST_SPEC_T& inst_spec
+  ) {
+    AddInst(
+      INST_SPEC_T::name(),
+      INST_SPEC_T::run,
+      INST_SPEC_T::desc(),
+      INST_SPEC_T::properties()
+    );
+  }
+
+  template<typename INST_SPEC_T>
+  void AddInst() {
+    AddInst(
+      INST_SPEC_T::name(),
+      INST_SPEC_T::run,
+      INST_SPEC_T::desc(),
+      INST_SPEC_T::properties()
+    );
   }
 
   /// Process a specified instruction in the provided hardware.

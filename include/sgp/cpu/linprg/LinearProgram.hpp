@@ -11,7 +11,7 @@
 #include "emp/math/Range.hpp"
 
 #include "../../EventLibrary.hpp"
-#include "../../InstructionLibrary.hpp"
+#include "../../inst/InstructionLibrary.hpp"
 #include "../../utils/random_utils.hpp"
 
 namespace sgp::cpu::linprg {
@@ -72,13 +72,10 @@ public:
     const tag_t& GetTag(size_t i) const { return tags[i]; }
 
     // Print each of the instruction's tag followed by the instruction and its arguments
-    template<
-      typename HARDWARE_T,
-      typename INST_PROPERTY_T
-    >
+    template<typename HARDWARE_T>
     void Print(
       std::ostream& out,
-      const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib
+      const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib
     ) const {
       out << "\t";
       // Skip last tag & arg so we dont get an extra delimiter.
@@ -149,9 +146,9 @@ public:
   }
 
   /// Push instruction to program by name.
-  template<typename HARDWARE_T, typename INST_PROPERTY_T>
+  template<typename HARDWARE_T>
   void PushInst(
-    const InstructionLibrary<HARDWARE_T, Instruction, INST_PROPERTY_T>& ilib,
+    const inst::InstructionLibrary<HARDWARE_T, Instruction>& ilib,
     const std::string& name,
     const emp::vector<arg_t>& args=emp::vector<arg_t>(),
     const emp::vector<tag_t>& tags=emp::vector<tag_t>()
@@ -166,19 +163,19 @@ public:
   }
 
   /// Is the given instruction valid?
-  template<typename HARDWARE_T, typename INST_PROPERTY_T>
+  template<typename HARDWARE_T>
   static bool IsValidInst(
-    const InstructionLibrary<HARDWARE_T, Instruction, INST_PROPERTY_T>& ilib,
-    const Instruction& inst)
-  {
+    const inst::InstructionLibrary<HARDWARE_T, Instruction>& ilib,
+    const Instruction& inst
+  ) {
     return inst.id < ilib.GetSize();
   }
 
   // Print each instruction out
-  template<typename HARDWARE_T, typename INST_PROPERTY_T>
+  template<typename HARDWARE_T>
   void Print(
     std::ostream& out,
-    const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib
+    const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib
   ) const {
     for(auto const& inst : inst_seq){
       inst.Print(out, ilib);
@@ -194,10 +191,9 @@ public:
 template<typename HARDWARE_T, size_t TAG_WIDTH>
 typename LinearProgram<emp::BitSet<TAG_WIDTH>, int>::Instruction GenRandInst(
   emp::Random& rnd,
-  const InstructionLibrary<
+  const inst::InstructionLibrary<
     HARDWARE_T,
-    typename LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction,
-    typename HARDWARE_T::inst_prop_t
+    typename LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction
   >& inst_lib,
   size_t num_tags=1,
   size_t num_args=3,
@@ -228,10 +224,9 @@ typename LinearProgram<emp::BitSet<TAG_WIDTH>, int>::Instruction GenRandInst(
 template<typename HARDWARE_T, size_t TAG_WIDTH>
 LinearProgram<emp::BitSet<TAG_WIDTH>, int> GenRandLinearProgram(
   emp::Random& rnd,
-  const InstructionLibrary<
+  const inst::InstructionLibrary<
     HARDWARE_T,
-    typename LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction,
-    typename HARDWARE_T::inst_prop_t
+    typename LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction
   >& inst_lib,
   const emp::Range<size_t>& inst_cnt_range={1, 32},
   size_t num_inst_tags=1,

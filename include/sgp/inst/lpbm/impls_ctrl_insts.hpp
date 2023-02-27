@@ -14,52 +14,52 @@
 #include "emp/datastructs/set_utils.hpp"
 #include "emp/datastructs/map_utils.hpp"
 
-#include "BaseInst.hpp"
+#include "../BaseInstructionSpec.hpp"
+#include "../InstructionLibrary.hpp"
 
-// NOTE - Not sure what the best way to organize instruction implementations would be.
 namespace sgp::inst::lpbm {
 
 template<typename HARDWARE_T>
-struct Inst_ModuleDef : BaseInst<Inst_ModuleDef<HARDWARE_T>, HARDWARE_T> {
+struct Inst_ModuleDef : BaseInstructionSpec<Inst_ModuleDef<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Mark the beginning of a module.";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "ModuleDef";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{ inst_prop_t::MODULE };
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) { ; }
+  static void run(hw_t& hw, const inst_t& inst) { ; }
 
 };
 
 template<typename HARDWARE_T>
-struct Inst_If : BaseInst<Inst_If<HARDWARE_T>, HARDWARE_T> {
+struct Inst_If : BaseInstructionSpec<Inst_If<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "If";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "If";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{inst_prop_t::BLOCK_DEF};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     const size_t prog_len = hw.GetProgram().GetSize();
@@ -105,24 +105,24 @@ struct Inst_If : BaseInst<Inst_If<HARDWARE_T>, HARDWARE_T> {
 };
 
 template<typename HARDWARE_T>
-struct Inst_While : BaseInst<Inst_While<HARDWARE_T>, HARDWARE_T> {
+struct Inst_While : BaseInstructionSpec<Inst_While<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "While loop";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "While";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{inst_prop_t::BLOCK_DEF};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     const size_t prog_len = hw.GetProgram().GetSize();
@@ -167,24 +167,24 @@ struct Inst_While : BaseInst<Inst_While<HARDWARE_T>, HARDWARE_T> {
 };
 
 template<typename HARDWARE_T>
-struct Inst_Countdown : BaseInst<Inst_Countdown<HARDWARE_T>, HARDWARE_T> {
+struct Inst_Countdown : BaseInstructionSpec<Inst_Countdown<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Countdown loop. Loop until [arg0] memory value <= 0.";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "Countdown";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{inst_prop_t::BLOCK_DEF};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     const size_t prog_len = hw.GetProgram().GetSize();
@@ -230,24 +230,24 @@ struct Inst_Countdown : BaseInst<Inst_Countdown<HARDWARE_T>, HARDWARE_T> {
 };
 
 template<typename HARDWARE_T>
-struct Inst_Break : BaseInst<Inst_Break<HARDWARE_T>, HARDWARE_T> {
+struct Inst_Break : BaseInstructionSpec<Inst_Break<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Break out of nearest loop in the flow stack (that isn't preceded by a routine or call).";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "Break";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     using flow_type_t = cpu::linprg::FlowType;
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     // break out of the nearest loop:
@@ -296,24 +296,24 @@ struct Inst_Break : BaseInst<Inst_Break<HARDWARE_T>, HARDWARE_T> {
 };
 
 template<typename HARDWARE_T>
-struct Inst_Close : BaseInst<Inst_Close<HARDWARE_T>, HARDWARE_T> {
+struct Inst_Close : BaseInstructionSpec<Inst_Close<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Mark the end of basic and loop control flow.";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "Close";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{inst_prop_t::BLOCK_CLOSE};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     using flow_type_t = cpu::linprg::FlowType;
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     const flow_type_t cur_flow_type = call_state.GetTopFlow().GetType();
@@ -333,48 +333,48 @@ struct Inst_Close : BaseInst<Inst_Close<HARDWARE_T>, HARDWARE_T> {
 };
 
 template<typename HARDWARE_T>
-struct Inst_Call : BaseInst<Inst_Call<HARDWARE_T>, HARDWARE_T> {
+struct Inst_Call : BaseInstructionSpec<Inst_Call<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Call a module specified by tag0.";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "Call";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     hw.CallModule(inst.GetTag(0), hw.GetCurThread().GetExecState());
   }
 
 };
 
 template<typename HARDWARE_T>
-struct Inst_Routine : BaseInst<Inst_Routine<HARDWARE_T>, HARDWARE_T> {
+struct Inst_Routine : BaseInstructionSpec<Inst_Routine<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Call a module specified by tag0 as a routine (shares local memory with current call).";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "Routine";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     using flow_type_t = cpu::linprg::FlowType;
     emp::vector<size_t> matches(
       hw.FindModuleMatch(inst.GetTag(0))
@@ -399,24 +399,24 @@ struct Inst_Routine : BaseInst<Inst_Routine<HARDWARE_T>, HARDWARE_T> {
 };
 
 template<typename HARDWARE_T>
-struct Inst_Return : BaseInst<Inst_Return<HARDWARE_T>, HARDWARE_T> {
+struct Inst_Return : BaseInstructionSpec<Inst_Return<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Return from nearest routine in the flow stack. Or, if no routines, the current call.";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "Return";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     using flow_type_t = cpu::linprg::FlowType;
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     // Return from CALL or ROUTINE
@@ -456,24 +456,24 @@ struct Inst_Return : BaseInst<Inst_Return<HARDWARE_T>, HARDWARE_T> {
 };
 
 template<typename HARDWARE_T>
-struct Inst_Fork : BaseInst<Inst_Fork<HARDWARE_T>, HARDWARE_T> {
+struct Inst_Fork : BaseInstructionSpec<Inst_Fork<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Fork a new thread with a function call specified by tag0";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "Fork";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     const emp::vector<size_t> matches(hw.FindModuleMatch(inst.GetTag(0)));
     if (matches.size()) {
       auto spawned = hw.SpawnThreadWithID(matches[0]);
@@ -496,24 +496,24 @@ struct Inst_Fork : BaseInst<Inst_Fork<HARDWARE_T>, HARDWARE_T> {
 };
 
 template<typename HARDWARE_T>
-struct Inst_Terminate : BaseInst<Inst_Terminate<HARDWARE_T>, HARDWARE_T> {
+struct Inst_Terminate : BaseInstructionSpec<Inst_Terminate<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
   using inst_prop_t = typename HARDWARE_T::inst_prop_t;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Mark the current thread as dead.";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "Terminate";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     hw.GetCurThread().SetDead();
   }
 

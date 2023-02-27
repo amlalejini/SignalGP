@@ -3,19 +3,20 @@
 
 #include "emp/bits/BitSet.hpp"
 
-#include "sgp/InstructionLibrary.hpp"
+#include "sgp/inst/InstructionLibrary.hpp"
 #include "sgp/cpu/LinearProgramCPU.hpp"
 #include "sgp/cpu/linprg/LinearProgram.hpp"
 #include "sgp/cpu/mem/BasicMemoryModel.hpp"
 
+#include "sgp/inst/lpbm/InstructionAdder.hpp"
 #include "sgp/inst/lpbm/inst_impls.hpp"
 
 template <typename INST_LIB_T>
 void AddBasicInstructions(INST_LIB_T& inst_lib) {
   using hardware_t = typename INST_LIB_T::hardware_t;
   namespace inst_impls = sgp::inst::lpbm;
-  inst_impls::InstructionDirectory<hardware_t> inst_directory;
-  inst_directory.AddAllDefaultInstructions(
+  inst_impls::InstructionAdder<hardware_t> inst_adder;
+  inst_adder.AddAllDefaultInstructions(
     inst_lib
   );
 }
@@ -103,11 +104,6 @@ TEST_CASE("LinearProgram<emp::BitSet<W>,int> - GenRandLinearProgram") {
   // Build a limited instruction library.
   inst_lib_t inst_lib;
   AddBasicInstructions(inst_lib);
-  inst_lib.AddInst(
-    sgp::inst::lpbm::BuildInstDef<hardware_t, sgp::inst::lpbm::Inst_ModuleDef<hardware_t>>::Gen()
-  );
-  // inst_lib.AddInst("ModuleDef", [](hardware_t & hw, const inst_t & inst) { ; }, "Module definition", {inst_prop_t::MODULE});
-  // TODO - print out num functions!
   // Generate a bunch of random instructions, check that they conform with requested bounds.
   for (size_t i = 0; i < 10000; ++i) {
     program_t program(

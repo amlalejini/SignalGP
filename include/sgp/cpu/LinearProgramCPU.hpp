@@ -11,7 +11,7 @@
 #include "emp/matching/matchbin_utils.hpp"
 
 #include "../EventLibrary.hpp"
-#include "../InstructionLibrary.hpp"
+#include "../inst/InstructionLibrary.hpp"
 
 #include "BaseCPU.hpp"
 
@@ -51,7 +51,7 @@ public:
   // struct ExecState;
   struct Module;
   // struct CallState;
-  enum class InstProperty;
+  // enum class InstProperty;
 
   // Type aliases.
   using this_t = LinearProgramCPU<
@@ -85,10 +85,10 @@ public:
   using event_t = typename base_hw_t::event_t;
   // -- Instructions --
   /// Blocks are within-module flow control segments (e.g., while loops, if statements, etc)
-  enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
+  // enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
   using inst_t = typename program_t::inst_t;
-  using inst_lib_t = InstructionLibrary<this_t, inst_t, InstProperty>;
-  using inst_prop_t = InstProperty;
+  using inst_lib_t = inst::InstructionLibrary<this_t, inst_t>;
+  using inst_prop_t = inst::InstProperty;
 
   // -- Member structs --
   /// Program module definition.
@@ -498,9 +498,9 @@ public:
     while (true) {
       if (!IsValidProgramPosition(mp, ip)) break;
       const inst_t& inst = program[ip];
-      if (inst_lib.HasProperty(inst.GetID(), InstProperty::BLOCK_DEF)) {
+      if (inst_lib.HasProperty(inst.GetID(), inst_prop_t::BLOCK_DEF)) {
         ++depth;
-      } else if (inst_lib.HasProperty(inst.GetID(), InstProperty::BLOCK_CLOSE)) {
+      } else if (inst_lib.HasProperty(inst.GetID(), inst_prop_t::BLOCK_CLOSE)) {
         --depth;
         if (depth == 0) break;
       }
@@ -605,7 +605,7 @@ public:
     for (size_t pos = 0; pos < program.GetSize(); ++pos) {
       inst_t& inst = program[pos];
       // Is this a module definition?
-      if (inst_lib.HasProperty(inst.GetID(), InstProperty::MODULE)) {
+      if (inst_lib.HasProperty(inst.GetID(), inst_prop_t::MODULE)) {
         // If this isn't the first module we've found, mark this position as the
         // last position of the previous module.
         if (modules.size()) {
