@@ -14,32 +14,32 @@
 #include "emp/datastructs/set_utils.hpp"
 #include "emp/datastructs/map_utils.hpp"
 
-#include "../lpbm/BaseInst.hpp"
+#include "../InstructionLibrary.hpp"
+#include "../BaseInstructionSpec.hpp"
 #include "../lpbm/impls_ctrl_insts.hpp"
 
-// NOTE - Not sure what the best way to organize instruction implementations would be.
 namespace sgp::inst::lfpbm {
 
 // Inst_If
 template<typename HARDWARE_T>
-struct Inst_If : lpbm::BaseInst<Inst_If<HARDWARE_T>, HARDWARE_T> {
+struct Inst_If : BaseInstructionSpec<Inst_If<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "If statement. Defines the beginning of an if control flow block";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "If";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{ inst_prop_t::BLOCK_DEF };
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     size_t cur_ip = call_state.GetIP();
@@ -78,24 +78,24 @@ struct Inst_If : lpbm::BaseInst<Inst_If<HARDWARE_T>, HARDWARE_T> {
 
 // Inst_While
 template<typename HARDWARE_T>
-struct Inst_While : lpbm::BaseInst<Inst_While<HARDWARE_T>, HARDWARE_T> {
+struct Inst_While : BaseInstructionSpec<Inst_While<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Marks the beginning of a while loop.";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "While";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{ inst_prop_t::BLOCK_DEF };
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     size_t cur_ip = call_state.GetIP();
@@ -134,24 +134,24 @@ struct Inst_While : lpbm::BaseInst<Inst_While<HARDWARE_T>, HARDWARE_T> {
 
 // Inst_Countdown
 template<typename HARDWARE_T>
-struct Inst_Countdown : lpbm::BaseInst<Inst_Countdown<HARDWARE_T>, HARDWARE_T> {
+struct Inst_Countdown : BaseInstructionSpec<Inst_Countdown<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Countdown loop. Loop until [arg0] memory value <= 0.";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "Countdown";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{ inst_prop_t::BLOCK_DEF };
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     size_t cur_ip = call_state.GetIP();
@@ -191,24 +191,24 @@ struct Inst_Countdown : lpbm::BaseInst<Inst_Countdown<HARDWARE_T>, HARDWARE_T> {
 
 // Inst_Routine
 template<typename HARDWARE_T>
-struct Inst_Routine : lpbm::BaseInst<Inst_Routine<HARDWARE_T>, HARDWARE_T> {
+struct Inst_Routine : BaseInstructionSpec<Inst_Routine<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
-  static std::string Desc() {
+  static std::string desc() {
     return "Call a module specified by tag0 as a routine (shares local memory with current call).";
   }
 
-  static std::string Name() {
+  static std::string name() {
     return "Routine";
   }
 
-  static std::unordered_set<inst_prop_t> Properties() {
+  static std::unordered_set<inst_prop_t> properties() {
     return std::unordered_set<inst_prop_t>{};
   }
 
-  static void Run(hw_t& hw, const inst_t& inst) {
+  static void run(hw_t& hw, const inst_t& inst) {
     using flow_type_t = cpu::linprg::FlowType;
     emp::vector<size_t> matches(
       hw.FindModuleMatch(inst.GetTag(0))

@@ -11,7 +11,7 @@
 #include "emp/matching/matchbin_utils.hpp"
 
 #include "../EventLibrary.hpp"
-#include "../InstructionLibrary.hpp"
+#include "../inst/InstructionLibrary.hpp"
 
 #include "BaseCPU.hpp"
 
@@ -79,10 +79,10 @@ public:
   using event_lib_t = typename base_hw_t::event_lib_t; // EventLibrary<this_t>
   using event_t = typename base_hw_t::event_t;
   // -- Instructions --
-  enum class InstProperty { BLOCK_CLOSE, BLOCK_DEF }; /// Instruction-definition properties.
+  // enum class InstProperty { BLOCK_CLOSE, BLOCK_DEF }; /// Instruction-definition properties.
   using inst_t = typename program_t::inst_t;
-  using inst_lib_t = InstructionLibrary<this_t, inst_t, InstProperty>;
-  using inst_prop_t = InstProperty;
+  using inst_lib_t = inst::InstructionLibrary<this_t, inst_t>;
+  using inst_prop_t = inst::InstProperty;
 
 protected:
   inst_lib_t& inst_lib;
@@ -440,9 +440,9 @@ public:
     while (true) {
       if (!IsValidProgramPosition(mp, ip)) break;
       const inst_t & inst = program[mp][ip];
-      if (inst_lib.HasProperty(inst.id, InstProperty::BLOCK_DEF)) {
+      if (inst_lib.HasProperty(inst.id, inst_prop_t::BLOCK_DEF)) {
         ++depth;
-      } else if (inst_lib.HasProperty(inst.id, InstProperty::BLOCK_CLOSE)) {
+      } else if (inst_lib.HasProperty(inst.id, inst_prop_t::BLOCK_CLOSE)) {
         --depth;
         if (depth == 0) break;
       }

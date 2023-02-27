@@ -13,7 +13,7 @@
 #include "emp/bits/BitSet.hpp"
 
 #include "../../EventLibrary.hpp"
-#include "../../InstructionLibrary.hpp"
+#include "../../inst/InstructionLibrary.hpp"
 #include "../linprg/LinearProgram.hpp"
 
 namespace sgp::cpu::lfunprg {
@@ -130,9 +130,9 @@ public:
   }
 
   /// Push instruction to program by name.
-  template<typename HARDWARE_T, typename INST_PROPERTY_T>
+  template<typename HARDWARE_T>
   void PushInst(
-    const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib,
+    const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib,
     const std::string& name,
     const emp::vector<arg_t>& args=emp::vector<arg_t>(),
     const emp::vector<tag_t>& tags=emp::vector<tag_t>()
@@ -145,18 +145,18 @@ public:
   void PushInst(const inst_t& inst) { inst_sequence.PushInst(inst); }
 
   /// Is the given instruction valid?
-  template<typename HARDWARE_T, typename INST_PROPERTY_T>
+  template<typename HARDWARE_T>
   bool IsValidInst(
-    const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib,
+    const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib,
     const inst_t& inst
   ) {
     return inst_sequence.IsValidInst(ilib, inst);
   }
 
-  template<typename HARDWARE_T, typename INST_PROPERTY_T>
+  template<typename HARDWARE_T>
   void Print(
     std::ostream& out,
-    const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib
+    const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib
   ) const {
     inst_sequence.Print(out, ilib);
   }
@@ -281,10 +281,10 @@ public:
     PushInst(fp, inst_id, args, tags);
   }
 
-  template<typename HARDWARE_T, typename INST_PROPERTY_T>
+  template<typename HARDWARE_T>
   void PushInst(
     size_t function_id,
-    const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib,
+    const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib,
     const std::string& name,
     const emp::vector<arg_t>& args=emp::vector<arg_t>(),
     const emp::vector<tag_t>& tags=emp::vector<tag_t>()
@@ -293,9 +293,9 @@ public:
     program[function_id].PushInst(ilib, name, args, tags);
   }
 
-  template<typename HARDWARE_T, typename INST_PROPERTY_T>
+  template<typename HARDWARE_T>
   void PushInst(
-    const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib,
+    const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib,
     const std::string& name,
     const emp::vector<arg_t>& args=emp::vector<arg_t>(),
     const emp::vector<tag_t>& tags=emp::vector<tag_t>()
@@ -322,10 +322,10 @@ public:
 
   // Full print for a program. Prints all tags, functions, instructions and args.
   // Prints each tag on a new line followed by the function number.
-  template<typename HARDWARE_T, typename INST_PROPERTY_T>
+  template<typename HARDWARE_T>
   void Print(
     std::ostream& out,
-    const InstructionLibrary<HARDWARE_T, inst_t, INST_PROPERTY_T>& ilib
+    const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib
   ) const {
     for (size_t i = 0; i < GetSize(); ++i) {
       // Skip the last tag so we dont get an extra delimeter
@@ -346,10 +346,9 @@ public:
 template<typename HARDWARE_T, size_t TAG_WIDTH>
 LinearFunction<emp::BitSet<TAG_WIDTH>, int> GenRandLinearFunction(
   emp::Random& rnd,
-  const InstructionLibrary<
+  const inst::InstructionLibrary<
     HARDWARE_T,
-    typename linprg::LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction,
-    typename HARDWARE_T::inst_prop_t
+    typename linprg::LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction
   >& inst_lib,
   size_t num_func_tags=1,
   const emp::Range<size_t>& inst_cnt_range={1, 32},
@@ -373,10 +372,9 @@ LinearFunction<emp::BitSet<TAG_WIDTH>, int> GenRandLinearFunction(
 template<typename HARDWARE_T, size_t TAG_WIDTH>
 LinearFunctionsProgram<emp::BitSet<TAG_WIDTH>, int> GenRandLinearFunctionsProgram(
   emp::Random & rnd,
-  const InstructionLibrary<
+  const inst::InstructionLibrary<
     HARDWARE_T,
-    typename linprg::LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction,
-    typename HARDWARE_T::inst_prop_t
+    typename linprg::LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction
   >& inst_lib,
   const emp::Range<size_t>& num_func_range={1, 4},
   size_t num_func_tags=1,

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../lpbm/BaseInst.hpp"
+#include "../InstructionLibrary.hpp"
+#include "../BaseInstructionSpec.hpp"
 #include "../lpbm/impls_basic_insts.hpp"
 
 namespace sgp::inst::lfpbm {

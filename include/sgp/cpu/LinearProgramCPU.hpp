@@ -85,7 +85,6 @@ public:
   using event_t = typename base_hw_t::event_t;
   // -- Instructions --
   /// Blocks are within-module flow control segments (e.g., while loops, if statements, etc)
-  // enum class InstProperty { MODULE, BLOCK_CLOSE, BLOCK_DEF };
   using inst_t = typename program_t::inst_t;
   using inst_lib_t = inst::InstructionLibrary<this_t, inst_t>;
   using inst_prop_t = inst::InstProperty;
