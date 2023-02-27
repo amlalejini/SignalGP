@@ -13,6 +13,7 @@
 #include "../../EventLibrary.hpp"
 #include "../../inst/InstructionLibrary.hpp"
 #include "../../utils/random_utils.hpp"
+#include "Instruction.hpp"
 
 namespace sgp::cpu::linprg {
 
@@ -25,74 +26,18 @@ template<
 >
 class LinearProgram {
 public:
-  struct Instruction;
+
   using tag_t = TAG_T;
   using arg_t = ARGUMENT_T;
-  using inst_t = Instruction;
-
-  // todo => print arg fun
-  // todo => print tag fun
-
-  struct Instruction {
-    size_t id;                      ///< Instruction ID
-    emp::vector<arg_t> args;
-    emp::vector<tag_t> tags;
-
-    Instruction(
-      size_t _id,
-      const emp::vector<arg_t>& _args=emp::vector<arg_t>(),
-      const emp::vector<tag_t>& _tags=emp::vector<tag_t>()
-    ) :
-      id(_id),
-      args(_args),
-      tags(_tags)
-    { ; }
-
-    bool operator==(const Instruction& other) const {
-      return std::tie(id, args, tags) == std::tie(other.id, other.args, other.tags);
-    }
-
-    bool operator!=(const Instruction& other) const {
-      return !(*this == other);
-    }
-
-    bool operator<(const Instruction& other) const {
-      return std::tie(id, args, tags) < std::tie(other.id, other.args, other.tags);
-    }
-
-    void SetID(size_t _id) { id = _id; }
-    size_t GetID() const { return id; }
-
-    emp::vector<arg_t>& GetArgs() { return args; }
-    const emp::vector<arg_t>& GetArgs() const { return args; }
-    emp::vector<tag_t>& GetTags() { return tags; }
-    const emp::vector<tag_t>& GetTags() const { return tags; }
-
-    const arg_t& GetArg(size_t i) const { return args[i]; }
-    const tag_t& GetTag(size_t i) const { return tags[i]; }
-
-    // Print each of the instruction's tag followed by the instruction and its arguments
-    template<typename HARDWARE_T>
-    void Print(
-      std::ostream& out,
-      const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib
-    ) const {
-      out << "\t";
-      // Skip last tag & arg so we dont get an extra delimiter.
-      std::copy(tags.begin(), tags.end() - 1, std::ostream_iterator<tag_t>(out, "\n\t"));
-      out << tags.back() << " " << ilib.GetName(id) << " [";
-      std::copy(args.begin(), args.end() - 1, std::ostream_iterator<arg_t>(out, ", "));
-      out << args.back() << "]\n";
-    }
-  };
+  using inst_t = Instruction<tag_t, arg_t>;
 
 protected:
-  emp::vector<Instruction> inst_seq;
+  emp::vector<inst_t> inst_seq;
 
 public:
 
   LinearProgram(
-    const emp::vector<Instruction>& iseq=emp::vector<Instruction>()
+    const emp::vector<inst_t>& iseq=emp::vector<inst_t>()
   ) :
     inst_seq(iseq)
   { ; }
@@ -110,13 +55,13 @@ public:
   }
 
   /// Allow program's instruction sequence to be indexed as if a vector.
-  Instruction & operator[](size_t id) {
+  inst_t & operator[](size_t id) {
     emp_assert(id < inst_seq.size());
     return inst_seq[id];
   }
 
   /// Allow program's instruction sequence to be indexed as if a vector.
-  const Instruction & operator[](size_t id) const {
+  const inst_t & operator[](size_t id) const {
     emp_assert(id < inst_seq.size());
     return inst_seq[id];
   }
@@ -133,7 +78,7 @@ public:
   bool IsValidPosition(size_t pos) const { return pos < GetSize(); }
 
   /// Set program's instruction sequence to the one given.
-  void SetProgram(const emp::vector<Instruction>& p) { inst_seq = p; }
+  void SetProgram(const emp::vector<inst_t>& p) { inst_seq = p; }
 
   /// Push instruction to instruction set.
   /// - No validation! We're trusting that 'id' is legit!
@@ -148,7 +93,7 @@ public:
   /// Push instruction to program by name.
   template<typename HARDWARE_T>
   void PushInst(
-    const inst::InstructionLibrary<HARDWARE_T, Instruction>& ilib,
+    const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib,
     const std::string& name,
     const emp::vector<arg_t>& args=emp::vector<arg_t>(),
     const emp::vector<tag_t>& tags=emp::vector<tag_t>()
@@ -158,15 +103,15 @@ public:
   }
 
   /// Push instruction to program.
-  void PushInst(const Instruction& inst) {
+  void PushInst(const inst_t& inst) {
     inst_seq.emplace_back(inst);
   }
 
   /// Is the given instruction valid?
   template<typename HARDWARE_T>
   static bool IsValidInst(
-    const inst::InstructionLibrary<HARDWARE_T, Instruction>& ilib,
-    const Instruction& inst
+    const inst::InstructionLibrary<HARDWARE_T, inst_t>& ilib,
+    const inst_t& inst
   ) {
     return inst.id < ilib.GetSize();
   }
@@ -189,11 +134,11 @@ public:
 
 /// Generate random instruction.
 template<typename HARDWARE_T, size_t TAG_WIDTH>
-typename LinearProgram<emp::BitSet<TAG_WIDTH>, int>::Instruction GenRandInst(
+Instruction<emp::BitSet<TAG_WIDTH>, int> GenRandInst(
   emp::Random& rnd,
   const inst::InstructionLibrary<
     HARDWARE_T,
-    typename LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction
+    Instruction<emp::BitSet<TAG_WIDTH>, int>
   >& inst_lib,
   size_t num_tags=1,
   size_t num_args=3,
@@ -226,7 +171,7 @@ LinearProgram<emp::BitSet<TAG_WIDTH>, int> GenRandLinearProgram(
   emp::Random& rnd,
   const inst::InstructionLibrary<
     HARDWARE_T,
-    typename LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction
+    Instruction<emp::BitSet<TAG_WIDTH>, int>
   >& inst_lib,
   const emp::Range<size_t>& inst_cnt_range={1, 32},
   size_t num_inst_tags=1,

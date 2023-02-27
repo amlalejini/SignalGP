@@ -15,6 +15,7 @@
 #include "../../EventLibrary.hpp"
 #include "../../inst/InstructionLibrary.hpp"
 #include "../linprg/LinearProgram.hpp"
+#include "../linprg/Instruction.hpp"
 
 namespace sgp::cpu::lfunprg {
 
@@ -29,7 +30,7 @@ public:
   using tag_t = TAG_T;
   using arg_t = ARGUMENT_T;
   using sequence_t = linprg::LinearProgram<tag_t, arg_t>;
-  using inst_t = typename sequence_t::inst_t;
+  using inst_t = linprg::Instruction<tag_t, arg_t>;
 
 protected:
   emp::vector<tag_t> tags;      // @discussion Would there be a reason a function would want multiple tags?
@@ -173,7 +174,7 @@ public:
   using this_t = LinearFunctionsProgram<TAG_T, ARGUMENT_T>;
   using tag_t = TAG_T;
   using arg_t = ARGUMENT_T;
-  using inst_t = typename linprg::LinearProgram<tag_t, arg_t>::Instruction;
+  using inst_t = linprg::Instruction<tag_t, arg_t>;
   using function_t = LinearFunction<tag_t, arg_t>;
 
 protected:
@@ -348,7 +349,7 @@ LinearFunction<emp::BitSet<TAG_WIDTH>, int> GenRandLinearFunction(
   emp::Random& rnd,
   const inst::InstructionLibrary<
     HARDWARE_T,
-    typename linprg::LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction
+    linprg::Instruction< emp::BitSet<TAG_WIDTH>, int>
   >& inst_lib,
   size_t num_func_tags=1,
   const emp::Range<size_t>& inst_cnt_range={1, 32},
@@ -374,7 +375,7 @@ LinearFunctionsProgram<emp::BitSet<TAG_WIDTH>, int> GenRandLinearFunctionsProgra
   emp::Random & rnd,
   const inst::InstructionLibrary<
     HARDWARE_T,
-    typename linprg::LinearProgram< emp::BitSet<TAG_WIDTH>, int>::Instruction
+    linprg::Instruction< emp::BitSet<TAG_WIDTH>, int>
   >& inst_lib,
   const emp::Range<size_t>& num_func_range={1, 4},
   size_t num_func_tags=1,
