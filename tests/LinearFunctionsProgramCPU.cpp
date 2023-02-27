@@ -3,18 +3,19 @@
 
 #include "emp/bits/BitSet.hpp"
 
-#include "sgp/InstructionLibrary.hpp"
+#include "sgp/inst/InstructionLibrary.hpp"
 #include "sgp/cpu/LinearFunctionsProgramCPU.hpp"
 #include "sgp/cpu/lfunprg/LinearFunctionsProgram.hpp"
 #include "sgp/cpu/mem/BasicMemoryModel.hpp"
 
+#include "sgp/inst/lfpbm/InstructionAdder.hpp"
 #include "sgp/inst/lfpbm/inst_impls.hpp"
 
 template <typename INST_LIB_T>
 void AddBasicInstructions(INST_LIB_T& inst_lib) {
   using hardware_t = typename INST_LIB_T::hardware_t;
   namespace inst_impls = sgp::inst::lfpbm;
-  inst_impls::InstructionDirectory<hardware_t> inst_directory;
+  inst_impls::InstructionAdder<hardware_t> inst_directory;
   inst_directory.AddAllDefaultInstructions(
     inst_lib
   );

@@ -6,12 +6,13 @@
 #include "sgp/cpu/mem/BasicMemoryModel.hpp"
 #include "sgp/cpu/LinearProgramCPU.hpp"
 #include "sgp/inst/lpbm/inst_impls.hpp"
+#include "sgp/inst/lpbm/InstructionAdder.hpp"
 
 template <typename INST_LIB_T>
 void AddBasicInstructions(INST_LIB_T& inst_lib) {
   using hardware_t = typename INST_LIB_T::hardware_t;
   namespace inst_impls = sgp::inst::lpbm;
-  inst_impls::InstructionDirectory<hardware_t> inst_directory;
+  inst_impls::InstructionAdder<hardware_t> inst_directory;
   inst_directory.AddAllDefaultInstructions(
     inst_lib
   );
@@ -45,12 +46,6 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
 
   // Add some instructions to the instruction library.
   AddBasicInstructions(inst_lib);
-  inst_lib.AddInst(
-    sgp::inst::lpbm::BuildInstDef<
-      signalgp_t,
-      sgp::inst::lpbm::Inst_ModuleDef<signalgp_t>
-    >::Gen()
-  );
 
   emp::Random random(2);
 
