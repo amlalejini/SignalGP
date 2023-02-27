@@ -22,7 +22,7 @@ namespace sgp::inst::lpbm {
 template<typename HARDWARE_T>
 struct Inst_ModuleDef : BaseInstructionSpec<Inst_ModuleDef<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -44,7 +44,7 @@ struct Inst_ModuleDef : BaseInstructionSpec<Inst_ModuleDef<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_If : BaseInstructionSpec<Inst_If<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -107,7 +107,7 @@ struct Inst_If : BaseInstructionSpec<Inst_If<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_While : BaseInstructionSpec<Inst_While<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -169,7 +169,7 @@ struct Inst_While : BaseInstructionSpec<Inst_While<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Countdown : BaseInstructionSpec<Inst_Countdown<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -232,7 +232,7 @@ struct Inst_Countdown : BaseInstructionSpec<Inst_Countdown<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Break : BaseInstructionSpec<Inst_Break<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -298,7 +298,7 @@ struct Inst_Break : BaseInstructionSpec<Inst_Break<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Close : BaseInstructionSpec<Inst_Close<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -335,7 +335,7 @@ struct Inst_Close : BaseInstructionSpec<Inst_Close<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Call : BaseInstructionSpec<Inst_Call<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -359,7 +359,7 @@ struct Inst_Call : BaseInstructionSpec<Inst_Call<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Routine : BaseInstructionSpec<Inst_Routine<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -401,7 +401,7 @@ struct Inst_Routine : BaseInstructionSpec<Inst_Routine<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Return : BaseInstructionSpec<Inst_Return<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -458,7 +458,7 @@ struct Inst_Return : BaseInstructionSpec<Inst_Return<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Fork : BaseInstructionSpec<Inst_Fork<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -498,7 +498,7 @@ struct Inst_Fork : BaseInstructionSpec<Inst_Fork<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Terminate : BaseInstructionSpec<Inst_Terminate<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {

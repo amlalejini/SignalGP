@@ -23,7 +23,7 @@ namespace sgp::inst::lpbm {
 template<typename HARDWARE_T, int MULTIPLIER=1>
 struct Inst_SetRegulator : BaseInstructionSpec<Inst_SetRegulator<HARDWARE_T, MULTIPLIER>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -54,7 +54,7 @@ struct Inst_SetRegulator : BaseInstructionSpec<Inst_SetRegulator<HARDWARE_T, MUL
 template<typename HARDWARE_T, int MULTIPLIER=1>
 struct Inst_SetOwnRegulator : BaseInstructionSpec<Inst_SetOwnRegulator<HARDWARE_T, MULTIPLIER>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -84,7 +84,7 @@ struct Inst_SetOwnRegulator : BaseInstructionSpec<Inst_SetOwnRegulator<HARDWARE_
 template<typename HARDWARE_T>
 struct Inst_ClearRegulator : BaseInstructionSpec<Inst_ClearRegulator<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -110,7 +110,7 @@ struct Inst_ClearRegulator : BaseInstructionSpec<Inst_ClearRegulator<HARDWARE_T>
 template<typename HARDWARE_T>
 struct Inst_ClearOwnRegulator : BaseInstructionSpec<Inst_ClearOwnRegulator<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -136,7 +136,7 @@ struct Inst_ClearOwnRegulator : BaseInstructionSpec<Inst_ClearOwnRegulator<HARDW
 template<typename HARDWARE_T, int MULTIPLIER=1>
 struct Inst_AdjRegulator : BaseInstructionSpec<Inst_AdjRegulator<HARDWARE_T, MULTIPLIER>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -165,7 +165,7 @@ struct Inst_AdjRegulator : BaseInstructionSpec<Inst_AdjRegulator<HARDWARE_T, MUL
 template<typename HARDWARE_T, int MULTIPLIER=1>
 struct Inst_AdjOwnRegulator : BaseInstructionSpec<Inst_AdjOwnRegulator<HARDWARE_T, MULTIPLIER>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -193,7 +193,7 @@ struct Inst_AdjOwnRegulator : BaseInstructionSpec<Inst_AdjOwnRegulator<HARDWARE_
 template<typename HARDWARE_T>
 struct Inst_IncRegulator : BaseInstructionSpec<Inst_IncRegulator<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -219,7 +219,7 @@ struct Inst_IncRegulator : BaseInstructionSpec<Inst_IncRegulator<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_IncOwnRegulator : BaseInstructionSpec<Inst_IncOwnRegulator<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -245,7 +245,7 @@ struct Inst_IncOwnRegulator : BaseInstructionSpec<Inst_IncOwnRegulator<HARDWARE_
 template<typename HARDWARE_T>
 struct Inst_DecRegulator : BaseInstructionSpec<Inst_DecRegulator<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -271,7 +271,7 @@ struct Inst_DecRegulator : BaseInstructionSpec<Inst_DecRegulator<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_DecOwnRegulator : BaseInstructionSpec<Inst_DecOwnRegulator<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -297,7 +297,7 @@ struct Inst_DecOwnRegulator : BaseInstructionSpec<Inst_DecOwnRegulator<HARDWARE_
 template<typename HARDWARE_T>
 struct Inst_SenseRegulator : BaseInstructionSpec<Inst_SenseRegulator<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -329,7 +329,7 @@ struct Inst_SenseRegulator : BaseInstructionSpec<Inst_SenseRegulator<HARDWARE_T>
 template<typename HARDWARE_T>
 struct Inst_SenseOwnRegulator : BaseInstructionSpec<Inst_SenseOwnRegulator<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {

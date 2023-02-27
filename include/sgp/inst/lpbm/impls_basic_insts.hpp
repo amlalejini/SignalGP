@@ -49,7 +49,7 @@ struct Inst_Nop : BaseInstructionSpec<Inst_Nop<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Inc : BaseInstructionSpec<Inst_Inc<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -75,7 +75,7 @@ struct Inst_Inc : BaseInstructionSpec<Inst_Inc<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Dec : BaseInstructionSpec<Inst_Dec<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -101,7 +101,7 @@ struct Inst_Dec : BaseInstructionSpec<Inst_Dec<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Not : BaseInstructionSpec<Inst_Not<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -130,7 +130,7 @@ struct Inst_Not : BaseInstructionSpec<Inst_Not<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Add : BaseInstructionSpec<Inst_Add<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -159,7 +159,7 @@ struct Inst_Add : BaseInstructionSpec<Inst_Add<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Sub : BaseInstructionSpec<Inst_Sub<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -188,7 +188,7 @@ struct Inst_Sub : BaseInstructionSpec<Inst_Sub<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Mult : BaseInstructionSpec<Inst_Mult<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -217,7 +217,7 @@ struct Inst_Mult : BaseInstructionSpec<Inst_Mult<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Div : BaseInstructionSpec<Inst_Div<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -246,7 +246,7 @@ struct Inst_Div : BaseInstructionSpec<Inst_Div<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_Mod : BaseInstructionSpec<Inst_Mod<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -278,7 +278,7 @@ struct Inst_Mod : BaseInstructionSpec<Inst_Mod<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_TestEqu : BaseInstructionSpec<Inst_TestEqu<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -307,7 +307,7 @@ struct Inst_TestEqu : BaseInstructionSpec<Inst_TestEqu<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_TestNEqu : BaseInstructionSpec<Inst_TestNEqu<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -336,7 +336,7 @@ struct Inst_TestNEqu : BaseInstructionSpec<Inst_TestNEqu<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_TestLess : BaseInstructionSpec<Inst_TestLess<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -365,7 +365,7 @@ struct Inst_TestLess : BaseInstructionSpec<Inst_TestLess<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_TestLessEqu : BaseInstructionSpec<Inst_TestLessEqu<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -394,7 +394,7 @@ struct Inst_TestLessEqu : BaseInstructionSpec<Inst_TestLessEqu<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_TestGreater : BaseInstructionSpec<Inst_TestGreater<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -423,7 +423,7 @@ struct Inst_TestGreater : BaseInstructionSpec<Inst_TestGreater<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_TestGreaterEqu : BaseInstructionSpec<Inst_TestGreaterEqu<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -462,7 +462,7 @@ struct Inst_Terminal : BaseInstructionSpec<
   >
 > {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {

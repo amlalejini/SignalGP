@@ -23,7 +23,7 @@ namespace sgp::inst::lpbm {
 template<typename HARDWARE_T>
 struct Inst_SetMem : BaseInstructionSpec<Inst_SetMem<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -49,7 +49,7 @@ struct Inst_SetMem : BaseInstructionSpec<Inst_SetMem<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_CopyMem : BaseInstructionSpec<Inst_CopyMem<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -75,7 +75,7 @@ struct Inst_CopyMem : BaseInstructionSpec<Inst_CopyMem<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_SwapMem : BaseInstructionSpec<Inst_SwapMem<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -104,7 +104,7 @@ struct Inst_SwapMem : BaseInstructionSpec<Inst_SwapMem<HARDWARE_T>> {
 template<typename HARDWARE_T>
 struct Inst_InputToWorking : BaseInstructionSpec<Inst_InputToWorking<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -130,7 +130,7 @@ struct Inst_InputToWorking : BaseInstructionSpec<Inst_InputToWorking<HARDWARE_T>
 template<typename HARDWARE_T>
 struct Inst_WorkingToOutput : BaseInstructionSpec<Inst_WorkingToOutput<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -156,7 +156,7 @@ struct Inst_WorkingToOutput : BaseInstructionSpec<Inst_WorkingToOutput<HARDWARE_
 template<typename HARDWARE_T>
 struct Inst_WorkingToGlobal : BaseInstructionSpec<Inst_WorkingToGlobal<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -183,7 +183,7 @@ struct Inst_WorkingToGlobal : BaseInstructionSpec<Inst_WorkingToGlobal<HARDWARE_
 template<typename HARDWARE_T>
 struct Inst_GlobalToWorking : BaseInstructionSpec<Inst_GlobalToWorking<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -210,7 +210,7 @@ struct Inst_GlobalToWorking : BaseInstructionSpec<Inst_GlobalToWorking<HARDWARE_
 template<typename HARDWARE_T>
 struct Inst_FullWorkingToGlobal : BaseInstructionSpec<Inst_FullWorkingToGlobal<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
@@ -240,7 +240,7 @@ struct Inst_FullWorkingToGlobal : BaseInstructionSpec<Inst_FullWorkingToGlobal<H
 template<typename HARDWARE_T>
 struct Inst_FullGlobalToWorking : BaseInstructionSpec<Inst_FullGlobalToWorking<HARDWARE_T>> {
   using hw_t = HARDWARE_T;
-  using inst_prop_t = typename HARDWARE_T::inst_prop_t;
+  using inst_prop_t = inst::InstProperty;
   using inst_t = typename HARDWARE_T::inst_t;
 
   static std::string desc() {
