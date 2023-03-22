@@ -54,8 +54,9 @@ struct Instruction : public inst::BaseInstruction {
   ) const {
     out << "\t";
     // Skip last tag & arg so we dont get an extra delimiter.
-    std::copy(tags.begin(), tags.end() - 1, std::ostream_iterator<tag_t>(out, "\n\t"));
-    out << tags.back() << " " << ilib.GetName(id) << " [";
+    out << "(";
+    std::copy(tags.begin(), tags.end() - 1, std::ostream_iterator<tag_t>(out, ","));
+    out << tags.back() << ") " << ilib.GetName(id) << " [";
     std::copy(args.begin(), args.end() - 1, std::ostream_iterator<arg_t>(out, ", "));
     out << args.back() << "]\n";
   }

@@ -330,12 +330,13 @@ public:
   ) const {
     for (size_t i = 0; i < GetSize(); ++i) {
       // Skip the last tag so we dont get an extra delimeter
+      out << "(";
       std::copy(
         program[i].GetTags().begin(),
         program[i].GetTags().end() - 1,
-        std::ostream_iterator<tag_t>(out, "\n")
+        std::ostream_iterator<tag_t>(out, ",")
       );
-      out << program[i].GetTags().back() << " Fn-"<< i << "\n";
+      out << program[i].GetTags().back() << ") Fn-"<< i << "\n";
       program[i].Print(out, ilib);
       out << "\n";
     }
