@@ -149,8 +149,8 @@ struct Inst_Add : BaseInstructionSpec<Inst_Add<HARDWARE_T>> {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     mem_state.SetWorking(
-      inst.GetArg(2),
-      mem_state.AccessWorking(inst.GetArg(0)) + mem_state.AccessWorking(inst.GetArg(1))
+      inst.GetArg(0),
+      mem_state.AccessWorking(inst.GetArg(1)) + mem_state.AccessWorking(inst.GetArg(2))
     );
   }
 
@@ -178,8 +178,8 @@ struct Inst_Sub : BaseInstructionSpec<Inst_Sub<HARDWARE_T>> {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     mem_state.SetWorking(
-      inst.GetArg(2),
-      mem_state.AccessWorking(inst.GetArg(0)) - mem_state.AccessWorking(inst.GetArg(1))
+      inst.GetArg(0),
+      mem_state.AccessWorking(inst.GetArg(1)) - mem_state.AccessWorking(inst.GetArg(2))
     );
   }
 
@@ -207,8 +207,8 @@ struct Inst_Mult : BaseInstructionSpec<Inst_Mult<HARDWARE_T>> {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     mem_state.SetWorking(
-      inst.GetArg(2),
-      mem_state.AccessWorking(inst.GetArg(0)) * mem_state.AccessWorking(inst.GetArg(1))
+      inst.GetArg(0),
+      mem_state.AccessWorking(inst.GetArg(1)) * mem_state.AccessWorking(inst.GetArg(2))
     );
   }
 
@@ -235,10 +235,10 @@ struct Inst_Div : BaseInstructionSpec<Inst_Div<HARDWARE_T>> {
   static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
-    const auto& denom = mem_state.AccessWorking(inst.GetArg(1));
+    const auto& denom = mem_state.AccessWorking(inst.GetArg(2));
     if (denom == 0.0) return; // Do nothing.
-    const auto& num = mem_state.AccessWorking(inst.GetArg(0));
-    mem_state.SetWorking(inst.GetArg(2), num / denom);
+    const auto& num = mem_state.AccessWorking(inst.GetArg(1));
+    mem_state.SetWorking(inst.GetArg(0), num / denom);
   }
 
 };
@@ -264,11 +264,11 @@ struct Inst_Mod : BaseInstructionSpec<Inst_Mod<HARDWARE_T>> {
   static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
-    const int denom = (int)mem_state.AccessWorking(inst.GetArg(1));
+    const int denom = (int)mem_state.AccessWorking(inst.GetArg(2));
     if (denom == 0.0) return; // Do nothing.
-    const int num = (int)mem_state.AccessWorking(inst.GetArg(0));
+    const int num = (int)mem_state.AccessWorking(inst.GetArg(1));
     mem_state.SetWorking(
-      inst.GetArg(2),
+      inst.GetArg(0),
       static_cast<int64_t>(num) % static_cast<int64_t>(denom)
     );
   }
@@ -297,8 +297,8 @@ struct Inst_TestEqu : BaseInstructionSpec<Inst_TestEqu<HARDWARE_T>> {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     mem_state.SetWorking(
-      inst.GetArg(2),
-      mem_state.AccessWorking(inst.GetArg(0)) == mem_state.AccessWorking(inst.GetArg(1))
+      inst.GetArg(0),
+      mem_state.AccessWorking(inst.GetArg(1)) == mem_state.AccessWorking(inst.GetArg(2))
     );
   }
 
@@ -326,8 +326,8 @@ struct Inst_TestNEqu : BaseInstructionSpec<Inst_TestNEqu<HARDWARE_T>> {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     mem_state.SetWorking(
-      inst.GetArg(2),
-      mem_state.AccessWorking(inst.GetArg(0)) != mem_state.AccessWorking(inst.GetArg(1))
+      inst.GetArg(0),
+      mem_state.AccessWorking(inst.GetArg(1)) != mem_state.AccessWorking(inst.GetArg(2))
     );
   }
 
@@ -355,8 +355,8 @@ struct Inst_TestLess : BaseInstructionSpec<Inst_TestLess<HARDWARE_T>> {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     mem_state.SetWorking(
-      inst.GetArg(2),
-      mem_state.AccessWorking(inst.GetArg(0)) < mem_state.AccessWorking(inst.GetArg(1))
+      inst.GetArg(0),
+      mem_state.AccessWorking(inst.GetArg(1)) < mem_state.AccessWorking(inst.GetArg(2))
     );
   }
 
@@ -384,8 +384,8 @@ struct Inst_TestLessEqu : BaseInstructionSpec<Inst_TestLessEqu<HARDWARE_T>> {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     mem_state.SetWorking(
-      inst.GetArg(2),
-      mem_state.AccessWorking(inst.GetArg(0)) <= mem_state.AccessWorking(inst.GetArg(1))
+      inst.GetArg(0),
+      mem_state.AccessWorking(inst.GetArg(1)) <= mem_state.AccessWorking(inst.GetArg(2))
     );
   }
 
@@ -413,8 +413,8 @@ struct Inst_TestGreater : BaseInstructionSpec<Inst_TestGreater<HARDWARE_T>> {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     mem_state.SetWorking(
-      inst.GetArg(2),
-      mem_state.AccessWorking(inst.GetArg(0)) > mem_state.AccessWorking(inst.GetArg(1))
+      inst.GetArg(0),
+      mem_state.AccessWorking(inst.GetArg(1)) > mem_state.AccessWorking(inst.GetArg(2))
     );
   }
 
@@ -442,8 +442,8 @@ struct Inst_TestGreaterEqu : BaseInstructionSpec<Inst_TestGreaterEqu<HARDWARE_T>
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     mem_state.SetWorking(
-      inst.GetArg(2),
-      mem_state.AccessWorking(inst.GetArg(0)) >= mem_state.AccessWorking(inst.GetArg(1))
+      inst.GetArg(0),
+      mem_state.AccessWorking(inst.GetArg(1)) >= mem_state.AccessWorking(inst.GetArg(2))
     );
   }
 

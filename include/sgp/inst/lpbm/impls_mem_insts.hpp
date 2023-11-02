@@ -67,7 +67,7 @@ struct Inst_CopyMem : BaseInstructionSpec<Inst_CopyMem<HARDWARE_T>> {
   static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
-    mem_state.SetWorking(inst.GetArg(1), mem_state.AccessWorking(inst.GetArg(0)));
+    mem_state.SetWorking(inst.GetArg(0), mem_state.AccessWorking(inst.GetArg(1)));
   }
 
 };
@@ -122,7 +122,7 @@ struct Inst_InputToWorking : BaseInstructionSpec<Inst_InputToWorking<HARDWARE_T>
   static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
-    mem_state.SetWorking(inst.GetArg(1), mem_state.AccessInput(inst.GetArg(0)));
+    mem_state.SetWorking(inst.GetArg(0), mem_state.AccessInput(inst.GetArg(1)));
   }
 
 };
@@ -148,7 +148,7 @@ struct Inst_WorkingToOutput : BaseInstructionSpec<Inst_WorkingToOutput<HARDWARE_
   static void run(hw_t& hw, const inst_t& inst) {
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
-    mem_state.SetOutput(inst.GetArg(1), mem_state.AccessWorking(inst.GetArg(0)));
+    mem_state.SetOutput(inst.GetArg(0), mem_state.AccessWorking(inst.GetArg(1)));
   }
 
 };
@@ -175,7 +175,7 @@ struct Inst_WorkingToGlobal : BaseInstructionSpec<Inst_WorkingToGlobal<HARDWARE_
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     auto& mem_model = hw.GetMemoryModel();
-    mem_model.SetGlobal(inst.GetArg(1), mem_state.AccessWorking(inst.GetArg(0)));
+    mem_model.SetGlobal(inst.GetArg(0), mem_state.AccessWorking(inst.GetArg(1)));
   }
 
 };
@@ -202,7 +202,7 @@ struct Inst_GlobalToWorking : BaseInstructionSpec<Inst_GlobalToWorking<HARDWARE_
     auto& call_state = hw.GetCurThread().GetExecState().GetTopCallState();
     auto& mem_state = call_state.GetMemory();
     auto& mem_model = hw.GetMemoryModel();
-    mem_state.SetWorking(inst.GetArg(1), mem_model.AccessGlobal(inst.GetArg(0)));
+    mem_state.SetWorking(inst.GetArg(0), mem_model.AccessGlobal(inst.GetArg(1)));
   }
 
 };

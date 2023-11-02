@@ -210,9 +210,9 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
 
     // Build program to test inc instruction.
     program.PushInst(inst_lib, "Inc", {0, 0, 0}); // [0] = 1
-    program.PushInst(inst_lib, "Add", {0, 0, 1}); // [1] = 2
-    program.PushInst(inst_lib, "Add", {1, 1, 2}); // [2] = 4
-    program.PushInst(inst_lib, "Add", {1, 2, 3}); // [3] = 6
+    program.PushInst(inst_lib, "Add", {1, 0, 0}); // [1] = 2
+    program.PushInst(inst_lib, "Add", {2, 1, 1}); // [2] = 4
+    program.PushInst(inst_lib, "Add", {3, 1, 2}); // [3] = 6
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -257,13 +257,13 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
 
     // Build program to test inc instruction.
     program.PushInst(inst_lib, "Inc", {0, 0, 0}); // [0] = 1
-    program.PushInst(inst_lib, "Add", {0, 0, 1}); // [1] = 2
-    program.PushInst(inst_lib, "Add", {1, 1, 2}); // [2] = 4
-    program.PushInst(inst_lib, "Add", {1, 2, 3}); // [3] = 6
+    program.PushInst(inst_lib, "Add", {1, 0, 0}); // [1] = 2
+    program.PushInst(inst_lib, "Add", {2, 1, 1}); // [2] = 4
+    program.PushInst(inst_lib, "Add", {3, 1, 2}); // [3] = 6
 
-    program.PushInst(inst_lib, "Sub", {3, 4, 3}); // [4] = 0; [3] = 6
-    program.PushInst(inst_lib, "Sub", {3, 2, 4}); // [4] = 2
-    program.PushInst(inst_lib, "Sub", {2, 3, 4}); // [4] = -2
+    program.PushInst(inst_lib, "Sub", {3, 3, 4}); // [4] = 0; [3] = 6
+    program.PushInst(inst_lib, "Sub", {4, 3, 2}); // [4] = 2
+    program.PushInst(inst_lib, "Sub", {4, 2, 3}); // [4] = -2
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -316,13 +316,13 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
     hardware.Reset(); // Reset program & hardware.
 
     // Build program to test inc instruction.
-    program.PushInst(inst_lib, "Inc", {0, 0, 0}); // [0] = 1
-    program.PushInst(inst_lib, "Add", {0, 0, 1}); // [1] = 2
-    program.PushInst(inst_lib, "Dec", {-1, 0, 0}); // [-1] = -1
-    program.PushInst(inst_lib, "Mult", {0, 0, 2}); // [2] = 1
-    program.PushInst(inst_lib, "Mult", {-1, -1, 2}); // [2] = 1
-    program.PushInst(inst_lib, "Mult", {1, 1, 2}); // [2] = 4
-    program.PushInst(inst_lib, "Mult", {-1, 1, 2}); // [2] = -2
+    program.PushInst(inst_lib, "Inc",  {0, 0, 0}); // [0] = 1
+    program.PushInst(inst_lib, "Add",  {1, 0, 0}); // [1] = 2
+    program.PushInst(inst_lib, "Dec",  {-1, 0, 0}); // [-1] = -1
+    program.PushInst(inst_lib, "Mult", {2, 0, 0}); // [2] = 1
+    program.PushInst(inst_lib, "Mult", {2, -1, -1}); // [2] = 1
+    program.PushInst(inst_lib, "Mult", {2, 1, 1}); // [2] = 4
+    program.PushInst(inst_lib, "Mult", {2, -1, 1}); // [2] = -2
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -373,10 +373,10 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
 
     // Build program to test inc instruction.
     program.PushInst(inst_lib, "Inc", {0, 0, 0}); // [0] = 1
-    program.PushInst(inst_lib, "Add", {0, 0, 1}); // [1] = 2
+    program.PushInst(inst_lib, "Add", {1, 0, 0}); // [1] = 2
     program.PushInst(inst_lib, "Div", {2, 2, 2}); // [2] = 0   Do nothing.
     program.PushInst(inst_lib, "Div", {2, 2, 2}); // [2] = 0   Do nothing.
-    program.PushInst(inst_lib, "Div", {0, 1, 3}); // [3] = 0.5 Do nothing.
+    program.PushInst(inst_lib, "Div", {3, 0, 1}); // [3] = 0.5 Do nothing.
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -423,10 +423,10 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
 
     // Build program to test inc instruction.
     program.PushInst(inst_lib, "Inc", {0, 0, 0}); // [0] = 1
-    program.PushInst(inst_lib, "Add", {0, 0, 1}); // [1] = 2
+    program.PushInst(inst_lib, "Add", {1, 0, 0}); // [1] = 2
     program.PushInst(inst_lib, "Mod", {2, 2, 2}); // [2] = 0   Do nothing.
     program.PushInst(inst_lib, "Mod", {2, 2, 2}); // [2] = 0   Do nothing.
-    program.PushInst(inst_lib, "Mod", {0, 1, 3}); // [3] = 1
+    program.PushInst(inst_lib, "Mod", {3, 0, 1}); // [3] = 1
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -525,8 +525,8 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
     program.PushInst(inst_lib, "SetMem", {0, 0, 0});
     program.PushInst(inst_lib, "SetMem", {1, 0, 0});
     program.PushInst(inst_lib, "SetMem", {2, 2, 0});
-    program.PushInst(inst_lib, "TestEqu", {0, 1, 3});
-    program.PushInst(inst_lib, "TestEqu", {0, 2, 3});
+    program.PushInst(inst_lib, "TestEqu", {3, 0, 1});
+    program.PushInst(inst_lib, "TestEqu", {3, 0, 2});
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -575,8 +575,8 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
     program.PushInst(inst_lib, "SetMem", {0, 0, 0});
     program.PushInst(inst_lib, "SetMem", {1, 0, 0});
     program.PushInst(inst_lib, "SetMem", {2, 2, 0});
-    program.PushInst(inst_lib, "TestNEqu", {0, 1, 3});
-    program.PushInst(inst_lib, "TestNEqu", {0, 2, 3});
+    program.PushInst(inst_lib, "TestNEqu", {3, 0, 1});
+    program.PushInst(inst_lib, "TestNEqu", {3, 0, 2});
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -625,9 +625,9 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
     program.PushInst(inst_lib, "SetMem", {0, 0, 0});
     program.PushInst(inst_lib, "SetMem", {1, 0, 0});
     program.PushInst(inst_lib, "SetMem", {2, 2, 0});
-    program.PushInst(inst_lib, "TestLess", {0, 1, 3});
-    program.PushInst(inst_lib, "TestLess", {0, 2, 3});
-    program.PushInst(inst_lib, "TestLess", {2, 0, 3});
+    program.PushInst(inst_lib, "TestLess", {3, 0, 1});
+    program.PushInst(inst_lib, "TestLess", {3, 0, 2});
+    program.PushInst(inst_lib, "TestLess", {3, 2, 0});
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -678,9 +678,9 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
     program.PushInst(inst_lib, "SetMem", {0, 0, 0});
     program.PushInst(inst_lib, "SetMem", {1, 0, 0});
     program.PushInst(inst_lib, "SetMem", {2, 2, 0});
-    program.PushInst(inst_lib, "TestLessEqu", {0, 1, 3});
-    program.PushInst(inst_lib, "TestLessEqu", {0, 2, 3});
-    program.PushInst(inst_lib, "TestLessEqu", {2, 0, 3});
+    program.PushInst(inst_lib, "TestLessEqu", {3, 0, 1});
+    program.PushInst(inst_lib, "TestLessEqu", {3, 0, 2});
+    program.PushInst(inst_lib, "TestLessEqu", {3, 2, 0});
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -731,9 +731,9 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
     program.PushInst(inst_lib, "SetMem", {0, 0, 0});
     program.PushInst(inst_lib, "SetMem", {1, 0, 0});
     program.PushInst(inst_lib, "SetMem", {2, 2, 0});
-    program.PushInst(inst_lib, "TestGreater", {0, 1, 3});
-    program.PushInst(inst_lib, "TestGreater", {0, 2, 3});
-    program.PushInst(inst_lib, "TestGreater", {2, 0, 3});
+    program.PushInst(inst_lib, "TestGreater", {3, 0, 1});
+    program.PushInst(inst_lib, "TestGreater", {3, 0, 2});
+    program.PushInst(inst_lib, "TestGreater", {3, 2, 0});
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -784,9 +784,9 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
     program.PushInst(inst_lib, "SetMem", {0, 0, 0});
     program.PushInst(inst_lib, "SetMem", {1, 0, 0});
     program.PushInst(inst_lib, "SetMem", {2, 2, 0});
-    program.PushInst(inst_lib, "TestGreaterEqu", {0, 1, 3});
-    program.PushInst(inst_lib, "TestGreaterEqu", {0, 2, 3});
-    program.PushInst(inst_lib, "TestGreaterEqu", {2, 0, 3});
+    program.PushInst(inst_lib, "TestGreaterEqu", {3, 0, 1});
+    program.PushInst(inst_lib, "TestGreaterEqu", {3, 0, 2});
+    program.PushInst(inst_lib, "TestGreaterEqu", {3, 2, 0});
 
     // Load program on hardware.
     hardware.SetProgram(program);
@@ -1780,12 +1780,12 @@ TEST_CASE("SignalGP - Linear Program", "[general]") {
     program.PushInst(inst_lib,   "Call", {0, 0, 0}, {ones});
 
     program.PushInst(inst_lib, "ModuleDef",  {0, 0, 0}, {ones});
-    program.PushInst(inst_lib,   "InputToWorking", {2, 1, 0});
-    program.PushInst(inst_lib,   "InputToWorking", {3, 2, 0});
+    program.PushInst(inst_lib,   "InputToWorking", {1, 2, 0});
+    program.PushInst(inst_lib,   "InputToWorking", {2, 3, 0});
     program.PushInst(inst_lib,   "Inc", {1, 0, 0});
     program.PushInst(inst_lib,   "Inc", {2, 0, 0});
-    program.PushInst(inst_lib,   "WorkingToOutput", {1, 4, 0});
-    program.PushInst(inst_lib,   "WorkingToOutput", {2, 5, 0});
+    program.PushInst(inst_lib,   "WorkingToOutput", {4, 1, 0});
+    program.PushInst(inst_lib,   "WorkingToOutput", {5, 2, 0});
 
     // Load program on hardware.
     hardware.SetProgram(program);
